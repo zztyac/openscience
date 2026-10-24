@@ -160,7 +160,12 @@ const mount = async (wallet: Wallet = funded) => {
   const host = document.createElement("div")
   document.body.append(host)
   const dispose = web.render(
-    () => subject.ManagedInference({ services, onError: (message) => state.errors.push(message) }),
+    () =>
+      web.createComponent(languageFixture.TestLanguage, {
+        get children() {
+          return (() => subject.ManagedInference({ services, onError: (message) => state.errors.push(message) }))()
+        },
+      }),
     host,
   )
   cleanups.push(() => {
@@ -172,6 +177,8 @@ const mount = async (wallet: Wallet = funded) => {
 }
 const button = (host: HTMLElement, label: string) =>
   [...host.querySelectorAll<HTMLButtonElement>("button")].find((item) => item.textContent?.trim() === label)!
+
+const languageFixture = (await vite.ssrLoadModule("/test/language.tsx")) as typeof import("../../../test/language")
 
 afterAll(() => vite.close())
 afterEach(() => {

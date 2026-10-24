@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { Button } from "@synsci/ui/button"
 import { For, Show, createMemo, createUniqueId, onCleanup, onMount } from "solid-js"
 import { createStore } from "solid-js/store"
@@ -63,18 +64,18 @@ export const accountUnavailable = (wallet: Wallet) =>
   wallet.signedIn &&
   (wallet.accessVerified !== true || (wallet.balanceUsd === null && !wallet.balanceRedacted && wallet.managedSupported))
 
-const MODES: { value: Mode; title: string; body: string }[] = [
+const MODES = [
   {
     value: "byok",
-    title: "Keys & subscriptions",
-    body: "Your connected keys and eligible subscriptions. The Wallet still funds what they cannot: models without a key, web search without a Firecrawl key, and image generation.",
+    title: "settings.copy.routing.keys",
+    body: "settings.copy.routing.keysDescription",
   },
   {
     value: "managed",
-    title: "Ace",
-    body: "Your purchased Wallet for supported models. Your own keys cover the rest.",
+    title: "settings.shell.panel.ace",
+    body: "settings.copy.routing.walletDescription",
   },
-]
+] as const
 
 const normalizeMode = (value: unknown): Mode => (value === "managed" ? "managed" : "byok")
 
@@ -95,6 +96,7 @@ export function ManagedInference(props: {
   /** The host page has its own sign-in control (the Account card on Ace), so the Ace row must not repeat it. */
   accountOwnedByHost?: boolean
 }) {
+  const language = useLanguage()
   const sdk = props.services?.sdk ?? useGlobalSDK()
   const globalSync = props.services?.sync ?? useGlobalSync()
   const platform = props.services?.platform ?? usePlatform()
@@ -138,7 +140,7 @@ export function ManagedInference(props: {
       // routing preference; a delayed summary must not undo a saved choice.
       props.onError?.(
         accountUnavailable(next)
-          ? "Account refresh temporarily unavailable. Retrying automatically."
+          ? language.t("settings.copy.accountRefreshTemporarilyUnavailableRetryingAutomatically")
           : next.error
             ? `Showing the last known account state. ${next.error}`
             : undefined,
@@ -235,7 +237,7 @@ export function ManagedInference(props: {
         // The routing choice is already durable. Provider synchronization is
         // follow-up work and must not keep the controls feeling stuck.
         setState("saving", false)
-        void syncProviders("Model access was saved")
+        void syncProviders(language.t("settings.copy.modelAccessWasSaved"))
       })
       .catch((error) => {
         if (!current()) return
@@ -253,9 +255,9 @@ export function ManagedInference(props: {
     props.onError?.(undefined)
     void settingsApi<LoginResult>(sdk.url, fetchFn, "/account/login-browser", { method: "POST" })
       .then((result) => {
-        if (!result.ok) throw new Error(result.error || "Sign in did not complete. Try again.")
+        if (!result.ok) throw new Error(result.error || language.t("settings.copy.signInDidNotCompleteTryAgain"))
         window.dispatchEvent(new Event("openscience:account-changed"))
-        void syncProviders("The Ace account changed")
+        void syncProviders(language.t("settings.copy.theAceAccountChanged"))
       })
       .catch(fail)
       .finally(() => setState("signingIn", false))
@@ -275,10 +277,10 @@ export function ManagedInference(props: {
       body: JSON.stringify({ key }),
     })
       .then((result) => {
-        if (!result.ok) throw new Error(result.error || "That key could not be used. Check it and try again.")
+        if (!result.ok) throw new Error(result.error || language.t("settings.copy.thatKeyCouldNotBeUsedCheckIt"))
         setState({ keyEntry: "closed", key: "" })
         window.dispatchEvent(new Event("openscience:account-changed"))
-        void syncProviders("The Ace account changed")
+        void syncProviders(language.t("settings.copy.theAceAccountChanged"))
       })
       .catch((error) => {
         setState("keyEntry", "open")
@@ -310,21 +312,21 @@ export function ManagedInference(props: {
 
   const managedUnavailable = () => state.wallet !== undefined && !canSelectManaged(state.wallet)
   const aceLabel = () => {
-    if (state.account === "error") return "Account unavailable"
-    if (!state.wallet) return "Account"
-    if (!state.wallet.signedIn) return "Sign in required"
-    if (!state.wallet.managedSupported) return "Unavailable"
-    if (state.wallet.aceEnabled) return "On"
-    if (state.wallet.managedUnlocked) return "Wallet funded"
-    if (state.wallet.balanceUsd === null) return "Account connected"
-    return "No purchased balance"
+    if (state.account === "error") return language.t("settings.copy.accountUnavailable")
+    if (!state.wallet) return language.t("settings.shell.group.app")
+    if (!state.wallet.signedIn) return language.t("settings.copy.signInRequired")
+    if (!state.wallet.managedSupported) return language.t("settings.copy.unavailable")
+    if (state.wallet.aceEnabled) return language.t("settings.copy.on")
+    if (state.wallet.managedUnlocked) return language.t("settings.copy.walletFunded")
+    if (state.wallet.balanceUsd === null) return language.t("settings.copy.accountConnected")
+    return language.t("settings.copy.noPurchasedBalance")
   }
   const balanceLabel = () => {
-    if (state.wallet && !state.wallet.signedIn) return "Sign in to view"
+    if (state.wallet && !state.wallet.signedIn) return language.t("settings.copy.signInToView")
     if (!state.wallet || (state.account === "loading" && state.wallet.balanceUsd === null))
-      return state.account === "error" ? "Unavailable" : "—"
-    if (state.wallet.balanceRedacted) return "Private to admins"
-    if (state.wallet.balanceUsd === null) return "Unavailable"
+      return state.account === "error" ? language.t("settings.copy.unavailable") : "—"
+    if (state.wallet.balanceRedacted) return language.t("settings.copy.privateToAdmins")
+    if (state.wallet.balanceUsd === null) return language.t("settings.copy.unavailable")
     return formatCreditBalance(state.wallet.balanceUsd)
   }
   // Holds for turns in flight come off the purchased balance before the next
@@ -344,13 +346,15 @@ export function ManagedInference(props: {
   }
   const reloadActive = () => Boolean(state.wallet?.aceEnabled && state.wallet.aceContract?.reloadControlledByAce)
   const accountAction = () => {
-    if (state.wallet && !state.wallet.signedIn) return state.signingIn ? "Waiting for browser…" : "Sign in"
-    if (state.account === "error") return "Retry"
-    if (!state.wallet) return "Open Wallet"
-    if (state.wallet.balanceUsd === null && !state.wallet.managedUnlocked && !state.wallet.aceEnabled) return "Refresh"
-    if (!state.wallet.managedSupported) return "Manage Wallet"
-    if (!state.wallet.managedUnlocked) return "Turn on Ace"
-    return state.wallet.aceEnabled ? "Manage Ace" : "Manage Wallet"
+    if (state.wallet && !state.wallet.signedIn)
+      return state.signingIn ? language.t("settings.copy.waitingForBrowser") : language.t("settings.copy.signIn")
+    if (state.account === "error") return language.t("settings.connectors.retry")
+    if (!state.wallet) return language.t("settings.copy.openWallet")
+    if (state.wallet.balanceUsd === null && !state.wallet.managedUnlocked && !state.wallet.aceEnabled)
+      return language.t("settings.copy.refresh")
+    if (!state.wallet.managedSupported) return language.t("settings.copy.manageWallet")
+    if (!state.wallet.managedUnlocked) return language.t("settings.copy.turnOnAce")
+    return state.wallet.aceEnabled ? language.t("settings.copy.manageAce") : language.t("settings.copy.manageWallet")
   }
   const actOnAccount = () => {
     if (state.wallet && !state.wallet.signedIn) {
@@ -381,14 +385,18 @@ export function ManagedInference(props: {
   const originLabel = () => {
     const wallet = state.wallet
     if (!wallet?.signedIn) return
-    const where = wallet.workspace ? (wallet.workspace.personal ? "Personal" : wallet.workspace.name) : undefined
-    if (wallet.origin === "key") return where ? `API key · ${where}` : "API key"
+    const where = wallet.workspace
+      ? wallet.workspace.personal
+        ? language.t("settings.copy.personal")
+        : wallet.workspace.name
+      : undefined
+    if (wallet.origin === "key") return where ? `API key · ${where}` : language.t("provider.connect.method.apiKey")
     return where && !wallet.workspace?.personal ? where : undefined
   }
 
   const walletDescription = () => {
-    if (state.wallet && !state.wallet.signedIn) return "Sign in to see the purchased balance."
-    return "Purchased funds for Ace models."
+    if (state.wallet && !state.wallet.signedIn) return language.t("settings.copy.signInToSeeThePurchasedBalance")
+    return language.t("settings.copy.purchasedFundsForAceModels")
   }
   const signedOut = () => Boolean(state.wallet && !state.wallet.signedIn)
   // A summary re-read passes through "loading" often; the row keeps its
@@ -396,14 +404,17 @@ export function ManagedInference(props: {
   const showAccountAction = () => !(props.accountOwnedByHost && signedOut())
 
   return (
-    <div class="models-inference" aria-label="Model access">
+    <div class="models-inference" aria-label={language.t("settings.copy.modelAccess")}>
       {/* Ace: what it is and whether it is on; one way to manage it. */}
       <div class="settings-row settings-preference-row">
         <div class="settings-row-copy">
           <strong>Ace</strong>
           <span>
-            <Show when={signedOut()} fallback={<>Managed models through your Wallet, no provider keys.</>}>
-              Managed models through your Wallet once you sign in. Your own provider keys stay separate.
+            <Show
+              when={signedOut()}
+              fallback={<>{language.t("settings.copy.managedModelsThroughYourWalletNoProviderKeys")}</>}
+            >
+              {language.t("settings.copy.managedModelsThroughYourWalletOnceYouSign")}
             </Show>
             <Show when={originLabel()}>{(label) => <> · {label()}</>}</Show>
           </span>
@@ -428,10 +439,14 @@ export function ManagedInference(props: {
       {/* Wallet: what is spendable now, and what turns in flight hold. */}
       <dl class="settings-row settings-preference-row models-routing__wallet">
         <div class="settings-row-copy">
-          <dt>Wallet</dt>
+          <dt>{language.t("settings.copy.wallet")}</dt>
           <span>{walletDescription()}</span>
           <Show when={heldLabel()}>
-            {(held) => <span class="models-routing__held">{held()} held for turns in flight</span>}
+            {(held) => (
+              <span class="models-routing__held">
+                {held()} {language.t("settings.copy.heldForTurnsInFlight")}
+              </span>
+            )}
           </Show>
         </div>
         <div class="settings-preference-row__actions models-access-actions">
@@ -441,15 +456,16 @@ export function ManagedInference(props: {
             data-refreshing={state.wallet?.refreshing ? "true" : undefined}
           >
             <Show when={spendable() !== undefined} fallback={balanceLabel()}>
-              {formatCreditBalance(spendable()!)} <span class="models-routing__wallet-unit">available</span>
+              {formatCreditBalance(spendable()!)}{" "}
+              <span class="models-routing__wallet-unit">{language.t("settings.copy.available")}</span>
             </Show>
             <Show when={state.wallet?.refreshing}>
-              <span class="models-routing__sync sr-only"> Refreshing…</span>
+              <span class="models-routing__sync sr-only"> {language.t("settings.copy.refreshing")}</span>
             </Show>
           </dd>
           <Show when={state.wallet?.signedIn && !state.wallet.balanceRedacted}>
             <Button size="small" variant="secondary" onClick={() => platform.openLink(billingURL())}>
-              Add funds
+              {language.t("settings.copy.addFunds")}
             </Button>
           </Show>
         </div>
@@ -460,19 +476,25 @@ export function ManagedInference(props: {
         {(contract) => (
           <div class="settings-row settings-preference-row" data-model-reload>
             <div class="settings-row-copy">
-              <strong>Auto-reload</strong>
+              <strong>{language.t("settings.copy.autoReload")}</strong>
               <span class="models-routing__reload-terms">
                 <Show
                   when={reloadActive()}
-                  fallback={`Turning on Ace adds $${contract().reloadAmountUsd} whenever the Wallet drops below $${contract().reloadThresholdUsd}.`}
+                  fallback={language.t("settings.copy.routing.reloadInactive", {
+                    amount: contract().reloadAmountUsd,
+                    threshold: contract().reloadThresholdUsd,
+                  })}
                 >
-                  Adds ${contract().reloadAmountUsd} when the Wallet drops below ${contract().reloadThresholdUsd}.
+                  {language.t("settings.copy.routing.reloadActive", {
+                    amount: contract().reloadAmountUsd,
+                    threshold: contract().reloadThresholdUsd,
+                  })}
                 </Show>
               </span>
             </div>
             <div class="settings-preference-row__actions models-access-actions">
               <span class="models-routing__status" data-active={reloadActive() ? "true" : undefined}>
-                {reloadActive() ? "On" : "Off"}
+                {reloadActive() ? language.t("settings.copy.on") : language.t("settings.copy.off")}
               </span>
             </div>
           </div>
@@ -482,8 +504,8 @@ export function ManagedInference(props: {
       {/* API key: the Zen-style way in, billed to the key's own workspace. */}
       <div class="settings-row settings-preference-row">
         <div class="settings-row-copy">
-          <strong>API key</strong>
-          <span>Sign in with a key from any workspace you belong to. It bills that workspace.</span>
+          <strong>{language.t("provider.connect.method.apiKey")}</strong>
+          <span>{language.t("settings.copy.signInWithAKeyFromAnyWorkspace")}</span>
         </div>
         <div class="settings-preference-row__actions">
           <Show when={state.keyEntry === "closed"}>
@@ -493,7 +515,9 @@ export function ManagedInference(props: {
               data-model-access-use-key
               onClick={() => setState("keyEntry", "open")}
             >
-              {state.wallet?.signedIn ? "Use a different API key" : "Use an API key"}
+              {state.wallet?.signedIn
+                ? language.t("settings.copy.useADifferentApiKey")
+                : language.t("settings.copy.useAnApiKey")}
             </Button>
           </Show>
         </div>
@@ -511,16 +535,16 @@ export function ManagedInference(props: {
             <input
               type="password"
               class="models-routing__key-input"
-              placeholder="osk_… or thk_… from app.syntheticsciences.ai → Settings → Keys"
+              placeholder={language.t("settings.copy.oskOrThkFromAppSyntheticsciencesAiSettings")}
               autocomplete="off"
               spellcheck={false}
               value={state.key}
               disabled={state.keyEntry === "submitting"}
               onInput={(event) => setState("key", event.currentTarget.value)}
-              aria-label="Ace API key"
+              aria-label={language.t("settings.copy.aceApiKey")}
             />
             <span class="models-routing__key-note">
-              Signing out later forgets the key on this device without revoking it.
+              {language.t("settings.copy.signingOutLaterForgetsTheKeyOnThis")}
             </span>
           </div>
           <div class="settings-preference-row__actions">
@@ -531,7 +555,7 @@ export function ManagedInference(props: {
               disabled={state.keyEntry === "submitting"}
               onClick={() => setState({ keyEntry: "closed", key: "" })}
             >
-              Cancel
+              {language.t("common.cancel")}
             </Button>
             <Button
               type="submit"
@@ -539,7 +563,9 @@ export function ManagedInference(props: {
               variant="primary"
               disabled={!state.key.trim() || state.keyEntry === "submitting"}
             >
-              {state.keyEntry === "submitting" ? "Checking…" : "Connect"}
+              {state.keyEntry === "submitting"
+                ? language.t("settings.copy.checking")
+                : language.t("settings.copy.connect")}
             </Button>
           </div>
         </form>
@@ -548,20 +574,20 @@ export function ManagedInference(props: {
       {/* Which route wins when both a key and Ace could serve a model. */}
       <div class="settings-row settings-preference-row models-routing__preference">
         <div class="settings-row-copy">
-          <strong>Preferred model access</strong>
+          <strong>{language.t("settings.copy.preferredModelAccess")}</strong>
           <span id={description} class="models-routing__description" aria-live="polite">
-            <Show when={state.saving} fallback="Which route a model uses when both could serve it.">
-              Saving {selected().title}…
+            <Show when={state.saving} fallback={language.t("settings.copy.routing.description")}>
+              {language.t("settings.copy.routing.saving", { mode: language.t(selected().title) })}
             </Show>
             <Show when={!state.saving && state.refreshing}>
-              <span class="models-routing__sync"> Updating model availability…</span>
+              <span class="models-routing__sync"> {language.t("settings.copy.updatingModelAvailability")}</span>
             </Show>
           </span>
         </div>
         <div
           class="settings-preference-row__actions settings-segmented-control models-routing__modes"
           role="group"
-          aria-label="Model access mode"
+          aria-label={language.t("settings.copy.modelAccessMode")}
           aria-describedby={description}
         >
           <For each={MODES}>
@@ -579,12 +605,12 @@ export function ManagedInference(props: {
                   data-selected={state.mode === option.value ? "true" : undefined}
                   title={
                     option.value === "managed" && managedUnavailable()
-                      ? "Sign in, add purchased Wallet funds, or turn on Ace to use managed models"
-                      : option.body
+                      ? language.t("settings.copy.signInAddPurchasedWalletFundsOrTurn")
+                      : language.t(option.body)
                   }
                   onClick={() => update(option.value)}
                 >
-                  {option.title}
+                  {language.t(option.title)}
                 </button>
               )
             }}

@@ -49,6 +49,7 @@ const offline = (path: string) => Bun.fetch(`${unreachable}${path}`)
 const erroring = async () => new Response("kernel registry unavailable", { status: 503 })
 const serving = async () => new Response(JSON.stringify(capacity), { headers: { "content-type": "application/json" } })
 
+const { TestLanguage } = (await vite.ssrLoadModule("/test/language.tsx")) as typeof import("../../test/language")
 const cleanups: Array<() => void> = []
 
 afterAll(() => vite.close())
@@ -61,7 +62,17 @@ afterEach(() => {
 const mount = (view: () => JSX.Element) => {
   const host = document.createElement("div")
   document.body.append(host)
-  cleanups.push(web.render(view, host))
+  cleanups.push(
+    web.render(
+      () =>
+        web.createComponent(TestLanguage, {
+          get children() {
+            return view()
+          },
+        }),
+      host,
+    ),
+  )
   return host
 }
 

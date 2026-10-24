@@ -1,3 +1,5 @@
+import { credentialServiceCopy } from "./catalog-copy"
+import { useLanguage } from "@/context/language"
 import { Button } from "@synsci/ui/button"
 import { Icon } from "@synsci/ui/icon"
 import { useDialog } from "@synsci/ui/context/dialog"
@@ -17,6 +19,7 @@ export const CredentialServices: Component<{
   description: string
   custom?: boolean
 }> = (props) => {
+  const language = useLanguage()
   const sdk = useGlobalSDK()
   const platform = usePlatform()
   const dialog = useDialog()
@@ -70,7 +73,11 @@ export const CredentialServices: Component<{
     if (service.id === "modal") return undefined
     return "integration"
   }
-  const items = createMemo(() => services().filter((service) => category(service) === props.category))
+  const items = createMemo(() =>
+    services()
+      .filter((service) => category(service) === props.category)
+      .map((service) => credentialServiceCopy(service, language.t)),
+  )
   const count = createMemo(() => items().filter((service) => service.connected).length)
 
   const load = async (refresh = false) => {
@@ -145,8 +152,8 @@ export const CredentialServices: Component<{
     if (saving()) return
     const confirmed = await confirmDialog(dialog, {
       title: `Remove ${service.label} credentials?`,
-      message: "This removes the saved credentials from this machine. It does not change external cloud resources.",
-      confirmLabel: "Remove credentials",
+      message: language.t("settings.copy.thisRemovesTheSavedCredentialsFromThisMachine"),
+      confirmLabel: language.t("settings.copy.removeCredentials"),
       danger: true,
     })
     if (!confirmed) return
@@ -195,7 +202,12 @@ export const CredentialServices: Component<{
           <h3>{props.title}</h3>
           <p>
             {props.description}
-            <Show when={!loading()}> {count() === 0 ? "Nothing saved yet." : `${count()} saved.`}</Show>
+            <Show when={!loading()}>
+              {" "}
+              {count() === 0
+                ? language.t("settings.copy.nothingSavedYet")
+                : language.t("settings.copy.credentials.savedCount", { count: count() })}
+            </Show>
           </p>
         </div>
       </div>
@@ -210,7 +222,7 @@ export const CredentialServices: Component<{
             disabled={loading() || saving()}
             onClick={() => void load(true)}
           >
-            Retry
+            {language.t("settings.connectors.retry")}
           </Button>
         </div>
       </Show>
@@ -218,7 +230,11 @@ export const CredentialServices: Component<{
       <Show
         when={!loading()}
         fallback={
-          <div class="settings-panel-loading__rows" role="status" aria-label="Loading services">
+          <div
+            class="settings-panel-loading__rows"
+            role="status"
+            aria-label={language.t("settings.copy.loadingServices")}
+          >
             <span />
             <span />
             <span />
@@ -230,7 +246,7 @@ export const CredentialServices: Component<{
           fallback={
             <div class="settings-card">
               <p class="settings-card-empty" role="status">
-                No services are available from this server.
+                {language.t("settings.copy.noServicesAreAvailableFromThisServer")}
               </p>
             </div>
           }
@@ -249,14 +265,19 @@ export const CredentialServices: Component<{
                         {service.description}
                         <Show when={!service.connected && hostSource(service.id)}>
                           {" "}
-                          Found on this computer via {hostSource(service.id)}.
+                          {language.t("settings.copy.foundOnThisComputerVia")}
+                          {hostSource(service.id)}.
                         </Show>
                       </span>
                     </div>
                     <Show when={service.connected}>
                       <span class="settings-row-status">
-                        {service.source === "account" ? "Synced from your workspace" : "Saved on this device"}
-                        {service.set_fields.length > 1 ? ` · ${service.set_fields.length} fields` : ""}
+                        {service.source === "account"
+                          ? language.t("settings.copy.syncedFromYourWorkspace")
+                          : language.t("settings.copy.savedOnThisDevice")}
+                        {service.set_fields.length > 1
+                          ? language.t("settings.copy.credentials.fields", { count: service.set_fields.length })
+                          : ""}
                       </span>
                     </Show>
                     <div class="settings-list-actions max-w-full flex-wrap justify-end">
@@ -267,7 +288,7 @@ export const CredentialServices: Component<{
                           disabled={saving()}
                           onClick={() => void importHost(service)}
                         >
-                          Use this computer's login
+                          {language.t("settings.copy.useThisComputerSLogin")}
                         </Button>
                       </Show>
                       <Show when={service.connected && service.source !== "account"}>
@@ -275,10 +296,10 @@ export const CredentialServices: Component<{
                           size="small"
                           variant="secondary"
                           disabled={saving()}
-                          aria-label={`Remove ${service.label} credentials`}
+                          aria-label={language.t("settings.copy.credentials.remove", { service: service.label })}
                           onClick={() => void remove(service)}
                         >
-                          Remove
+                          {language.t("settings.providerKeys.remove")}
                         </Button>
                       </Show>
                       <Show when={service.source === "account"}>
@@ -293,17 +314,17 @@ export const CredentialServices: Component<{
                             )
                           }
                         >
-                          Manage
+                          {language.t("settings.copy.manage")}
                         </Button>
                       </Show>
                       <Button size="small" variant="secondary" disabled={saving()} onClick={() => open(service.id)}>
                         {editing() === service.id
-                          ? "Cancel"
+                          ? language.t("common.cancel")
                           : service.source === "account"
-                            ? "Use local key"
+                            ? language.t("settings.copy.useLocalKey")
                             : service.connected
-                              ? "Update"
-                              : "Add credential"}
+                              ? language.t("settings.copy.update")
+                              : language.t("settings.copy.addCredential")}
                       </Button>
                     </div>
                   </div>
@@ -321,8 +342,10 @@ export const CredentialServices: Component<{
                           <label>
                             <span>
                               {item.label}
-                              {item.optional ? " (optional)" : ""}
-                              {service.set_fields.includes(item.name) ? " · saved" : ""}
+                              {item.optional ? language.t("settings.copy.credentials.optional") : ""}
+                              {service.set_fields.includes(item.name)
+                                ? language.t("settings.copy.credentials.saved")
+                                : ""}
                             </span>
                             <Show
                               when={item.type === "textarea"}
@@ -335,7 +358,9 @@ export const CredentialServices: Component<{
                                   value={values()[item.name] ?? ""}
                                   placeholder={
                                     item.placeholder ??
-                                    (service.set_fields.includes(item.name) ? "Leave blank to keep saved value" : "")
+                                    (service.set_fields.includes(item.name)
+                                      ? language.t("settings.copy.leaveBlankToKeepSavedValue")
+                                      : "")
                                   }
                                   onInput={(event) =>
                                     setValues({ ...values(), [item.name]: event.currentTarget.value })
@@ -350,7 +375,9 @@ export const CredentialServices: Component<{
                                 value={values()[item.name] ?? ""}
                                 placeholder={
                                   item.placeholder ??
-                                  (service.set_fields.includes(item.name) ? "Leave blank to keep saved value" : "")
+                                  (service.set_fields.includes(item.name)
+                                    ? language.t("settings.copy.leaveBlankToKeepSavedValue")
+                                    : "")
                                 }
                                 onInput={(event) => setValues({ ...values(), [item.name]: event.currentTarget.value })}
                               />
@@ -360,7 +387,7 @@ export const CredentialServices: Component<{
                       </For>
                       <div class="credential-form-actions max-w-full flex-wrap">
                         <Button type="submit" size="small" variant="primary" disabled={saving() || !ready(service)}>
-                          {saving() ? "Saving…" : "Save credential"}
+                          {saving() ? language.t("settings.copy.saving2") : language.t("settings.copy.saveCredential")}
                         </Button>
                         <Button
                           type="button"
@@ -369,7 +396,7 @@ export const CredentialServices: Component<{
                           disabled={saving()}
                           onClick={() => setEditing(undefined)}
                         >
-                          Cancel
+                          {language.t("common.cancel")}
                         </Button>
                       </div>
                     </form>
@@ -392,7 +419,7 @@ export const CredentialServices: Component<{
               onClick={() => setCustom(true)}
             >
               <Icon name="plus" size="small" />
-              Add custom credential
+              {language.t("settings.copy.addCustomCredential")}
             </button>
           }
         >
@@ -404,17 +431,27 @@ export const CredentialServices: Component<{
             }}
           >
             <div class="credential-form-grid">
-              <Field label="Service name" value={name()} placeholder="My service" onInput={setName} />
-              <Field label="Environment field" value={field()} placeholder="api_key" onInput={setField} />
+              <Field
+                label={language.t("settings.copy.serviceName")}
+                value={name()}
+                placeholder={language.t("settings.copy.myService")}
+                onInput={setName}
+              />
+              <Field
+                label={language.t("settings.copy.environmentField")}
+                value={field()}
+                placeholder="api_key"
+                onInput={setField}
+              />
             </div>
             <Field
-              label="Secret value"
+              label={language.t("settings.copy.secretValue")}
               value={secret()}
               type="password"
-              placeholder="Paste secret"
+              placeholder={language.t("settings.copy.pasteSecret")}
               onInput={setSecret}
             />
-            <p class="break-words">OpenScience will make this available as SERVICE_NAME_ENVIRONMENT_FIELD.</p>
+            <p class="break-words">{language.t("settings.copy.openscienceWillMakeThisAvailableAsServiceName")}</p>
             <div class="credential-form-actions max-w-full flex-wrap">
               <Button
                 type="submit"
@@ -422,10 +459,10 @@ export const CredentialServices: Component<{
                 variant="primary"
                 disabled={saving() || !secret().trim() || !customCredentialIdentity(name(), field()).ok}
               >
-                {saving() ? "Saving…" : "Save credential"}
+                {saving() ? language.t("settings.copy.saving2") : language.t("settings.copy.saveCredential")}
               </Button>
               <Button type="button" size="small" variant="ghost" disabled={saving()} onClick={() => setCustom(false)}>
-                Cancel
+                {language.t("common.cancel")}
               </Button>
             </div>
           </form>

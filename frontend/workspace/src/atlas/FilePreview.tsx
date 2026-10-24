@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import {
   batch,
   createSignal,
@@ -138,6 +139,7 @@ export function FileView(props: {
   /** Explicit transport seam for embedding and component-level regression checks. */
   services?: Pick<ReturnType<typeof useSDK>, "request" | "client" | "projectID" | "url">
 }): JSX.Element {
+  const language = useLanguage()
   const production = props.services ? undefined : useSDK()
   const sdk = props.services ?? production!
   const sync = props.services ? undefined : useSync()
@@ -583,6 +585,7 @@ export function FileView(props: {
   }
   const description = createMemo(() =>
     describeFile({
+      translate: language.t,
       kind: kind(),
       format: badge(),
       binary: isBinary(),
@@ -782,12 +785,12 @@ export function FileView(props: {
       window.dispatchEvent(new CustomEvent("openscience:artifacts-changed"))
       showToast({
         variant: "success",
-        title: "Saved to Results",
+        title: language.t("atlas.results.savedTo"),
         description: saved ? savedResultLabel(saved) : title,
         actions: saved
           ? [
               {
-                label: "Open",
+                label: language.t("atlas.common.open"),
                 onClick: () => {
                   if (owns()) uiStore.openSaved(saved)
                 },
@@ -844,13 +847,17 @@ export function FileView(props: {
     if (props.scope === "auto") {
       const source =
         projectContains(directory(), requestPath()) && resolvedScope() === "project"
-          ? "Project files"
+          ? language.t("atlas.files.project")
           : /^(?:\/|[A-Za-z]:[\\/])/.test(path)
-            ? "Connected file"
-            : "Session scratch"
+            ? language.t("atlas.files.connectedFile")
+            : language.t("atlas.files.scratch")
       return index > 0 ? `${source} · ${path.slice(0, index)}` : source
     }
-    return index > 0 ? path.slice(0, index) : resolvedScope() === "session" ? "Session files" : "Project files"
+    return index > 0
+      ? path.slice(0, index)
+      : resolvedScope() === "session"
+        ? language.t("atlas.files.sessionFiles")
+        : language.t("atlas.files.project")
   }
 
   return (
@@ -861,7 +868,7 @@ export function FileView(props: {
           location={location()}
           description={description()}
           source={view.source}
-          sourceLabel={description().source && writable() !== false ? "Edit" : undefined}
+          sourceLabel={description().source && writable() !== false ? language.t("common.edit") : undefined}
           dirty={dirty()}
           saving={view.saving}
           saveDisabled={!view.revision || view.conflict === true}
@@ -889,7 +896,7 @@ export function FileView(props: {
         <Show when={view.saveError}>
           {(error) => (
             <div class="atlas-file-save-error" role="alert">
-              Couldn’t save changes. {error()}
+              {language.t("atlas.files.saveError", { error: error() })}
               <Show when={view.conflict}>
                 <button
                   type="button"
@@ -899,7 +906,7 @@ export function FileView(props: {
                     setView({ draft: view.saved, conflict: false, saveError: undefined, refresh: view.refresh + 1 })
                   }}
                 >
-                  Discard changes and reload
+                  {language.t("atlas.files.discardReload")}
                 </button>
               </Show>
             </div>
@@ -916,8 +923,7 @@ export function FileView(props: {
           }
         >
           <div class="atlas-file-save-error" role="status">
-            Saving is unavailable because this server did not provide a file revision. Your edits are preserved; update
-            the server and reload before saving.
+            {language.t("atlas.files.revisionUnavailable")}
           </div>
         </Show>
 
@@ -929,7 +935,7 @@ export function FileView(props: {
                 <div class="atlas-file-loading-heading" />
                 <div class="atlas-file-loading-line" />
                 <div class="atlas-file-loading-line is-short" />
-                <span>Loading {name()}…</span>
+                <span>{language.t("atlas.files.loadingNamed", { name: name() })}</span>
               </div>
             }
           >
@@ -941,22 +947,22 @@ export function FileView(props: {
                   fallback={
                     <section class="atlas-file-error" role="alert" aria-live="polite">
                       <IconFile size={20} strokeWidth={1.5} />
-                      <h2>Couldn’t open this file</h2>
-                      <p>{view.error?.message ?? "The file could not be read."}</p>
+                      <h2>{language.t("atlas.files.openError")}</h2>
+                      <p>{view.error?.message ?? language.t("atlas.files.readError")}</p>
                       <button
                         type="button"
                         class="atlas-file-button"
                         onClick={() => setView("refresh", (key) => key + 1)}
                       >
-                        Retry
+                        {language.t("atlas.common.retry")}
                       </button>
                     </section>
                   }
                 >
                   <section class="atlas-file-error" role="status" aria-live="polite">
                     <IconFile size={20} strokeWidth={1.5} />
-                    <h2>File preview interrupted</h2>
-                    <p>The read ended before it finished. Your file was not changed.</p>
+                    <h2>{language.t("atlas.files.interrupted")}</h2>
+                    <p>{language.t("atlas.files.interruptedHint")}</p>
                     <button
                       type="button"
                       class="atlas-file-button"
@@ -965,7 +971,7 @@ export function FileView(props: {
                         setView("refresh", (key) => key + 1)
                       }}
                     >
-                      Retry
+                      {language.t("atlas.common.retry")}
                     </button>
                   </section>
                 </Show>
@@ -982,8 +988,7 @@ export function FileView(props: {
                   <Match when={truncated() && kind() !== "pdf"}>
                     <div class="atlas-file-source atlas-file-truncated">
                       <div class="atlas-file-notice" role="status">
-                        Preview limited to 8 MB of {formatBytes(data()?.size ?? 0)}. Download the file or use a compute
-                        tool for the complete dataset.
+                        {language.t("atlas.files.truncated", { size: formatBytes(data()?.size ?? 0) })}
                       </div>
                       <pre>{view.draft}</pre>
                     </div>
@@ -1108,18 +1113,22 @@ export function FileView(props: {
                             <div class="atlas-file-loading-heading" />
                             <div class="atlas-file-loading-line" />
                             <div class="atlas-file-loading-line is-short" />
-                            <span>Loading the complete {formatBytes(data()?.size ?? 0)} PDF…</span>
+                            <span>
+                              {language.t("atlas.files.loadingPdf", { size: formatBytes(data()?.size ?? 0) })}
+                            </span>
                           </div>
                         </Match>
                         <Match when={pdfMode() === "raw" && pdf.status === "error"}>
                           <div class="atlas-file-notice" role="alert">
-                            Couldn’t load the PDF preview. {pdf.error} Use Download above to open the original file.
+                            {language.t("atlas.files.pdfError", { error: pdf.error ?? "" })}
                           </div>
                         </Match>
                         <Match when={pdfMode() === "download"}>
                           <div class="atlas-file-notice" role="status">
-                            This {formatBytes(data()?.size ?? 0)} PDF exceeds the {formatBytes(PDF_PREVIEW_LIMIT)}{" "}
-                            browser preview limit. Use Download above to open the original file.
+                            {language.t("atlas.files.pdfLimit", {
+                              size: formatBytes(data()?.size ?? 0),
+                              limit: formatBytes(PDF_PREVIEW_LIMIT),
+                            })}
                           </div>
                         </Match>
                       </Switch>
@@ -1174,7 +1183,7 @@ export function FileView(props: {
                     }
                   >
                     <CodeEditor
-                      label={`${name()} source`}
+                      label={language.t("atlas.files.namedSource", { name: name() })}
                       value={view.draft}
                       language={LANG[e()] ?? "text"}
                       readOnly={writable() === false}
@@ -1203,6 +1212,7 @@ export function FileView(props: {
  * preview path. Backdrop / Esc / the header × all close it.
  */
 export function FilePreview(props: { path: string; onClose: () => void }): JSX.Element {
+  const language = useLanguage()
   const [mounted, setMounted] = createSignal(false)
   onMount(() => {
     requestAnimationFrame(() => setMounted(true))
@@ -1228,7 +1238,7 @@ export function FilePreview(props: { path: string; onClose: () => void }): JSX.E
       />
       <div
         role="dialog"
-        aria-label={`preview ${props.path}`}
+        aria-label={language.t("atlas.files.previewPath", { path: props.path })}
         style={{
           position: "fixed",
           top: "14px",

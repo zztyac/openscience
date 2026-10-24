@@ -1,3 +1,4 @@
+import type { JSX } from "solid-js"
 import { afterAll, afterEach, expect, test } from "bun:test"
 import { fileURLToPath } from "node:url"
 import { createOpenScienceClient } from "@synsci/sdk/v2/client"
@@ -18,6 +19,18 @@ const vite = await createServer({
 })
 const subject = (await vite.ssrLoadModule("/src/components/working-folder.tsx")) as typeof import("./working-folder")
 const web = (await vite.ssrLoadModule("solid-js/web")) as typeof import("solid-js/web")
+const { TestLanguage } = (await vite.ssrLoadModule("/test/language.tsx")) as typeof import("../../test/language")
+const localizedRender = (view: () => JSX.Element, host: HTMLElement) =>
+  web.render(
+    () =>
+      web.createComponent(TestLanguage, {
+        get children() {
+          return view()
+        },
+      }),
+    host,
+  )
+
 afterAll(() => vite.close())
 afterEach(() => {
   cleanups
@@ -60,7 +73,7 @@ test.each([0, 2000])("a failed folder save remains visible and retry handles a %
   const host = document.createElement("div")
   document.body.append(host)
   cleanups.push(
-    web.render(
+    localizedRender(
       () =>
         subject.WorkingFolderChip({
           client: createOpenScienceClient({

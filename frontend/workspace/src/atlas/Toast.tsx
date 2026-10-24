@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { Toast, showToast, toaster, type ToastVariant } from "@synsci/ui/toast"
 import { onCleanup } from "solid-js"
 import { onPersistFailure, onPersistRecovered, type PersistFailure } from "@/utils/persist"
@@ -61,16 +62,15 @@ let persistFailureContainers = 0
 let stopPersistWatch: (() => void) | undefined
 const failingStores = new Set<string>()
 
-function showPersistFailure(failure: PersistFailure) {
+function showPersistFailure(failure: PersistFailure, language: ReturnType<typeof useLanguage>) {
   failingStores.add(failure.key)
   // One message covers every failing store, and re-pushing it for the second
   // would only restart its entrance animation.
   if (persistFailureToast !== undefined) return
   persistFailureToast = toast.push({
     kind: "error",
-    title: "Not saved in this browser",
-    description:
-      "This tab holds more than browser storage allows, most likely a large attachment. Remove it to start saving again; anything unsaved may be lost.",
+    title: language.t("pages.overlay.persistFailed"),
+    description: language.t("pages.overlay.persistFailedHint"),
     ttl_ms: 0,
   })
 }
@@ -89,10 +89,10 @@ function clearPersistFailure(key: string) {
   dismissPersistFailure()
 }
 
-function connectPersistFailures() {
+function connectPersistFailures(language: ReturnType<typeof useLanguage>) {
   persistFailureContainers++
   stopPersistWatch ??= (() => {
-    const offFailure = onPersistFailure(showPersistFailure)
+    const offFailure = onPersistFailure((failure) => showPersistFailure(failure, language))
     const offRecovered = onPersistRecovered(clearPersistFailure)
     return () => {
       offFailure()
@@ -117,9 +117,10 @@ function connectPersistFailures() {
  * swipe handling, and the labelled 32px close control.
  */
 export function ToastContainer() {
+  const language = useLanguage()
   // A refused write is otherwise silent data loss: the state looks saved and
   // then is not, so this one stays until acknowledged.
-  onCleanup(connectPersistFailures())
+  onCleanup(connectPersistFailures(language))
 
-  return <Toast.Region aria-label="Notifications" />
+  return <Toast.Region aria-label={language.t("pages.overlay.notifications")} />
 }

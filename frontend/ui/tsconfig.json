@@ -16,6 +16,8 @@
     "lib": ["es2023", "dom", "dom.iterable"],
     // Type Checking & Safety
     "strict": true,
-    "types": ["vite/client", "bun"]
+    "types": ["vite/client", "bun"],
+    // The jsdom document tests load workspace components with their real language context.
+    "paths": { "@/*": ["../workspace/src/*"] }
   }
 }

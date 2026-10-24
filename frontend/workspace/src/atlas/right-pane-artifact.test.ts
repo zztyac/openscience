@@ -23,6 +23,17 @@ const [pane, artifacts, state, web, stores] = await Promise.all([
   server.ssrLoadModule("solid-js/web") as Promise<typeof import("solid-js/web")>,
   server.ssrLoadModule("solid-js/store") as Promise<typeof import("solid-js/store")>,
 ])
+const fixture = (await server.ssrLoadModule("/test/language.tsx")) as typeof import("../../test/language")
+const render = (view: () => JSX.Element, host: HTMLElement) =>
+  web.render(
+    () =>
+      fixture.TestLanguage({
+        get children() {
+          return web.createComponent(view, {})
+        },
+      }),
+    host,
+  )
 const cleanups: Array<() => void> = []
 
 afterAll(() => server.close())
@@ -52,7 +63,7 @@ afterEach(() => {
 const mount = (view: () => JSX.Element) => {
   const host = document.createElement("div")
   document.body.append(host)
-  cleanups.push(web.render(view, host))
+  cleanups.push(render(view, host))
   return host
 }
 
@@ -163,7 +174,7 @@ test("treats the mobile pane as a focus-contained modal and restores its opener"
   const host = document.createElement("div")
   const control: { dispose?: () => void } = {}
   document.body.append(host)
-  control.dispose = web.render(
+  control.dispose = render(
     () =>
       pane.RightPaneFrame({
         modal: true,

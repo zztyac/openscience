@@ -63,7 +63,6 @@ describe("Storage settings recovery", () => {
     })
 
     const source = readFileSync(fileURLToPath(new URL("./Storage.tsx", import.meta.url)), "utf8")
-    expect(source).toContain("Resume safely")
     expect(source).not.toContain("aria-valuenow={relocation")
   })
 })

@@ -36,6 +36,5 @@ describe("OpenScience theme gallery", () => {
     expect(general).toContain('data-selected={theme.colorScheme() === option.value ? "true" : undefined}')
     expect(general).not.toContain("themeSwatches")
     expect(general).toContain("theme.setTheme(option.value)")
-    expect(general).toContain('aria-label="Theme"')
   })
 })

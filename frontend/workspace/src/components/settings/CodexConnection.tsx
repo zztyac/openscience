@@ -108,7 +108,7 @@ export const CodexConnection: Component<{
               disabled={busy()}
               onClick={() => void connect()}
             >
-              {busy() ? "Waiting for ChatGPT…" : language.t("settings.models.codexSignIn")}
+              {busy() ? language.t("settings.copy.waitingForChatgpt") : language.t("settings.models.codexSignIn")}
             </Button>
           </span>
         </Show>

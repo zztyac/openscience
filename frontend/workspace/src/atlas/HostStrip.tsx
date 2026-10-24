@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { createMemo, createResource, createSignal, onCleanup, type JSX } from "solid-js"
 import { useSDK } from "@/context/sdk"
 import { hostReading, type Capacity } from "@/atlas/host-instruments"
@@ -11,6 +12,7 @@ type HostStripProps = {
 }
 
 export function HostStrip(props: HostStripProps = {}): JSX.Element {
+  const language = useLanguage()
   const request = props.request ?? useSDK().request
   const kernelRequest = createKernelRouteRequester(request)
   const client = identify()
@@ -30,7 +32,7 @@ export function HostStrip(props: HostStripProps = {}): JSX.Element {
   const reading = createMemo(() => hostReading(data.latest))
   const memoryTotal = createMemo(() =>
     reading().memory === "memory unavailable"
-      ? reading().memory
+      ? language.t("research.compute.memoryUnavailable")
       : reading()
           .memory.replace(/^of /, "/ ")
           .replace(/ memory$/, ""),
@@ -47,26 +49,31 @@ export function HostStrip(props: HostStripProps = {}): JSX.Element {
   })
 
   return (
-    <section class="host-strip" aria-label="Current local compute" data-testid="host-strip" data-health={health()}>
+    <section
+      class="host-strip"
+      aria-label={language.t("research.compute.local")}
+      data-testid="host-strip"
+      data-health={health()}
+    >
       <div class="host-strip__identity">
         <span class="host-strip__glyph" aria-hidden="true">
           <IconCpu size={16} strokeWidth={1.5} />
         </span>
         <div class="host-strip__copy">
-          <strong>This computer</strong>
+          <strong>{language.t("research.compute.computer")}</strong>
           <span>
             {health() === "loading"
-              ? "Reading compute…"
+              ? language.t("research.compute.loading")
               : health() === "unavailable"
-                ? "Usage unavailable"
-                : `${reading().live} active · ${reading().running} running`}
+                ? language.t("research.compute.unavailableUsage")
+                : language.t("research.compute.activityCounts", { active: reading().live, running: reading().running })}
           </span>
         </div>
       </div>
 
-      <div class="host-strip__resources" aria-label="Local compute resources">
+      <div class="host-strip__resources" aria-label={language.t("research.compute.localResources")}>
         <div class="host-strip__metric" data-host-tile="memory">
-          <span class="host-strip__label">Memory</span>
+          <span class="host-strip__label">{language.t("research.compute.memory")}</span>
           <p>
             <strong class="host-strip__headline">{reading().headline}</strong>
             <span class="host-strip__total">{memoryTotal()}</span>
@@ -76,13 +83,31 @@ export function HostStrip(props: HostStripProps = {}): JSX.Element {
         <div class="host-strip__metric" data-host-tile="cpu">
           <span class="host-strip__label">CPU</span>
           <p>
-            <strong class="host-strip__cores-value">{reading().cores}</strong>
-            <span class="host-strip__total">cores</span>
+            <strong class="host-strip__cores-value">
+              {reading().cores.includes(" of ")
+                ? language.t("research.compute.coresOf", {
+                    used: reading().cores.split(" of ")[0],
+                    total: reading().cores.split(" of ")[1],
+                  })
+                : reading().cores}
+            </strong>
+            <span class="host-strip__total">{language.t("research.compute.cores")}</span>
           </p>
           <Meter value={reading().cpuFill} />
         </div>
       </div>
-      <span class="host-strip__health" aria-live="polite" aria-label={health()} />
+      <span
+        class="host-strip__health"
+        aria-live="polite"
+        aria-label={language.t(
+          {
+            loading: "research.compute.loading",
+            available: "research.compute.available",
+            unavailable: "research.compute.unavailableUsage",
+          }[health()] as
+            "research.compute.loading" | "research.compute.available" | "research.compute.unavailableUsage",
+        )}
+      />
     </section>
   )
 }

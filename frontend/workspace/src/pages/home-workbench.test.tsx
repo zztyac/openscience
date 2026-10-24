@@ -19,9 +19,10 @@ const server = await createServer({
     resolve: { conditions: ["browser", "production"] },
   },
 })
-const [subject, web] = await Promise.all([
+const [subject, web, fixture] = await Promise.all([
   server.ssrLoadModule("/src/pages/home-workbench.tsx") as Promise<typeof import("./home-workbench")>,
   server.ssrLoadModule("solid-js/web") as Promise<typeof import("solid-js/web")>,
+  server.ssrLoadModule("/src/pages/language.fixture.tsx") as Promise<typeof import("./language.fixture")>,
 ])
 
 afterAll(() => server.close())
@@ -31,10 +32,21 @@ afterEach(() => {
   document.body.replaceChildren()
 })
 
-const mount = (view: () => JSX.Element) => {
+const mount = (view: () => JSX.Element, onLanguage?: Parameters<typeof fixture.LanguageFixture>[0]["onLanguage"]) => {
   const host = document.createElement("div")
   document.body.append(host)
-  cleanups.push(web.render(view, host))
+  cleanups.push(
+    web.render(
+      () =>
+        fixture.LanguageFixture({
+          get children() {
+            return view()
+          },
+          onLanguage,
+        }),
+      host,
+    ),
+  )
   return host
 }
 
@@ -68,6 +80,39 @@ const props = {
 }
 
 describe("ProjectsWorkbench", () => {
+  test("switches project copy, counts, accessible actions, and relative dates without changing project names", async () => {
+    const current: { language?: ReturnType<typeof import("@/context/language").useLanguage> } = {}
+    const pinned: string[] = []
+    const host = mount(
+      () => subject.ProjectsWorkbench({ ...props, onPin: (project) => pinned.push(project.id) }),
+      (language) => {
+        current.language = language
+      },
+    )
+    expect(host.querySelector("h1")?.textContent).toBe("Projects")
+    current.language!.setLocale("zh")
+    for (let attempt = 0; attempt < 100 && host.querySelector("h1")?.textContent !== "项目"; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    }
+    expect(host.querySelector("h1")?.textContent).toBe("项目")
+    expect(host.querySelector(".science-home__results-summary")?.textContent).toBe("1 个项目")
+    expect(host.querySelector(".science-home__sessions")?.textContent).toBe("4 个会话")
+    expect(host.querySelector("time")?.textContent).toContain("天前")
+    expect(host.querySelector("time")?.textContent).not.toContain("day")
+    host.querySelector<HTMLButtonElement>('button[aria-label="置顶 Gateway"]')?.click()
+    expect(pinned).toEqual(["prj_atlas"])
+    expect(host.querySelector(".science-home__project-copy strong")?.textContent).toBe("Gateway")
+    expect(host.querySelector<HTMLInputElement>("input")?.placeholder).toBe("按名称、文件夹或 ID 搜索项目")
+    current.language!.setLocale("zht")
+    for (let attempt = 0; attempt < 100 && host.querySelector("h1")?.textContent !== "專案"; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    }
+    expect(host.querySelector("h1")?.textContent).toBe("專案")
+    current.language!.setLocale("en")
+    expect(host.querySelector("h1")?.textContent).toBe("Projects")
+    expect(host.querySelector("time")?.textContent).toContain("day")
+  })
+
   test("refreshes activity labels when returning to the app without changing project data", async () => {
     const original = Date.now
     const now = original()

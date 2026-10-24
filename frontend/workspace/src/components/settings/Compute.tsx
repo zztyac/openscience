@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { For, Show, createEffect, createResource, type Component, type JSX, type Setter } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Button } from "@synsci/ui/button"
@@ -109,6 +110,7 @@ const schedulers = [
 ]
 
 const Compute: Component = () => {
+  const language = useLanguage()
   const sdk = useGlobalSDK()
   const platform = usePlatform()
   const dialog = useDialog()
@@ -245,8 +247,8 @@ const Compute: Component = () => {
     if (dirty()) {
       return {
         tone: "neutral",
-        title: "Unsaved default changes",
-        detail: "Save defaults before reviewing a new Modal job.",
+        title: language.t("settings.copy.unsavedDefaultChanges"),
+        detail: language.t("settings.copy.saveDefaultsBeforeReviewingANewModalJob"),
       }
     }
     return current
@@ -269,14 +271,14 @@ const Compute: Component = () => {
 
   const connect = async () => {
     setBusy("modal:connect", true)
-    setConnection({ tone: "neutral", title: "Saving Modal token…" })
+    setConnection({ tone: "neutral", title: language.t("settings.copy.savingModalToken") })
     const next = await call<Info>("/provider/modal", {
       method: "POST",
       body: JSON.stringify({ key: `${token().trim()} : ${secret().trim()}` }),
     }).catch((error) => {
       const detail = message(error)
-      setConnection({ tone: "error", title: "Could not save Modal token", detail })
-      showToast({ title: "Could not save Modal token", description: detail })
+      setConnection({ tone: "error", title: language.t("settings.copy.couldNotSaveModalToken"), detail })
+      showToast({ title: language.t("settings.copy.couldNotSaveModalToken"), description: detail })
       return undefined
     })
     setBusy("modal:connect", false)
@@ -286,23 +288,27 @@ const Compute: Component = () => {
     setSecret("")
     setConnection({
       tone: "success",
-      title: "Modal token saved",
-      detail: "Enable Modal, then test the connection before dispatching jobs.",
+      title: language.t("settings.copy.modalTokenSaved"),
+      detail: language.t("settings.copy.enableModalThenTestTheConnectionBeforeDispatching"),
     })
     showToast({
       variant: "success",
-      title: "Modal token saved",
-      description: "Enable Modal before testing or running.",
+      title: language.t("settings.copy.modalTokenSaved"),
+      description: language.t("settings.copy.enableModalBeforeTestingOrRunning"),
     })
   }
 
   const configure = async () => {
     setBusy("modal:configure", true)
-    setConnection({ tone: "neutral", title: "Configuring Modal…", detail: "Reading the active ~/.modal.toml profile." })
+    setConnection({
+      tone: "neutral",
+      title: language.t("settings.copy.configuringModal"),
+      detail: language.t("settings.copy.readingTheActiveModalTomlProfile"),
+    })
     const next = await call<Info>("/modal/configure", { method: "POST" }).catch((error) => {
       const detail = message(error)
-      setConnection({ tone: "error", title: "Could not configure Modal", detail })
-      showToast({ title: "Could not configure Modal", description: detail })
+      setConnection({ tone: "error", title: language.t("settings.copy.couldNotConfigureModal"), detail })
+      showToast({ title: language.t("settings.copy.couldNotConfigureModal"), description: detail })
       return undefined
     })
     setBusy("modal:configure", false)
@@ -310,26 +316,29 @@ const Compute: Component = () => {
     control.mutate(next)
     setConnection({
       tone: "success",
-      title: "Modal configured and enabled",
-      detail: "The profile is saved. Test the connection to verify it with Modal.",
+      title: language.t("settings.copy.modalConfiguredAndEnabled"),
+      detail: language.t("settings.copy.theProfileIsSavedTestTheConnectionTo"),
     })
     showToast({
       variant: "success",
-      title: "Modal configured and enabled",
-      description: "OpenScience will use the active profile in ~/.modal.toml only for approved Modal operations.",
+      title: language.t("settings.copy.modalConfiguredAndEnabled"),
+      description: language.t("settings.copy.openscienceWillUseTheActiveProfileInModal"),
     })
   }
 
   const toggle = async (enabled: boolean) => {
     setBusy("modal:toggle", true)
-    setConnection({ tone: "neutral", title: enabled ? "Enabling Modal…" : "Disabling Modal…" })
+    setConnection({
+      tone: "neutral",
+      title: enabled ? language.t("settings.copy.enablingModal") : language.t("settings.copy.disablingModal"),
+    })
     const next = await call<Info>("/provider/modal/enabled", {
       method: "POST",
       body: JSON.stringify({ enabled }),
     }).catch((error) => {
       const detail = message(error)
-      setConnection({ tone: "error", title: "Could not update Modal", detail })
-      showToast({ title: "Could not update Modal", description: detail })
+      setConnection({ tone: "error", title: language.t("settings.copy.couldNotUpdateModal"), detail })
+      showToast({ title: language.t("settings.copy.couldNotUpdateModal"), description: detail })
       return undefined
     })
     setBusy("modal:toggle", false)
@@ -337,30 +346,38 @@ const Compute: Component = () => {
     control.mutate(next)
     setConnection({
       tone: "success",
-      title: enabled ? "Modal enabled" : "Modal disabled",
+      title: enabled ? language.t("settings.copy.modalEnabled") : language.t("settings.copy.modalDisabled"),
       detail: enabled
-        ? "Connection not tested since enabling. Select Test connection to verify it."
-        : "Credential resolution and new Modal dispatches are blocked.",
+        ? language.t("settings.copy.connectionNotTestedSinceEnablingSelectTestConnection")
+        : language.t("settings.copy.credentialResolutionAndNewModalDispatchesAreBlocked"),
     })
   }
 
   const check = async () => {
     setBusy("modal:check", true)
-    setConnection({ tone: "neutral", title: "Checking Modal connection…", detail: "Verifying the configured profile." })
+    setConnection({
+      tone: "neutral",
+      title: language.t("settings.copy.checkingModalConnection"),
+      detail: language.t("settings.copy.verifyingTheConfiguredProfile"),
+    })
     const result = await call<{ ok: true; sdk: string }>("/modal/check", { method: "POST" }).catch((error) => {
       const detail = message(error)
-      setConnection({ tone: "error", title: "Connection check failed", detail })
-      showToast({ title: "Modal connection failed", description: detail })
+      setConnection({ tone: "error", title: language.t("settings.copy.connectionCheckFailed"), detail })
+      showToast({ title: language.t("settings.copy.modalConnectionFailed"), description: detail })
       return undefined
     })
     setBusy("modal:check", false)
     if (!result) return
     setConnection({
       tone: "success",
-      title: "Connection verified",
+      title: language.t("settings.copy.connectionVerified"),
       detail: `Modal accepted this profile using SDK ${result.sdk}.`,
     })
-    showToast({ variant: "success", title: "Modal is ready", description: `Connected with Modal SDK ${result.sdk}.` })
+    showToast({
+      variant: "success",
+      title: language.t("settings.copy.modalIsReady"),
+      description: `Connected with Modal SDK ${result.sdk}.`,
+    })
   }
 
   const saveModal = async () => {
@@ -368,24 +385,30 @@ const Compute: Component = () => {
     if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1_440) {
       setDefaults({
         tone: "error",
-        title: "Defaults not saved",
-        detail: "Use a whole-number timeout from 1 to 1440 minutes.",
+        title: language.t("settings.copy.defaultsNotSaved"),
+        detail: language.t("settings.copy.useAWholeNumberTimeoutFrom1To"),
       })
-      showToast({ title: "Invalid Modal timeout", description: "Use a whole number from 1 to 1440 minutes." })
+      showToast({
+        title: language.t("settings.copy.invalidModalTimeout"),
+        description: language.t("settings.copy.useAWholeNumberFrom1To1440"),
+      })
       return
     }
     const limit = Number(concurrency())
     if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
       setDefaults({
         tone: "error",
-        title: "Defaults not saved",
-        detail: "Use a whole-number concurrent job limit from 1 to 100.",
+        title: language.t("settings.copy.defaultsNotSaved"),
+        detail: language.t("settings.copy.useAWholeNumberConcurrentJobLimitFrom"),
       })
-      showToast({ title: "Invalid Modal concurrency", description: "Use a whole number from 1 to 100." })
+      showToast({
+        title: language.t("settings.copy.invalidModalConcurrency"),
+        description: language.t("settings.copy.useAWholeNumberFrom1To100"),
+      })
       return
     }
     setBusy("modal:save", true)
-    setDefaults({ tone: "neutral", title: "Saving Modal defaults…" })
+    setDefaults({ tone: "neutral", title: language.t("settings.copy.savingModalDefaults") })
     const next = await call<Info>("/modal", {
       method: "PATCH",
       body: JSON.stringify({
@@ -397,8 +420,8 @@ const Compute: Component = () => {
       }),
     }).catch((error) => {
       const detail = message(error)
-      setDefaults({ tone: "error", title: "Defaults not saved", detail })
-      showToast({ title: "Could not save Modal defaults", description: detail })
+      setDefaults({ tone: "error", title: language.t("settings.copy.defaultsNotSaved"), detail })
+      showToast({ title: language.t("settings.copy.couldNotSaveModalDefaults"), description: detail })
       return undefined
     })
     setBusy("modal:save", false)
@@ -406,16 +429,16 @@ const Compute: Component = () => {
     control.mutate(next)
     setDefaults({
       tone: "success",
-      title: "Defaults saved",
-      detail: "New Modal job reviews will use these values.",
+      title: language.t("settings.copy.defaultsSaved"),
+      detail: language.t("settings.copy.newModalJobReviewsWillUseTheseValues"),
     })
-    showToast({ variant: "success", title: "Modal defaults saved" })
+    showToast({ variant: "success", title: language.t("settings.copy.modalDefaultsSaved") })
   }
 
   const repairEnvironments = async () => {
     setBusy("environments:repair", true)
     const next = await call<Info>("/environments/repair", { method: "POST" }).catch(async (error) => {
-      showToast({ title: "Environment setup failed", description: message(error) })
+      showToast({ title: language.t("settings.copy.environmentSetupFailed"), description: message(error) })
       // The card reads the recorded failure; refresh so it names the reason.
       await control.refetch()
       return undefined
@@ -423,7 +446,7 @@ const Compute: Component = () => {
     setBusy("environments:repair", false)
     if (!next) return
     control.mutate(next)
-    showToast({ variant: "success", title: "Scientific environments are ready" })
+    showToast({ variant: "success", title: language.t("settings.copy.scientificEnvironmentsAreReady") })
   }
 
   const saveProvider = async (item: Provider) => {
@@ -448,8 +471,8 @@ const Compute: Component = () => {
       variant: "success",
       title: `${item.name} credential saved`,
       description: saved?.enabled
-        ? "Enabled. Test connection must approve an administrator-managed executable before agents can use the read-only broker."
-        : "Saved encrypted and off. Generic agent processes cannot access it.",
+        ? language.t("settings.copy.enabledTestConnectionMustApproveAnAdministratorManaged")
+        : language.t("settings.copy.savedEncryptedAndOffGenericAgentProcessesCannot"),
     })
   }
 
@@ -471,8 +494,8 @@ const Compute: Component = () => {
       variant: "success",
       title: enabled ? `${item.name} credential enabled` : `${item.name} credential is off`,
       description: enabled
-        ? "A reviewed provider-specific broker may resolve it. Bash, Task, kernels, and local MCP cannot."
-        : "Provider-specific brokers cannot resolve this credential.",
+        ? language.t("settings.copy.aReviewedProviderSpecificBrokerMayResolveIt")
+        : language.t("settings.copy.providerSpecificBrokersCannotResolveThisCredential"),
     })
   }
 
@@ -508,8 +531,8 @@ const Compute: Component = () => {
   const removeProvider = async (item: Provider) => {
     const confirmed = await confirmDialog(dialog, {
       title: `Remove ${item.name} credential?`,
-      message: "This removes the encrypted credential. It does not change cloud resources.",
-      confirmLabel: "Remove credential",
+      message: language.t("settings.copy.thisRemovesTheEncryptedCredentialItDoesNot"),
+      confirmLabel: language.t("settings.copy.removeCredential"),
       danger: true,
     })
     if (!confirmed) return
@@ -543,12 +566,18 @@ const Compute: Component = () => {
   const add = async () => {
     const parsedPort = port().trim() ? Number(port()) : undefined
     if (parsedPort !== undefined && (!Number.isInteger(parsedPort) || parsedPort < 1 || parsedPort > 65_535)) {
-      showToast({ title: "Invalid SSH port", description: "Use a port between 1 and 65535." })
+      showToast({
+        title: language.t("settings.copy.invalidSshPort"),
+        description: language.t("settings.copy.useAPortBetween1And65535"),
+      })
       return
     }
     const limit = Number(sshConcurrency())
     if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
-      showToast({ title: "Invalid SSH concurrency", description: "Use a whole number from 1 to 100." })
+      showToast({
+        title: language.t("settings.copy.invalidSshConcurrency"),
+        description: language.t("settings.copy.useAWholeNumberFrom1To100"),
+      })
       return
     }
     setBusy("ssh:add", true)
@@ -567,14 +596,18 @@ const Compute: Component = () => {
         concurrency: limit,
       }),
     }).catch((error) => {
-      showToast({ title: "Could not add SSH host", description: message(error) })
+      showToast({ title: language.t("settings.copy.couldNotAddSshHost"), description: message(error) })
       return undefined
     })
     setBusy("ssh:add", false)
     if (!next) return
     control.mutate(next)
     reset()
-    showToast({ variant: "success", title: "SSH host added", description: "Test the connection before dispatch." })
+    showToast({
+      variant: "success",
+      title: language.t("settings.copy.sshHostAdded"),
+      description: language.t("settings.copy.testTheConnectionBeforeDispatch"),
+    })
   }
 
   const test = async (item: Host) => {
@@ -615,13 +648,17 @@ const Compute: Component = () => {
         concurrency: 4,
       }),
     }).catch((error) => {
-      showToast({ title: "Could not import SSH host", description: message(error) })
+      showToast({ title: language.t("settings.copy.couldNotImportSshHost"), description: message(error) })
       return undefined
     })
     setBusy(busyKey, false)
     if (!next) return
     control.mutate(next)
-    showToast({ variant: "success", title: `${item.alias} imported`, description: "Test it to pin the host key." })
+    showToast({
+      variant: "success",
+      title: `${item.alias} imported`,
+      description: language.t("settings.copy.testItToPinTheHostKey"),
+    })
   }
 
   const beginNotes = (item: Host) => {
@@ -641,28 +678,28 @@ const Compute: Component = () => {
       method: "PATCH",
       body: JSON.stringify({ notes: notesDraft().trim() }),
     }).catch((error) => {
-      showToast({ title: "Could not save host notes", description: message(error) })
+      showToast({ title: language.t("settings.copy.couldNotSaveHostNotes"), description: message(error) })
       return undefined
     })
     setBusy(busyKey, false)
     if (!next) return
     control.mutate(next)
     cancelNotes()
-    showToast({ variant: "success", title: "Host notes saved" })
+    showToast({ variant: "success", title: language.t("settings.copy.hostNotesSaved") })
   }
 
   const remove = async (item: Host) => {
     const confirmed = await confirmDialog(dialog, {
       title: `Remove ${item.label}?`,
-      message: "This removes the saved connection profile. It does not change or delete anything on the remote host.",
-      confirmLabel: "Remove host",
+      message: language.t("settings.copy.thisRemovesTheSavedConnectionProfileItDoes"),
+      confirmLabel: language.t("settings.copy.removeHost"),
       danger: true,
     })
     if (!confirmed) return
     const busyKey = `ssh:remove:${item.id}`
     setBusy(busyKey, true)
     const next = await call<Info>(`/ssh/${item.id}`, { method: "DELETE" }).catch((error) => {
-      showToast({ title: "Could not remove SSH host", description: message(error) })
+      showToast({ title: language.t("settings.copy.couldNotRemoveSshHost"), description: message(error) })
       return undefined
     })
     setBusy(busyKey, false)
@@ -674,32 +711,39 @@ const Compute: Component = () => {
   return (
     <PanelScroll>
       <div class="settings-preferences-panel settings-preferences-panel--compute">
-        <PanelHeader title="Compute" description="Choose where agent-managed Python, R, shell, and batch work runs." />
+        <PanelHeader
+          title={language.t("settings.shell.panel.compute")}
+          description={language.t("settings.copy.chooseWhereAgentManagedPythonRShellAnd")}
+        />
         <PanelBody>
           <Section
-            title="Local runtimes"
-            description="OpenScience owns shared, reproducible starter environments and keeps your system Python, R, and shell untouched."
+            title={language.t("settings.copy.localRuntimes")}
+            description={language.t("settings.copy.openscienceOwnsSharedReproducibleStarterEnvironmentsAndKeeps")}
           >
             <Card>
               <div class="settings-row settings-compute-summary-row">
                 <RowCopy
-                  title="Python starter"
-                  description="Python 3.11 with NumPy, pandas, SciPy, Matplotlib, Seaborn, and Pillow. Variables persist for the session."
+                  title={language.t("settings.copy.pythonStarter")}
+                  description={language.t("settings.copy.python311WithNumpyPandasScipyMatplotlib")}
                 />
                 <div class="settings-compute-summary-action">
                   <Badge tone={environment("python")?.ready ? "ready" : "muted"}>
-                    {environment("python")?.ready ? "Ready" : "Setup needed"}
+                    {environment("python")?.ready
+                      ? language.t("settings.copy.ready")
+                      : language.t("settings.copy.setupNeeded")}
                   </Badge>
                 </div>
               </div>
               <div class="settings-row settings-compute-summary-row">
                 <RowCopy
-                  title="R starter"
-                  description="R with tidyverse, ggplot2, and jsonlite. It is isolated from your system R libraries."
+                  title={language.t("settings.copy.rStarter")}
+                  description={language.t("settings.copy.rWithTidyverseGgplot2AndJsonliteItIs")}
                 />
                 <div class="settings-compute-summary-action">
                   <Badge tone={environment("r")?.ready ? "ready" : "muted"}>
-                    {environment("r")?.ready ? "Ready" : "Setup needed"}
+                    {environment("r")?.ready
+                      ? language.t("settings.copy.ready")
+                      : language.t("settings.copy.setupNeeded")}
                   </Badge>
                 </div>
               </div>
@@ -708,12 +752,12 @@ const Compute: Component = () => {
                   <div class="settings-list-copy min-w-0 flex-1">
                     <strong>
                       {data()?.environments.status === "failed"
-                        ? "Starter setup needs attention"
-                        : "Preparing environments"}
+                        ? language.t("settings.copy.starterSetupNeedsAttention")
+                        : language.t("settings.copy.preparingEnvironments")}
                     </strong>
                     <span>
                       {data()?.environments.error ??
-                        "First setup downloads micromamba and creates the Python and R starters under ~/.openscience/conda."}
+                        language.t("settings.copy.firstSetupDownloadsMicromambaAndCreatesThePython")}
                     </span>
                   </div>
                   <Button
@@ -722,14 +766,16 @@ const Compute: Component = () => {
                     disabled={isBusy("environments:repair")}
                     onClick={() => void repairEnvironments()}
                   >
-                    {isBusy("environments:repair") ? "Preparing…" : "Set up or repair"}
+                    {isBusy("environments:repair")
+                      ? language.t("settings.copy.preparing")
+                      : language.t("settings.copy.setUpOrRepair")}
                   </Button>
                 </div>
               </Show>
             </Card>
           </Section>
 
-          <Section title="Modal" description="Connect Modal for approved jobs in isolated cloud sandboxes.">
+          <Section title="Modal" description={language.t("settings.copy.connectModalForApprovedJobsInIsolatedCloud")}>
             <Card>
               <div class="settings-compute-card" aria-busy={modalBusy() ? "true" : undefined}>
                 <div class="settings-compute-provider-row">
@@ -741,25 +787,27 @@ const Compute: Component = () => {
                     <span class="text-12-regular text-text-weak">
                       {modal()?.connected
                         ? modal()?.source === "modal_toml"
-                          ? "Active profile from ~/.modal.toml"
-                          : "Token stored locally and encrypted."
+                          ? language.t("settings.copy.activeProfileFromModalToml")
+                          : language.t("settings.copy.tokenStoredLocallyAndEncrypted")
                         : data()?.modal_file.ready
-                          ? "Modal CLI configuration found at ~/.modal.toml. Token values stay in that file."
+                          ? language.t("settings.copy.modalCliConfigurationFoundAtModalTomlToken")
                           : data()?.modal_file.found
-                            ? "Modal config found, but its active profile has no usable token."
-                            : "Enter the token ID and secret from Modal."}
+                            ? language.t("settings.copy.modalConfigFoundButItsActiveProfileHas")
+                            : language.t("settings.copy.enterTheTokenIdAndSecretFromModal")}
                     </span>
                   </div>
                   <Show when={modal()?.connected}>
                     <div class="settings-compute-actions">
-                      <span class="settings-row-status">{modal()?.enabled ? "Enabled" : "Off"}</span>
+                      <span class="settings-row-status">
+                        {modal()?.enabled ? language.t("settings.copy.enabled") : language.t("settings.copy.off")}
+                      </span>
                       <Switch
                         hideLabel
                         checked={modal()?.enabled ?? false}
                         disabled={modalBusy()}
                         onChange={(value) => void toggle(value)}
                       >
-                        Enable Modal
+                        {language.t("settings.copy.enableModal")}
                       </Switch>
                     </div>
                   </Show>
@@ -772,7 +820,9 @@ const Compute: Component = () => {
                         disabled={modalBusy()}
                         onClick={() => void configure()}
                       >
-                        {isBusy("modal:configure") ? "Configuring…" : "Use this profile"}
+                        {isBusy("modal:configure")
+                          ? language.t("settings.copy.configuring")
+                          : language.t("settings.copy.useThisProfile")}
                       </Button>
                     </div>
                   </Show>
@@ -781,9 +831,14 @@ const Compute: Component = () => {
                 <Show when={!data.loading && !modal()?.connected && !data()?.modal_file.ready}>
                   <div class="flex flex-col gap-2">
                     <div class="settings-form-grid">
-                      <Field label="Modal token ID" value={token()} placeholder="ak-…" onInput={setToken} />
                       <Field
-                        label="Modal token secret"
+                        label={language.t("settings.copy.modalTokenId")}
+                        value={token()}
+                        placeholder="ak-…"
+                        onInput={setToken}
+                      />
+                      <Field
+                        label={language.t("settings.copy.modalTokenSecret")}
                         value={secret()}
                         placeholder="as-…"
                         type="password"
@@ -798,22 +853,34 @@ const Compute: Component = () => {
                         disabled={!token().trim() || !secret().trim() || modalBusy()}
                         onClick={() => void connect()}
                       >
-                        {isBusy("modal:connect") ? "Saving…" : "Save token"}
+                        {isBusy("modal:connect")
+                          ? language.t("settings.copy.saving2")
+                          : language.t("settings.copy.saveToken")}
                       </Button>
                     </div>
                   </div>
                 </Show>
                 <Show when={modal()?.connected}>
                   <div class="settings-list-header">
-                    <h4 class="text-12-medium text-text-weak">Job defaults</h4>
+                    <h4 class="text-12-medium text-text-weak">{language.t("settings.copy.jobDefaults")}</h4>
                   </div>
                   <div class="settings-form-grid">
-                    <Field label="Modal app" value={app()} placeholder="openscience" onInput={setApp} />
-                    <Field label="Default image" value={image()} placeholder="python:3.12-slim" onInput={setImage} />
+                    <Field
+                      label={language.t("settings.copy.modalApp")}
+                      value={app()}
+                      placeholder="openscience"
+                      onInput={setApp}
+                    />
+                    <Field
+                      label={language.t("settings.copy.defaultImage")}
+                      value={image()}
+                      placeholder="python:3.12-slim"
+                      onInput={setImage}
+                    />
                     <div class="flex min-w-0 flex-col gap-1.5">
-                      <span class="text-12-medium text-text-strong">Network</span>
+                      <span class="text-12-medium text-text-strong">{language.t("settings.shell.panel.network")}</span>
                       <Select
-                        aria-label="Modal network"
+                        aria-label={language.t("settings.copy.modalNetwork")}
                         options={networks}
                         current={networks.find((item) => item.value === network())}
                         value={(item) => item.value}
@@ -825,14 +892,14 @@ const Compute: Component = () => {
                       />
                     </div>
                     <Field
-                      label="Default timeout (minutes)"
+                      label={language.t("settings.copy.defaultTimeoutMinutes")}
                       value={timeout()}
                       placeholder="60"
                       inputMode="numeric"
                       onInput={setTimeout}
                     />
                     <Field
-                      label="Concurrent jobs"
+                      label={language.t("settings.copy.concurrentJobs")}
                       value={concurrency()}
                       placeholder="10"
                       inputMode="numeric"
@@ -849,7 +916,9 @@ const Compute: Component = () => {
                       disabled={!modal()?.enabled || modalBusy()}
                       onClick={() => void check()}
                     >
-                      {isBusy("modal:check") ? "Testing…" : "Test connection"}
+                      {isBusy("modal:check")
+                        ? language.t("settings.copy.testing")
+                        : language.t("settings.copy.testConnection")}
                     </Button>
                     <Button
                       class="settings-panel-action"
@@ -858,11 +927,13 @@ const Compute: Component = () => {
                       disabled={!app().trim() || !image().trim() || modalBusy()}
                       onClick={() => void saveModal()}
                     >
-                      {isBusy("modal:save") ? "Saving…" : "Save defaults"}
+                      {isBusy("modal:save")
+                        ? language.t("settings.copy.saving2")
+                        : language.t("settings.copy.saveDefaults")}
                     </Button>
                   </div>
                   <p class="text-12-regular text-text-weak">
-                    Credentials stay local. Every dispatch still requires approval.
+                    {language.t("settings.copy.credentialsStayLocalEveryDispatchStillRequiresApproval")}
                   </p>
                 </Show>
               </div>
@@ -870,8 +941,8 @@ const Compute: Component = () => {
           </Section>
 
           <Section
-            title="GPU provider credentials"
-            description="Encrypted credentials for reviewed read-only agent operations. They never enter agent shells, and paid or mutating actions stay unavailable."
+            title={language.t("settings.copy.gpuProviderCredentials")}
+            description={language.t("settings.copy.encryptedCredentialsForReviewedReadOnlyAgentOperations")}
           >
             <Card>
               <For each={cliProviders()}>
@@ -879,7 +950,11 @@ const Compute: Component = () => {
                   const rowBusy = () =>
                     hasBusyPrefix(`provider:`) && Object.keys(state.busy).some((key) => key.endsWith(item.id))
                   const status = () =>
-                    item.connected ? (item.enabled ? "Enabled for broker" : "Credential saved · off") : "Not configured"
+                    item.connected
+                      ? item.enabled
+                        ? language.t("settings.copy.enabledForBroker")
+                        : language.t("settings.copy.credentialSavedOff")
+                      : language.t("settings.copy.notConfigured")
                   return (
                     <div class="settings-list-item" aria-busy={rowBusy() ? "true" : undefined}>
                       <div class="settings-list-row">
@@ -893,7 +968,13 @@ const Compute: Component = () => {
                           >
                             {item.hint}
                             <Show when={item.last_used}>
-                              {(value) => <> Last used {new Date(value()).toLocaleDateString()}.</>}
+                              {(value) => (
+                                <>
+                                  {" "}
+                                  {language.t("settings.copy.lastUsed")}
+                                  {new Date(value()).toLocaleDateString()}.
+                                </>
+                              )}
                             </Show>
                           </span>
                         </div>
@@ -906,7 +987,8 @@ const Compute: Component = () => {
                               disabled={rowBusy()}
                               onChange={(enabled) => void toggleProvider(item, enabled)}
                             >
-                              Enable {item.name} credential
+                              {language.t("settings.copy.enable")}
+                              {item.name} {language.t("settings.copy.credential")}
                             </Switch>
                             <Button
                               class="settings-panel-action settings-panel-action--quiet"
@@ -916,7 +998,7 @@ const Compute: Component = () => {
                               aria-label={`Remove ${item.name} credential`}
                               onClick={() => void removeProvider(item)}
                             >
-                              Remove
+                              {language.t("settings.providerKeys.remove")}
                             </Button>
                           </Show>
                           <Show when={item.enabled}>
@@ -927,7 +1009,9 @@ const Compute: Component = () => {
                               disabled={rowBusy()}
                               onClick={() => void checkProvider(item)}
                             >
-                              {isBusy(`provider:check:${item.id}`) ? "Testing…" : "Test connection"}
+                              {isBusy(`provider:check:${item.id}`)
+                                ? language.t("settings.copy.testing")
+                                : language.t("settings.copy.testConnection")}
                             </Button>
                           </Show>
                           <Button
@@ -940,7 +1024,11 @@ const Compute: Component = () => {
                               setState("editingProvider", editingProvider() === item.id ? undefined : item.id)
                             }}
                           >
-                            {editingProvider() === item.id ? "Cancel" : item.connected ? "Update" : "Add credential"}
+                            {editingProvider() === item.id
+                              ? language.t("common.cancel")
+                              : item.connected
+                                ? language.t("settings.copy.update")
+                                : language.t("settings.copy.addCredential")}
                           </Button>
                         </div>
                       </div>
@@ -960,13 +1048,16 @@ const Compute: Component = () => {
                               spellcheck={false}
                               disabled={rowBusy()}
                               value={providerKey(item.id)}
-                              placeholder={item.connected ? "Enter a replacement credential" : item.placeholder}
+                              placeholder={
+                                item.connected
+                                  ? language.t("settings.copy.enterAReplacementCredential")
+                                  : item.placeholder
+                              }
                               onInput={(event) => setProviderKey(item.id, event.currentTarget.value)}
                             />
                           </label>
                           <p class="text-12-regular text-text-weak">
-                            Stored encrypted. Saving a new credential leaves this bridge off; updating preserves its
-                            current on/off state. No provider API call or paid resource is created here.
+                            {language.t("settings.copy.storedEncryptedSavingANewCredentialLeavesThis")}
                           </p>
                           <div class="credential-form-actions max-w-full flex-wrap">
                             <Button
@@ -975,7 +1066,9 @@ const Compute: Component = () => {
                               variant="primary"
                               disabled={rowBusy() || !providerKey(item.id).trim()}
                             >
-                              {isBusy(`provider:save:${item.id}`) ? "Saving…" : "Save credential"}
+                              {isBusy(`provider:save:${item.id}`)
+                                ? language.t("settings.copy.saving2")
+                                : language.t("settings.copy.saveCredential")}
                             </Button>
                             <Button
                               type="button"
@@ -984,7 +1077,7 @@ const Compute: Component = () => {
                               disabled={rowBusy()}
                               onClick={() => platform.openLink(item.credential.docs_url)}
                             >
-                              Official setup docs
+                              {language.t("settings.copy.officialSetupDocs")}
                             </Button>
                           </div>
                         </form>
@@ -999,7 +1092,8 @@ const Compute: Component = () => {
                             >
                               {result().ok
                                 ? `Verified with ${result().command}. No resource was created.`
-                                : (result().error ?? "The native connection check did not complete.")}
+                                : (result().error ??
+                                  language.t("settings.copy.theNativeConnectionCheckDidNotComplete"))}
                             </p>
                           </div>
                         )}
@@ -1012,15 +1106,19 @@ const Compute: Component = () => {
           </Section>
 
           <Section
-            title="Remote hosts"
-            description="Pin a host key, then dispatch staged jobs through your active SSH agent. A selected identity file and data-only ProxyJump are optional."
+            title={language.t("settings.copy.remoteHosts")}
+            description={language.t("settings.copy.pinAHostKeyThenDispatchStagedJobs")}
           >
             <div class="settings-compute-remote" aria-busy={hasBusyPrefix("ssh:") ? "true" : undefined}>
               <Show
                 when={!data.loading}
                 fallback={
                   <Card>
-                    <div class="settings-panel-loading__rows" role="status" aria-label="Loading SSH hosts">
+                    <div
+                      class="settings-panel-loading__rows"
+                      role="status"
+                      aria-label={language.t("settings.copy.loadingSshHosts")}
+                    >
                       <span />
                       <span />
                     </div>
@@ -1033,8 +1131,8 @@ const Compute: Component = () => {
                     <Card>
                       <div class="settings-row settings-compute-summary-row">
                         <RowCopy
-                          title="No remote hosts connected"
-                          description="Add a plain SSH, Slurm, or PBS host, then run a real connection check."
+                          title={language.t("settings.copy.noRemoteHostsConnected")}
+                          description={language.t("settings.copy.addAPlainSshSlurmOrPbsHost")}
                         />
                         <div class="settings-compute-summary-action">
                           <Button
@@ -1044,7 +1142,7 @@ const Compute: Component = () => {
                             disabled={sshMutationBusy()}
                             onClick={() => setAdding(true)}
                           >
-                            Add host
+                            {language.t("settings.copy.addHost")}
                           </Button>
                         </div>
                       </div>
@@ -1070,7 +1168,9 @@ const Compute: Component = () => {
                                   </Show>
                                   <Show when={item.identity_file || item.proxy_jump}>
                                     <p class="mt-1 truncate text-12-regular text-text-weak">
-                                      {item.identity_file ? `Identity ${item.identity_file}` : "SSH agent"}
+                                      {item.identity_file
+                                        ? `Identity ${item.identity_file}`
+                                        : language.t("settings.copy.sshAgent")}
                                       {item.proxy_jump ? ` · via ${item.proxy_jump}` : ""}
                                     </p>
                                   </Show>
@@ -1091,7 +1191,8 @@ const Compute: Component = () => {
                                   </Show>
                                   <Show when={item.fingerprint}>
                                     <p class="mt-1 truncate text-12-regular text-text-weak" title={item.fingerprint}>
-                                      {item.fingerprint} · {item.concurrency} concurrent job
+                                      {item.fingerprint} · {item.concurrency}{" "}
+                                      {language.t("settings.copy.concurrentJob")}
                                       {item.concurrency === 1 ? "" : "s"}
                                     </p>
                                   </Show>
@@ -1100,9 +1201,9 @@ const Compute: Component = () => {
                               <div class="settings-compute-host-actions">
                                 <span class="settings-row-status">
                                   {probe()?.ok
-                                    ? "Ready to dispatch"
+                                    ? language.t("settings.copy.readyToDispatch")
                                     : item.fingerprint
-                                      ? "Host key pinned"
+                                      ? language.t("settings.copy.hostKeyPinned")
                                       : schedulerLabel(item.scheduler)}
                                 </span>
                                 <Button
@@ -1112,7 +1213,9 @@ const Compute: Component = () => {
                                   disabled={hostBusy(item.id) || sshMutationBusy()}
                                   onClick={() => void test(item)}
                                 >
-                                  {isBusy(`ssh:test:${item.id}`) ? "Testing…" : "Test"}
+                                  {isBusy(`ssh:test:${item.id}`)
+                                    ? language.t("settings.copy.testing")
+                                    : language.t("settings.copy.test")}
                                 </Button>
                                 <Button
                                   class="settings-panel-action settings-panel-action--quiet"
@@ -1121,7 +1224,7 @@ const Compute: Component = () => {
                                   disabled={hostBusy(item.id) || sshMutationBusy()}
                                   onClick={() => beginNotes(item)}
                                 >
-                                  Edit notes
+                                  {language.t("settings.copy.editNotes")}
                                 </Button>
                                 <Button
                                   class="settings-panel-action settings-panel-action--danger-quiet"
@@ -1130,7 +1233,7 @@ const Compute: Component = () => {
                                   disabled={hostBusy(item.id) || sshMutationBusy()}
                                   onClick={() => void remove(item)}
                                 >
-                                  Remove
+                                  {language.t("settings.providerKeys.remove")}
                                 </Button>
                               </div>
                             </div>
@@ -1143,12 +1246,14 @@ const Compute: Component = () => {
                                 }}
                               >
                                 <TextArea
-                                  label="Host notes"
+                                  label={language.t("settings.copy.hostNotes")}
                                   value={notesDraft()}
-                                  placeholder="Modules, partitions, scratch paths, or installation rules"
+                                  placeholder={language.t(
+                                    "settings.copy.modulesPartitionsScratchPathsOrInstallationRules",
+                                  )}
                                   onInput={setNotesDraft}
                                 />
-                                <p>Advisory only. Notes are shown during review and never run as commands.</p>
+                                <p>{language.t("settings.copy.advisoryOnlyNotesAreShownDuringReviewAnd")}</p>
                                 <div class="settings-inline-editor__actions">
                                   <Button
                                     class="settings-panel-action settings-panel-action--quiet"
@@ -1158,7 +1263,7 @@ const Compute: Component = () => {
                                     disabled={isBusy(`ssh:update:${item.id}`)}
                                     onClick={cancelNotes}
                                   >
-                                    Cancel
+                                    {language.t("common.cancel")}
                                   </Button>
                                   <Button
                                     class="settings-panel-action"
@@ -1167,7 +1272,9 @@ const Compute: Component = () => {
                                     variant="primary"
                                     disabled={isBusy(`ssh:update:${item.id}`)}
                                   >
-                                    {isBusy(`ssh:update:${item.id}`) ? "Saving…" : "Save notes"}
+                                    {isBusy(`ssh:update:${item.id}`)
+                                      ? language.t("settings.copy.saving2")
+                                      : language.t("settings.copy.saveNotes")}
                                   </Button>
                                 </div>
                               </form>
@@ -1184,11 +1291,8 @@ const Compute: Component = () => {
                 <div class="settings-compute-config-import">
                   <div class="settings-section-heading">
                     <div>
-                      <h3>From ~/.ssh/config</h3>
-                      <p>
-                        Literal host entries only, plus bounded Includes. Imports safe identity files and ProxyJump
-                        values; Match blocks are ignored and proxy commands are never evaluated.
-                      </p>
+                      <h3>{language.t("settings.copy.fromSshConfig")}</h3>
+                      <p>{language.t("settings.copy.literalHostEntriesOnlyPlusBoundedIncludesImports")}</p>
                     </div>
                   </div>
                   <Card>
@@ -1213,7 +1317,9 @@ const Compute: Component = () => {
                               disabled={sshMutationBusy() || isBusy(`ssh:import:${item.alias}`)}
                               onClick={() => void importHost(item)}
                             >
-                              {isBusy(`ssh:import:${item.alias}`) ? "Importing…" : "Import"}
+                              {isBusy(`ssh:import:${item.alias}`)
+                                ? language.t("settings.copy.importing")
+                                : language.t("settings.copy.import")}
                             </Button>
                           </div>
                         </div>
@@ -1231,7 +1337,7 @@ const Compute: Component = () => {
                   disabled={sshMutationBusy()}
                   onClick={() => setAdding(true)}
                 >
-                  Add another host
+                  {language.t("settings.copy.addAnotherHost")}
                 </Button>
               </Show>
 
@@ -1245,34 +1351,54 @@ const Compute: Component = () => {
                 >
                   <div class="flex items-start gap-3">
                     <div class="min-w-0">
-                      <h4 class="text-14-medium text-text-strong">New SSH host</h4>
+                      <h4 class="text-14-medium text-text-strong">{language.t("settings.copy.newSshHost")}</h4>
                       <p class="mt-0.5 text-12-regular text-text-weak">
-                        OpenScience pins tested host keys and uses your agent or a selected private-key path. Key bytes
-                        are never copied into OpenScience storage.
+                        {language.t("settings.copy.opensciencePinsTestedHostKeysAndUsesYour")}
                       </p>
                     </div>
                   </div>
                   <div class="settings-form-grid">
-                    <Field label="Name" value={label()} placeholder="Lab cluster" onInput={setLabel} />
-                    <Field label="Hostname" value={host()} placeholder="hpc.example.edu" onInput={setHost} />
-                    <Field label="User" value={user()} placeholder="Optional" onInput={setUser} />
-                    <Field label="Port" value={port()} placeholder="22" inputMode="numeric" onInput={setPort} />
                     <Field
-                      label="Identity file"
+                      label={language.t("dialog.project.edit.name")}
+                      value={label()}
+                      placeholder={language.t("settings.copy.labCluster")}
+                      onInput={setLabel}
+                    />
+                    <Field
+                      label={language.t("settings.copy.hostname")}
+                      value={host()}
+                      placeholder="hpc.example.edu"
+                      onInput={setHost}
+                    />
+                    <Field
+                      label={language.t("context.breakdown.user")}
+                      value={user()}
+                      placeholder={language.t("settings.copy.optional")}
+                      onInput={setUser}
+                    />
+                    <Field
+                      label={language.t("settings.copy.port")}
+                      value={port()}
+                      placeholder="22"
+                      inputMode="numeric"
+                      onInput={setPort}
+                    />
+                    <Field
+                      label={language.t("settings.copy.identityFile")}
                       value={identityFile()}
-                      placeholder="~/.ssh/id_ed25519 (optional)"
+                      placeholder={language.t("settings.copy.sshIdEd25519Optional")}
                       onInput={setIdentityFile}
                     />
                     <Field
                       label="ProxyJump"
                       value={proxyJump()}
-                      placeholder="user@bastion.example.org:22 (optional)"
+                      placeholder={language.t("settings.copy.userBastionExampleOrg22Optional")}
                       onInput={setProxyJump}
                     />
                     <label class="flex min-w-0 flex-col gap-1.5">
-                      <span class="text-12-medium text-text-strong">Scheduler</span>
+                      <span class="text-12-medium text-text-strong">{language.t("settings.copy.scheduler")}</span>
                       <Select
-                        aria-label="Scheduler"
+                        aria-label={language.t("settings.copy.scheduler")}
                         options={schedulers}
                         current={schedulers.find((item) => item.value === scheduler())}
                         value={(item) => item.value}
@@ -1284,13 +1410,13 @@ const Compute: Component = () => {
                       />
                     </label>
                     <Field
-                      label="Remote working directory"
+                      label={language.t("settings.copy.remoteWorkingDirectory")}
                       value={workdir()}
                       placeholder="~/research"
                       onInput={setWorkdir}
                     />
                     <Field
-                      label="Concurrent jobs"
+                      label={language.t("settings.copy.concurrentJobs")}
                       value={sshConcurrency()}
                       placeholder="4"
                       inputMode="numeric"
@@ -1298,9 +1424,9 @@ const Compute: Component = () => {
                     />
                     <div data-span="full">
                       <TextArea
-                        label="Host notes"
+                        label={language.t("settings.copy.hostNotes")}
                         value={notes()}
-                        placeholder="Modules, partitions, scratch paths, or installation rules"
+                        placeholder={language.t("settings.copy.modulesPartitionsScratchPathsOrInstallationRules")}
                         onInput={setNotes}
                       />
                     </div>
@@ -1314,7 +1440,7 @@ const Compute: Component = () => {
                       disabled={isBusy("ssh:add")}
                       onClick={reset}
                     >
-                      Cancel
+                      {language.t("common.cancel")}
                     </Button>
                     <Button
                       class="settings-panel-action"
@@ -1323,7 +1449,7 @@ const Compute: Component = () => {
                       variant="primary"
                       disabled={!label().trim() || !host().trim() || sshMutationBusy()}
                     >
-                      {isBusy("ssh:add") ? "Adding…" : "Add host"}
+                      {isBusy("ssh:add") ? language.t("settings.copy.adding") : language.t("settings.copy.addHost")}
                     </Button>
                   </div>
                 </form>
@@ -1333,8 +1459,8 @@ const Compute: Component = () => {
 
           <CredentialServices
             category="compute"
-            title="Cloud credentials"
-            description="Credential-only access for reviewed CLI, SDK, and hosted-model skills. Saving a credential does not add a first-party compute backend or verify the service."
+            title={language.t("settings.copy.cloudCredentials")}
+            description={language.t("settings.copy.credentialOnlyAccessForReviewedCliSdkAnd")}
           />
         </PanelBody>
       </div>

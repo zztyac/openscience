@@ -41,6 +41,7 @@ const card = (await vite.ssrLoadModule("/src/atlas/KernelCard.tsx")) as typeof i
 
 afterAll(() => vite.close())
 
+const { TestLanguage } = (await vite.ssrLoadModule("/test/language.tsx")) as typeof import("../../test/language")
 const cleanups: Array<() => void> = []
 afterEach(() => {
   cleanups.splice(0).forEach((cleanup) => cleanup())
@@ -54,7 +55,17 @@ const executions = (element: Element | null) =>
 const mount = (view: () => JSX.Element) => {
   const host = document.createElement("div")
   document.body.append(host)
-  cleanups.push(web.render(view, host))
+  cleanups.push(
+    web.render(
+      () =>
+        web.createComponent(TestLanguage, {
+          get children() {
+            return view()
+          },
+        }),
+      host,
+    ),
+  )
   return host
 }
 

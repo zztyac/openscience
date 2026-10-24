@@ -16,6 +16,13 @@ const vite = await createServer({
 })
 const subject = (await vite.ssrLoadModule("/src/atlas/experiments/MetricChart.tsx")) as typeof import("./MetricChart")
 const web = (await vite.ssrLoadModule("solid-js/web")) as typeof import("solid-js/web")
+const { TestLanguage } = (await vite.ssrLoadModule("/test/language.tsx")) as typeof import("../../../test/language")
+const localized = (view: () => import("solid-js").JSX.Element) =>
+  web.createComponent(TestLanguage, {
+    get children() {
+      return view()
+    },
+  })
 afterAll(() => vite.close())
 afterEach(() => {
   cleanups
@@ -40,7 +47,7 @@ test("draws one line per series and reports every series at the hovered step", a
   }
   const host = document.createElement("div")
   document.body.append(host)
-  cleanups.push(web.render(() => subject.MetricChart({ series, height: 120 }), host))
+  cleanups.push(web.render(() => localized(() => subject.MetricChart({ series, height: 120 })), host))
   const lines = host.querySelectorAll(".metric-chart__line")
   expect(lines.length).toBe(2)
   expect(lines[0]!.getAttribute("d")).toMatch(/^M[\d.]+ [\d.]+ L/)
@@ -52,7 +59,7 @@ test("draws one line per series and reports every series at the hovered step", a
   svg.dispatchEvent(new MouseEvent("mousemove", { clientX: 470, clientY: 40, bubbles: true }))
   await Bun.sleep(0)
   const tooltip = host.querySelector(".metric-chart__tooltip")!
-  expect(tooltip.textContent).toContain("step 4")
+  expect(tooltip.textContent).toContain("Step 4")
   expect(tooltip.textContent).toContain("baseline")
   expect(tooltip.textContent).toContain("momentum")
   expect(tooltip.querySelectorAll("b").length).toBe(2)
@@ -72,28 +79,30 @@ test("an empty series set shows the empty state, and log scale drops non-positiv
   }
   const host = document.createElement("div")
   document.body.append(host)
-  cleanups.push(web.render(() => subject.MetricChart({ series: [], height: 120 }), host))
+  cleanups.push(web.render(() => localized(() => subject.MetricChart({ series: [], height: 120 })), host))
   expect(host.textContent).toContain("No points yet")
   host.replaceChildren()
   cleanups.push(
     web.render(
       () =>
-        subject.MetricChart({
-          series: [
-            {
-              id: "a",
-              label: "a",
-              color: "#111",
-              points: [
-                { step: 0, value: 0 },
-                { step: 1, value: 1 },
-                { step: 2, value: 100 },
-              ],
-            },
-          ],
-          log: true,
-          height: 120,
-        }),
+        localized(() =>
+          subject.MetricChart({
+            series: [
+              {
+                id: "a",
+                label: "a",
+                color: "#111",
+                points: [
+                  { step: 0, value: 0 },
+                  { step: 1, value: 1 },
+                  { step: 2, value: 100 },
+                ],
+              },
+            ],
+            log: true,
+            height: 120,
+          }),
+        ),
       host,
     ),
   )

@@ -1,3 +1,4 @@
+import type { JSX } from "solid-js"
 import { afterAll, afterEach, expect, test } from "bun:test"
 import { fileURLToPath } from "node:url"
 import { createTestServer as createServer } from "../../test/vite"
@@ -76,6 +77,18 @@ const fixture = (await server.ssrLoadModule("\0composer-state")) as {
   events: { refresh: () => Promise<void> }
 }
 const cleanups: Array<() => void> = []
+const { TestLanguage } = (await server.ssrLoadModule("/test/language.tsx")) as typeof import("../../test/language")
+const localizedRender = (view: () => JSX.Element, host: HTMLElement) =>
+  web.render(
+    () =>
+      web.createComponent(TestLanguage, {
+        get children() {
+          return view()
+        },
+      }),
+    host,
+  )
+
 afterAll(() => server.close())
 afterEach(() => {
   cleanups.splice(0).forEach((cleanup) => cleanup())
@@ -104,7 +117,7 @@ const route = (providerID: string, variants: string[]) => ({
 const mount = () => {
   const host = document.createElement("div")
   document.body.append(host)
-  cleanups.push(web.render(() => web.createComponent(subject.ModelSettingsPopover, {}), host))
+  cleanups.push(localizedRender(() => web.createComponent(subject.ModelSettingsPopover, {}), host))
   return host
 }
 

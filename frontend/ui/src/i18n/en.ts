@@ -1,4 +1,7 @@
 export const dict = {
+  "ui.sessionTurn.responseActions": "Response actions",
+  "ui.sessionTurn.copyResponse": "Copy response",
+  "ui.sessionTurn.copyFailed": "Could not copy. Select the response text and copy it manually.",
   "ui.sessionTurn.sendAgain": "Send again",
   "ui.sessionTurn.steps.show": "Show reasoning and activity",
   "ui.sessionTurn.steps.hide": "Hide reasoning and activity",

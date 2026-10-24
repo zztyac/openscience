@@ -114,7 +114,6 @@ import {
 import {
   DEFAULT_RESEARCH_ACCESS_MODE,
   RESEARCH_ACCESS_OPTIONS,
-  researchAccessLabel as accessLabel,
   researchAccessMode,
   type ResearchAccessMode,
 } from "./research-access"
@@ -258,7 +257,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       .catch((error) => {
         capabilityActions.mutate(previous)
         showToast({
-          title: "Couldn't update research preferences",
+          title: language.t("interface.composer.preferencesFailed"),
           description: error instanceof Error ? error.message : String(error),
         })
       })
@@ -313,7 +312,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const current = currentResearchAccess()
     return current ? researchAccessMode(current) : DEFAULT_RESEARCH_ACCESS_MODE
   })
-  const researchAccessLabel = createMemo(() => accessLabel(selectedResearchAccess()))
+  const researchAccessLabel = createMemo(() => language.t(`interface.composer.${selectedResearchAccess()}`))
 
   const applyResearchAccess = async (mode: ResearchAccessMode, target: HTMLButtonElement) => {
     target.focus()
@@ -323,10 +322,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (researchAccessMode(initial) === mode) return
     if (mode === "full") {
       const confirmed = await confirmDialog(dialog, {
-        title: "Enable Full access?",
-        message:
-          "Full access disables the execution sandbox and routine action prompts, including package installs. Paid compute still asks once: approve a Modal job for the session or project and its time allowance covers the jobs that follow, until it is spent.",
-        confirmLabel: "Enable Full access",
+        title: language.t("interface.composer.enableFullTitle"),
+        message: language.t("interface.composer.enableFullDescription"),
+        confirmLabel: language.t("interface.composer.enableFull"),
         danger: true,
       })
       if (!confirmed) return
@@ -343,15 +341,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const effective = researchAccessMode(confirmed)
       if (effective !== mode) {
         showToast({
-          title: "Access is limited by managed settings",
-          description: `The effective mode remains ${accessLabel(effective)}.`,
+          title: language.t("interface.composer.managedAccess"),
+          description: language.t("interface.composer.accessEffective", {
+            label: language.t(`interface.composer.${effective}`),
+          }),
         })
         return
       }
-      showToast({ variant: "success", title: `${accessLabel(effective)} enabled` })
+      showToast({
+        variant: "success",
+        title: language.t("interface.composer.accessEnabled", { label: language.t(`interface.composer.${effective}`) }),
+      })
     } catch (error) {
       showToast({
-        title: "Couldn't update action approval",
+        title: language.t("interface.composer.approvalFailed"),
         description: error instanceof Error ? error.message : String(error),
       })
       void researchAccessControls.refetch()
@@ -569,7 +572,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const [submitting, setSubmitting] = createSignal(false)
 
   const placeholder = createMemo(() => {
-    if (submitting()) return "Sending…"
+    if (submitting()) return language.t("interface.composer.sending")
     if (store.mode === "shell") return language.t("prompt.placeholder.shell")
     // Enter adds to the running turn; only the button and Esc stop it, so a
     // message typed mid-turn is never lost to an accidental abort.
@@ -579,8 +582,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         backgroundWorkers() === 1 ? "prompt.placeholder.backgroundWorker" : "prompt.placeholder.backgroundWorkers",
         { count: backgroundWorkers() },
       )
-    if (store.intent === "plan") return "Describe your task to generate a plan…"
-    if (store.intent === "goal") return "Describe your goal and the measurable outcome…"
+    if (store.intent === "plan") return language.t("interface.composer.planHint")
+    if (store.intent === "goal") return language.t("interface.composer.goalHint")
     if (commentCount() > 1) return language.t("prompt.placeholder.summarizeComments")
     if (commentCount() === 1) return language.t("prompt.placeholder.summarizeComment")
     return language.t("prompt.placeholder.normal")
@@ -678,7 +681,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (!mime) {
       showToast({
         variant: "error",
-        title: "File not attached",
+        title: language.t("interface.composer.attachmentFailed"),
         description: `${file.name} is not a supported image, PDF, text, code, or scientific data file.`,
       })
       return
@@ -686,7 +689,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (file.size > MAX_ATTACHMENT_BYTES) {
       showToast({
         variant: "error",
-        title: "File not attached",
+        title: language.t("interface.composer.attachmentFailed"),
         description: `${file.name} is ${attachmentSize(file.size)}; attachments are limited to ${attachmentSize(MAX_ATTACHMENT_BYTES)}.`,
       })
       return
@@ -702,7 +705,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       (error: unknown) => {
         showToast({
           variant: "error",
-          title: "File not attached",
+          title: language.t("interface.composer.attachmentFailed"),
           description: error instanceof Error ? error.message : String(error),
         })
         return undefined
@@ -910,7 +913,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       .filter((session) => !session.parentID && session.id !== params.id && !session.time?.archived)
       .map((session) => ({
         sourceSessionID: session.id,
-        label: session.title?.trim() || "Untitled conversation",
+        label: session.title?.trim() || language.t("interface.composer.untitled"),
         throughMessageID: sync.data.message[session.id]?.at(-1)?.id,
         updated: session.time?.updated ?? session.time?.created ?? 0,
       }))
@@ -1336,9 +1339,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   let atPopoverRef: HTMLDivElement | undefined
   const atVisible = createMemo(() => {
     const label = (category: string) => {
-      if (category === "agent") return "Agents"
-      if (category === "recent") return "Recent"
-      if (category === "file") return atFilter().trim() ? "" : "Files & folders"
+      if (category === "agent") return language.t("interface.composer.agents")
+      if (category === "recent") return language.t("interface.composer.recent")
+      if (category === "file") return atFilter().trim() ? "" : language.t("interface.composer.filesFolders")
       return ""
     }
     return atGroups().map((group) => ({
@@ -1506,7 +1509,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         type: "conversation",
         sourceSessionID: conversation.dataset.sessionId!,
         throughMessageID: conversation.dataset.throughMessageId,
-        label: conversation.dataset.label || content.replace(/^#/, "") || "Conversation",
+        label: conversation.dataset.label || content.replace(/^#/, "") || language.t("interface.composer.conversation"),
         content,
         start: position,
         end: position + content.length,
@@ -2661,7 +2664,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                  min-h-10 overflow-auto no-scrollbar flex flex-col"
           id={store.popover === "slash" ? "composer-slash-listbox" : undefined}
           role={store.popover === "slash" ? "listbox" : undefined}
-          aria-label={store.popover === "slash" ? "Commands and skills" : undefined}
+          aria-label={store.popover === "slash" ? language.t("interface.composer.commandsSkills") : undefined}
           onMouseDown={(e) => e.preventDefault()}
         >
           <Switch>
@@ -2684,11 +2687,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                     class="workspace-composer__at-list"
                     id="composer-at-listbox"
                     role="listbox"
-                    aria-label="Files and folders"
+                    aria-label={language.t("interface.composer.filesAndFolders")}
                   >
                     <For each={atVisible()}>
                       {(group) => (
-                        <section class="workspace-composer__slash-group" aria-label={group.label || "Results"}>
+                        <section
+                          class="workspace-composer__slash-group"
+                          aria-label={group.label || language.t("interface.composer.results")}
+                        >
                           <Show when={group.label}>
                             <header class="workspace-composer__slash-heading" aria-hidden="true">
                               {group.label}
@@ -2781,10 +2787,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               <Show
                 when={conversationFlat().length > 0}
                 fallback={
-                  <div class="workspace-composer__suggestion-empty">No other conversations in this project</div>
+                  <div class="workspace-composer__suggestion-empty">
+                    {language.t("interface.composer.noConversations")}
+                  </div>
                 }
               >
-                <div class="workspace-composer__suggestion-heading">Conversations</div>
+                <div class="workspace-composer__suggestion-heading">
+                  {language.t("interface.composer.conversations")}
+                </div>
                 <For each={conversationFlat().slice(0, 12)}>
                   {(item) => (
                     <button
@@ -2801,7 +2811,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                       </span>
                       <span>
                         <strong>{item.label}</strong>
-                        <small>Reference a snapshot of this conversation</small>
+                        <small>{language.t("interface.composer.reference")}</small>
                       </span>
                     </button>
                   )}
@@ -2818,7 +2828,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                 {/* A suggestion refresh must not suspend the session and detach the focused editor. */}
                 <For each={slashVisible()}>
                   {(group) => (
-                    <section class="workspace-composer__slash-group" aria-label={group.category || "Results"}>
+                    <section
+                      class="workspace-composer__slash-group"
+                      aria-label={group.category || language.t("interface.composer.results")}
+                    >
                       <Show when={group.category}>
                         <header class="workspace-composer__slash-heading" aria-hidden="true">
                           {group.category}
@@ -2873,11 +2886,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       <Show when={store.mode === "normal" && !local.model.current()}>
         <div class="workspace-composer__setup" role="status">
           <span>
-            <strong>Choose a model to start</strong>
-            <small>Connect a provider in Settings to choose a model.</small>
+            <strong>{language.t("interface.composer.chooseModel")}</strong>
+            <small>{language.t("interface.composer.connectProvider")}</small>
           </span>
           <button type="button" onClick={() => dialog.show(() => <DialogSettings />)}>
-            Set up model
+            {language.t("interface.composer.setupModel")}
           </button>
         </div>
       </Show>
@@ -2969,7 +2982,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </div>
         </Show>
         <Show when={imageAttachments().length > 0}>
-          <div class="workspace-composer__attachments" aria-label="Attached files">
+          <div class="workspace-composer__attachments" aria-label={language.t("interface.composer.attachments")}>
             <For each={imageAttachments()}>
               {(attachment) => (
                 <div
@@ -2982,7 +2995,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                     target="_blank"
                     rel="noreferrer"
                     class="workspace-composer__attachment-open"
-                    aria-label={`${attachment.mime.startsWith("image/") ? "Preview" : "Open"} ${attachment.filename}`}
+                    aria-label={`${attachment.mime.startsWith("image/") ? language.t("interface.composer.preview") : language.t("interface.composer.open")} ${attachment.filename}`}
                     onClick={(event) => {
                       if (!attachment.mime.startsWith("image/")) return
                       event.preventDefault()
@@ -3002,7 +3015,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                     <span class="workspace-composer__attachment-copy">
                       <strong title={attachment.filename}>{attachment.filename}</strong>
                       <span>
-                        Attached · {attachmentFormat({ name: attachment.filename, type: attachment.mime })}
+                        {language.t("interface.composer.attached")}
+                        {attachmentFormat({ name: attachment.filename, type: attachment.mime })}
                         <Show when={attachment.size !== undefined}> · {attachmentSize(attachment.size!)}</Show>
                       </span>
                     </span>
@@ -3074,7 +3088,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             data-slot="prompt-controls"
             class="workspace-composer__controls flex items-center justify-start gap-2"
             role="group"
-            aria-label="Composer tools"
+            aria-label={language.t("interface.composer.controls")}
           >
             <input
               ref={fileInputRef}
@@ -3114,20 +3128,30 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   }}
                   onClose={resetResearchTools}
                 >
-                  <section class="workspace-composer__research-controls" aria-label="Research roles">
+                  <section
+                    class="workspace-composer__research-controls"
+                    aria-label={language.t("interface.composer.roles")}
+                  >
                     <ResearchSlider
-                      label="Delegation"
+                      label={language.t("interface.composer.delegation")}
                       value={delegation().level}
-                      options={DELEGATION_LEVELS}
+                      options={DELEGATION_LEVELS.map((option) => ({
+                        ...option,
+                        label: language.t(`interface.composer.${option.value === "standard" ? "auto" : option.value}`),
+                      }))}
                       disabled={!capabilities()}
                       onSelect={(value) => saveDelegation({ level: value as DelegationLevel })}
                     />
                     {/* Independence governs the lead's own questions, not only
                           delegated work, so it stays visible with delegation off. */}
                     <ResearchSlider
-                      label="Independence"
+                      label={language.t("interface.composer.independence")}
                       value={delegation().autonomy}
-                      options={DELEGATION_AUTONOMY}
+                      options={DELEGATION_AUTONOMY.map((option) => ({
+                        ...option,
+                        label: language.t(`interface.composer.${option.value}`),
+                        description: language.t(`interface.composer.${option.value}Description`),
+                      }))}
                       onSelect={(value) => saveDelegation({ autonomy: value as DelegationAutonomy })}
                     />
                     <div class="workspace-composer__research-access">
@@ -3139,7 +3163,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                             class="workspace-composer__research-access-retry"
                             onClick={() => void researchAccessControls.refetch()}
                           >
-                            Access settings unavailable · Retry
+                            {language.t("interface.composer.retryAccess")}
                           </button>
                         }
                       >
@@ -3147,21 +3171,33 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                           class="workspace-composer__research-setting workspace-composer__research-choice"
                           onToggle={toggleResearchChoice}
                         >
-                          <summary aria-label={`Action approval, ${researchAccessLabel()}`}>
-                            <span class="workspace-composer__research-setting-label">Action approval</span>
+                          <summary
+                            aria-label={language.t("interface.composer.approvalLabel", {
+                              label: researchAccessLabel(),
+                            })}
+                          >
+                            <span class="workspace-composer__research-setting-label">
+                              {language.t("interface.composer.approval")}
+                            </span>
                             <strong class="workspace-composer__research-setting-value" aria-live="polite">
-                              {researchAccessSaving() ? "Saving…" : researchAccessLabel()}
+                              {researchAccessSaving() ? language.t("interface.composer.saving") : researchAccessLabel()}
                             </strong>
                             <Icon name="chevron-right" size="small" />
                           </summary>
                           <div
                             class="workspace-composer__research-choice-menu"
                             role="radiogroup"
-                            aria-label="How should OpenScience actions be approved?"
+                            aria-label={language.t("interface.composer.approvalQuestion")}
                             aria-busy={researchAccessSaving() ? "true" : undefined}
                             onKeyDown={navigateResearchChoices}
                           >
-                            <For each={RESEARCH_ACCESS_OPTIONS}>
+                            <For
+                              each={RESEARCH_ACCESS_OPTIONS.map((option) => ({
+                                ...option,
+                                label: language.t(`interface.composer.${option.value}`),
+                                description: language.t(`interface.composer.${option.value}Description`),
+                              }))}
+                            >
                               {(option) => (
                                 <button
                                   type="button"
@@ -3202,11 +3238,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                           dialog.show(() => <DialogSettings initial="connectors" />)
                         }}
                       >
-                        <span class="workspace-composer__research-setting-label">MCP servers</span>
+                        <span class="workspace-composer__research-setting-label">
+                          {language.t("interface.composer.mcpServers")}
+                        </span>
                         <strong class="workspace-composer__research-setting-value">
                           {configuredConnectorCount() === 0
-                            ? "None configured"
-                            : `${configuredConnectorCount()} configured`}
+                            ? language.t("interface.composer.noneConfigured")
+                            : language.t("interface.composer.configured", { count: configuredConnectorCount() })}
                         </strong>
                         <Icon name="chevron-right" size="small" />
                       </button>
@@ -3229,18 +3267,29 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                 />
                 <Show when={store.intent}>
                   {(intent) => (
-                    <Tooltip placement="top" value={`Exit ${intent()} mode`}>
+                    <Tooltip
+                      placement="top"
+                      value={language.t("interface.composer.exitMode", {
+                        mode: language.t(intent() === "plan" ? "interface.composer.plan" : "interface.composer.goal"),
+                      })}
+                    >
                       <button
                         type="button"
                         class="workspace-composer__intent"
                         data-composer-intent={intent()}
-                        aria-label={`Exit ${intent()} mode`}
+                        aria-label={language.t("interface.composer.exitMode", {
+                          mode: language.t(intent() === "plan" ? "interface.composer.plan" : "interface.composer.goal"),
+                        })}
                         onClick={() => setIntent(null)}
                       >
                         <span class="workspace-composer__intent-close" aria-hidden="true">
                           <Icon name="close" size="small" />
                         </span>
-                        <span>{intent() === "plan" ? "Plan" : "Goal"}</span>
+                        <span>
+                          {intent() === "plan"
+                            ? language.t("interface.composer.plan")
+                            : language.t("interface.composer.goal")}
+                        </span>
                       </button>
                     </Tooltip>
                   )}
@@ -3251,7 +3300,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           <div
             class="workspace-composer__actions flex items-center gap-3"
             role="group"
-            aria-label="Model, effort, and send"
+            aria-label={language.t("interface.composer.modelControls")}
           >
             <Show when={local.agent.list().length > 1}>
               <Tooltip placement="top" value={language.t("prompt.agent.tooltip")}>

@@ -18,6 +18,7 @@ const [subject, web] = await Promise.all([
   server.ssrLoadModule("/src/atlas/files/ArtifactGrid.tsx") as Promise<typeof import("./ArtifactGrid")>,
   server.ssrLoadModule("solid-js/web") as Promise<typeof import("solid-js/web")>,
 ])
+const { TestLanguage } = (await server.ssrLoadModule("/test/language.tsx")) as typeof import("../../../test/language")
 const cleanups: Array<() => void> = []
 
 afterAll(() => server.close())
@@ -32,7 +33,17 @@ afterEach(() => {
 const mount = (view: () => JSX.Element) => {
   const host = document.createElement("div")
   document.body.append(host)
-  cleanups.push(web.render(view, host))
+  cleanups.push(
+    web.render(
+      () =>
+        web.createComponent(TestLanguage, {
+          get children() {
+            return view()
+          },
+        }),
+      host,
+    ),
+  )
   return host
 }
 

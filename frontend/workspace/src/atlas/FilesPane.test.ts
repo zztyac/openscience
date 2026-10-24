@@ -26,6 +26,7 @@ const web = (await server.ssrLoadModule("solid-js/web")) as typeof import("solid
 const subject = (await server.ssrLoadModule("/src/atlas/FilesPane.tsx")) as typeof import("./FilesPane")
 const notifications = (await server.ssrLoadModule("/src/atlas/Toast.tsx")) as typeof import("./Toast")
 const uiToast = (await server.ssrLoadModule("@synsci/ui/toast")) as typeof import("@synsci/ui/toast")
+const { TestLanguage } = (await server.ssrLoadModule("/test/language.tsx")) as typeof import("../../test/language")
 const cleanups: Array<() => void> = []
 
 afterAll(() => server.close())
@@ -44,7 +45,17 @@ const startOn = (id: string) => globalThis.localStorage?.setItem("openscience:fi
 const mount = (view: () => JSX.Element) => {
   const host = document.createElement("div")
   document.body.append(host)
-  cleanups.push(web.render(view, host))
+  cleanups.push(
+    web.render(
+      () =>
+        web.createComponent(TestLanguage, {
+          get children() {
+            return view()
+          },
+        }),
+      host,
+    ),
+  )
   return host
 }
 

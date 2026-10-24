@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { createEffect, createUniqueId, For, on, onCleanup, onMount, Show, type JSX } from "solid-js"
 import { createStore } from "solid-js/store"
 import { IconX } from "@/atlas/shared/Icon"
@@ -43,6 +44,7 @@ export function SessionTabStrip(props: {
   onRename: (id: string, title: string) => Promise<boolean>
   onWarm?: (id: string) => void
 }): JSX.Element {
+  const language = useLanguage()
   const inputID = createUniqueId()
   const statusID = `${inputID}-status`
   const [state, setState] = createStore({
@@ -123,7 +125,7 @@ export function SessionTabStrip(props: {
         focus(id)
         return
       }
-      setState("error", "Enter a session name.")
+      setState("error", language.t("pages.copy.sessionNameRequired"))
       queueMicrotask(() => input?.focus())
       return
     }
@@ -142,7 +144,7 @@ export function SessionTabStrip(props: {
       focus(id)
       return
     }
-    setState("error", "Could not save the session name. Try again.")
+    setState("error", language.t("pages.copy.sessionNameFailed"))
     if (source === "keyboard") {
       queueMicrotask(() => {
         input?.focus()
@@ -185,13 +187,17 @@ export function SessionTabStrip(props: {
 
   return (
     <div ref={root} class="workspace-session-tabs">
-      <nav class="workspace-tabs" aria-label="Open sessions">
+      <nav class="workspace-tabs" aria-label={language.t("pages.copy.openSessions")}>
         <div class="workspace-tabs__list" role="tablist" aria-orientation="horizontal">
           <For each={props.tabs}>
             {(item, index) => {
               const active = () => props.active === item.id
               const stateLabel = () =>
-                [item.working ? "working" : "", item.unread ? "unread" : "", item.dirty ? "draft saved" : ""]
+                [
+                  item.working ? language.t("pages.copy.working") : "",
+                  item.unread ? language.t("pages.copy.unread") : "",
+                  item.dirty ? language.t("pages.copy.draftSaved") : "",
+                ]
                   .filter(Boolean)
                   .join(", ")
               return (
@@ -202,7 +208,7 @@ export function SessionTabStrip(props: {
                   data-working={item.working ? "true" : undefined}
                   data-unread={item.unread ? "true" : undefined}
                   data-dirty={item.dirty ? "true" : undefined}
-                  title={active() && item.editable !== false ? "Double-click to rename" : item.title}
+                  title={active() && item.editable !== false ? language.t("pages.copy.renameDoubleClick") : item.title}
                 >
                   <button
                     type="button"
@@ -215,7 +221,7 @@ export function SessionTabStrip(props: {
                     aria-controls="session-conversation-panel"
                     aria-keyshortcuts={active() && item.editable !== false ? "F2" : undefined}
                     aria-label={`${item.title}${stateLabel() ? `, ${stateLabel()}` : ""}${
-                      active() && item.editable !== false ? ". Press F2 to rename" : ""
+                      active() && item.editable !== false ? language.t("pages.copy.renameKeyboard") : ""
                     }`}
                     draggable={item.reorderable !== false}
                     onPointerEnter={() => props.onWarm?.(item.id)}
@@ -276,7 +282,7 @@ export function SessionTabStrip(props: {
                     <button
                       type="button"
                       class="workspace-tab__close"
-                      aria-label={`Close ${item.title}`}
+                      aria-label={language.t("pages.copy.closeNamed", { name: item.title })}
                       onClick={(event) => {
                         if (state.editing === item.id) clear()
                         const restoreFocus = document.activeElement === event.currentTarget
@@ -300,7 +306,7 @@ export function SessionTabStrip(props: {
           style={{ left: `${state.left}px`, top: `${state.top}px`, width: `${state.width}px` }}
         >
           <label class="sr-only" for={inputID}>
-            Session name
+            {language.t("pages.copy.sessionName")}
           </label>
           <input
             ref={input}
@@ -331,7 +337,7 @@ export function SessionTabStrip(props: {
             autocomplete="off"
           />
           <span id={statusID} class="sr-only" role="status" aria-live="polite">
-            {state.saving ? "Saving session name…" : state.error}
+            {state.saving ? language.t("pages.copy.savingSessionName") : state.error}
           </span>
         </div>
       </Show>

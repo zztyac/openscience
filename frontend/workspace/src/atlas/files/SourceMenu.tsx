@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { For, Show, createEffect, createSignal, onCleanup, type JSX } from "solid-js"
 import { groupSources, type PaneSource } from "@/atlas/files/sources"
 import {
@@ -67,6 +68,13 @@ export function SourceMenu(props: {
    */
   onOpen?: () => void
 }): JSX.Element {
+  const language = useLanguage()
+  const groupLabels = {
+    Results: "atlas.files.group.results",
+    "Working files": "atlas.files.group.working",
+    Remote: "atlas.files.group.remote",
+    Recovery: "atlas.files.group.recovery",
+  } as const
   const [open, setOpen] = createSignal(false)
   const [align, setAlign] = createSignal<"start" | "end">("start")
   const refs: { trigger?: HTMLButtonElement; menu?: HTMLDivElement } = {}
@@ -166,14 +174,10 @@ export function SourceMenu(props: {
         aria-expanded={open()}
         aria-label={
           props.triggerLabel
-            ? `${props.triggerLabel} file locations; current: ${props.active.name}`
-            : `File source: ${props.active.name}`
+            ? language.t("atlas.files.moreLocationsCurrent", { label: props.triggerLabel, name: props.active.name })
+            : language.t("atlas.files.currentSource", { name: props.active.name })
         }
-        title={
-          props.triggerLabel
-            ? "Connected folders, remote storage, and Trash"
-            : (props.active.detail ?? props.active.sub)
-        }
+        title={props.triggerLabel ? language.t("atlas.files.moreLocations") : (props.active.detail ?? props.active.sub)}
         onClick={toggle}
       >
         <span class="files-source__glyph" aria-hidden="true">
@@ -242,7 +246,7 @@ export function SourceMenu(props: {
               {(group) => (
                 <>
                   <div class="files-menu__group" data-source-group>
-                    {group.group}
+                    {language.t(groupLabels[group.group])}
                   </div>
                   <For each={group.items}>
                     {(source) => (
@@ -279,20 +283,17 @@ export function SourceMenu(props: {
                                 the badge took the width the path needed, and the
                                 path is what tells two folders apart. */}
                             <Show when={source.readonly}>
-                              <span class="files-menu__badge">Read only</span>
+                              <span class="files-menu__badge">{language.t("atlas.files.readOnly")}</span>
                             </Show>
                             <Show when={source.kind === "connected" && !source.readonly}>
-                              <span
-                                class="files-menu__badge"
-                                title="Approved tools and sandboxed runtimes may read and write here."
-                              >
-                                Read & write
+                              <span class="files-menu__badge" title={language.t("atlas.files.sourceWriteHint")}>
+                                {language.t("atlas.files.readWrite")}
                               </span>
                             </Show>
                           </span>
                           <span class="files-menu__tail">
                             <Show when={source.live}>
-                              <span class="files-menu__dot" aria-label="Reachable" />
+                              <span class="files-menu__dot" aria-label={language.t("atlas.files.reachable")} />
                             </Show>
                             <Show when={source === props.active}>
                               <span aria-hidden="true">✓</span>
@@ -312,10 +313,10 @@ export function SourceMenu(props: {
                             role="menuitem"
                             tabindex="-1"
                             data-source-revoke={source.id}
-                            aria-label={`Revoke access to ${source.name}`}
+                            aria-label={language.t("atlas.files.revokeNamed", { name: source.name })}
                             onClick={() => revoke(source)}
                           >
-                            Revoke
+                            {language.t("atlas.files.revoke")}
                           </button>
                         </Show>
                       </div>
@@ -341,7 +342,7 @@ export function SourceMenu(props: {
                   <IconFolderAdd size={16} strokeWidth={1.5} />
                 </span>
                 <span>
-                  <span class="files-menu__label">Add folder…</span>
+                  <span class="files-menu__label">{language.t("atlas.files.addFolder")}</span>
                 </span>
                 <span class="files-menu__tail" />
               </button>
@@ -360,7 +361,7 @@ export function SourceMenu(props: {
                 <span class="files-menu__glyph" aria-hidden="true">
                   <IconFolderAdd size={16} strokeWidth={1.5} />
                 </span>
-                <span class="files-menu__label">Manage workspace folders…</span>
+                <span class="files-menu__label">{language.t("atlas.files.manageFolders")}</span>
               </button>
             </Show>
           </div>

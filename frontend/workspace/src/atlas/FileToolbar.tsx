@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { createMemo, For, Show, type JSX } from "solid-js"
 import { FileIcon } from "@synsci/ui/file-icon"
 import { IconArchive, IconCopy, IconDownload, IconX } from "@/atlas/shared/Icon"
@@ -28,6 +29,20 @@ export interface FileToolbarProps {
 }
 
 export function FileToolbar(props: FileToolbarProps): JSX.Element {
+  const language = useLanguage()
+  const label = (id: ReturnType<typeof toolbarControls>[number]["id"]) => {
+    if (id === "preview") return language.t("atlas.files.preview")
+    if (id === "source") return language.t("atlas.files.source")
+    if (id === "discard") return language.t("atlas.files.discard")
+    if (id === "save") return props.saving ? language.t("atlas.files.saving") : language.t("atlas.files.saveFile")
+    return id === "copy" ? language.t("atlas.files.copy") : language.t("atlas.files.download")
+  }
+  const artifactLabel = () =>
+    props.archiving
+      ? language.t("atlas.files.archiving")
+      : props.dirty
+        ? language.t("atlas.files.saveFileFirst")
+        : language.t("atlas.files.saveResult")
   const chrome = useFileChrome()
   const controls = createMemo(() =>
     toolbarControls({
@@ -86,22 +101,23 @@ export function FileToolbar(props: FileToolbarProps): JSX.Element {
 
       <div class="atlas-file-controls">
         <Show when={views().length > 0}>
-          <div class="atlas-file-modes" role="tablist" aria-label="File view">
+          <div class="atlas-file-modes" role="tablist" aria-label={language.t("atlas.files.view")}>
             <For each={views()}>
               {(control) => {
-                const label = () => (control.id === "source" ? (props.sourceLabel ?? control.label) : control.label)
+                const title = () =>
+                  control.id === "source" ? (props.sourceLabel ?? label(control.id)) : label(control.id)
                 return (
                   <button
                     type="button"
                     role="tab"
-                    aria-label={label()}
+                    aria-label={title()}
                     aria-selected={control.active === true}
                     class="atlas-file-mode"
                     classList={{ "is-active": control.active === true }}
                     disabled={props.disabled}
                     onClick={() => action(control.id)}
                   >
-                    {label()}
+                    {title()}
                   </button>
                 )
               }}
@@ -117,11 +133,15 @@ export function FileToolbar(props: FileToolbarProps): JSX.Element {
                   type="button"
                   class="atlas-file-button"
                   classList={{ "is-primary": control.id === "save" }}
-                  aria-label={control.id === "save" ? "Save changes" : "Discard changes"}
+                  aria-label={
+                    control.id === "save"
+                      ? language.t("atlas.files.saveChanges")
+                      : language.t("atlas.files.discardChanges")
+                  }
                   disabled={props.disabled || control.disabled || (control.id === "save" && props.saveDisabled)}
                   onClick={() => action(control.id)}
                 >
-                  {control.label}
+                  {label(control.id)}
                 </button>
               )}
             </For>
@@ -133,13 +153,13 @@ export function FileToolbar(props: FileToolbarProps): JSX.Element {
             <button
               type="button"
               class="atlas-file-action"
-              aria-label={control().label}
-              title={control().label}
+              aria-label={artifactLabel()}
+              title={artifactLabel()}
               disabled={props.disabled || control().disabled}
               onClick={() => props.onArtifact?.()}
             >
               <IconArchive size={14} strokeWidth={1.5} />
-              <span>{control().label}</span>
+              <span>{artifactLabel()}</span>
             </button>
           )}
         </Show>
@@ -147,26 +167,26 @@ export function FileToolbar(props: FileToolbarProps): JSX.Element {
           <button
             type="button"
             class="atlas-file-action"
-            aria-label="Copy contents"
-            title="Copy contents"
+            aria-label={language.t("atlas.files.copyContents")}
+            title={language.t("atlas.files.copyContents")}
             disabled={props.disabled}
             onClick={props.onCopy}
           >
             <IconCopy size={14} strokeWidth={1.5} />
-            <span>Copy</span>
+            <span>{language.t("atlas.files.copy")}</span>
           </button>
         </Show>
         <Show when={controls().some((control) => control.id === "download")}>
           <button
             type="button"
             class="atlas-file-action"
-            aria-label="Download file"
-            title="Download file"
+            aria-label={language.t("atlas.files.downloadFile")}
+            title={language.t("atlas.files.downloadFile")}
             disabled={props.disabled}
             onClick={props.onDownload}
           >
             <IconDownload size={14} strokeWidth={1.5} />
-            <span>Download</span>
+            <span>{language.t("atlas.files.download")}</span>
           </button>
         </Show>
       </div>
@@ -174,8 +194,8 @@ export function FileToolbar(props: FileToolbarProps): JSX.Element {
         <button
           type="button"
           class="atlas-file-close"
-          aria-label="Close file"
-          title="Close file"
+          aria-label={language.t("atlas.files.close")}
+          title={language.t("atlas.files.close")}
           onClick={() => props.onClose?.()}
         >
           <IconX size={16} strokeWidth={1.5} />

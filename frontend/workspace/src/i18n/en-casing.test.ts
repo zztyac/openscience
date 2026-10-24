@@ -2,6 +2,38 @@ import { describe, expect, test } from "bun:test"
 import { dict } from "./en"
 
 const deliberateFragments = new Set([
+  // Remote job suffixes follow the main status, e.g. "Succeeded · collecting output".
+  "research.compute.collecting",
+  "research.compute.recoveryPending",
+  "research.compute.cleanupPending",
+  "research.compute.remoteUnknown",
+  // Existing inline continuations and technical examples, now extracted for translation.
+  "atlas.skills.namePlaceholder",
+  "interface.model.on",
+  "interface.model.off",
+  "settings.copy.matched",
+  "settings.copy.unmatched",
+  "settings.copy.ambiguousBillingRecords",
+  "settings.copy.records",
+  "settings.copy.credential",
+  "settings.copy.concurrentJob",
+  "settings.copy.userBastionExampleOrg22Optional",
+  "settings.copy.of",
+  "settings.copy.selected",
+  "settings.copy.tokens",
+  "settings.copy.heldForTurnsInFlight",
+  "settings.copy.available",
+  "settings.copy.whenTheWalletDropsBelow",
+  "settings.copy.oskOrThkFromAppSyntheticsciencesAiSettings",
+  "settings.copy.domains",
+  "settings.copy.unknownCostObservations",
+  "settings.copy.stillRunningRestartingNowPausesEachTurnOpenscience",
+  "pages.copy.working",
+  "pages.copy.unread",
+  "pages.copy.draftSaved",
+  "pages.copy.recently",
+  "pages.copy.artifactSaveFailed",
+
   "provider.connect.oauth.code.visit.suffix",
   "provider.connect.oauth.auto.visit.suffix",
   // Continuations of a number the panel renders in front of them: "124.9K of 272K tokens".

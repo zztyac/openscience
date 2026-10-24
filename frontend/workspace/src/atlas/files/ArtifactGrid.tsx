@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { For, Show, createMemo, createSignal, type JSX } from "solid-js"
 import type { StoredArtifact } from "@/artifacts/store"
 import { ArtifactCard } from "./ArtifactCard"
@@ -24,6 +25,7 @@ export interface GridProps extends Omit<ThumbProps, "artifact"> {
 }
 
 export function ArtifactGrid(props: GridProps): JSX.Element {
+  const language = useLanguage()
   const [view, setView] = createSignal<View>(readView())
   const [prefs, setPrefs] = createSignal(false)
   const refs: { trigger?: HTMLButtonElement; menu?: HTMLDivElement } = {}
@@ -86,9 +88,11 @@ export function ArtifactGrid(props: GridProps): JSX.Element {
       <div class="artifact-toolbar">
         <span class="artifact-toolbar__primary">
           <span class="artifact-toolbar__count" data-artifact-count>
-            {props.artifacts.length} {props.artifacts.length === 1 ? "result" : "results"}
+            {props.artifacts.length === 1
+              ? language.t("atlas.results.oneCount")
+              : language.t("atlas.results.count", { count: props.artifacts.length })}
           </span>
-          <span class="artifact-toolbar__hint">Immutable versions</span>
+          <span class="artifact-toolbar__hint">{language.t("atlas.results.immutable")}</span>
         </span>
 
         {/* Sorting, layout and the optional size column are one mental model:
@@ -102,11 +106,11 @@ export function ArtifactGrid(props: GridProps): JSX.Element {
             type="button"
             class="artifact-toolbar__prefs"
             data-artifact-prefs
-            aria-label="Artifact view options"
+            aria-label={language.t("atlas.results.options")}
             aria-expanded={prefs()}
             onClick={() => (prefs() ? closePrefs() : openPrefs())}
           >
-            View
+            {language.t("atlas.results.view")}
             <IconChevronDown size={12} strokeWidth={1.5} />
           </button>
 
@@ -114,7 +118,7 @@ export function ArtifactGrid(props: GridProps): JSX.Element {
             <button
               type="button"
               class="artifact-menu__scrim"
-              aria-label="Dismiss artifact view options"
+              aria-label={language.t("atlas.results.dismissOptions")}
               onClick={() => closePrefs(true)}
             />
             {/* The backend does not expose the artifact-store path, so this menu
@@ -126,7 +130,7 @@ export function ArtifactGrid(props: GridProps): JSX.Element {
               }}
               class="artifact-menu artifact-menu--prefs"
               role="menu"
-              aria-label="Artifact view options"
+              aria-label={language.t("atlas.results.options")}
               onKeyDown={(event) => {
                 if (event.key === "Escape" || event.key === "Tab") {
                   event.preventDefault()
@@ -151,7 +155,7 @@ export function ArtifactGrid(props: GridProps): JSX.Element {
               }}
             >
               <span class="artifact-menu__section" role="presentation">
-                Sort
+                {language.t("atlas.results.sort")}
               </span>
               <For each={["created", "name"] as const}>
                 {(option) => (
@@ -166,13 +170,13 @@ export function ArtifactGrid(props: GridProps): JSX.Element {
                     <span aria-hidden="true" class="artifact-menu__check">
                       {sort() === option ? "✓" : ""}
                     </span>
-                    {option === "created" ? "Recently saved" : "Name A–Z"}
+                    {option === "created" ? language.t("atlas.results.recent") : language.t("atlas.results.nameOrder")}
                   </button>
                 )}
               </For>
 
               <span class="artifact-menu__section" role="presentation">
-                Layout
+                {language.t("atlas.results.layout")}
               </span>
               <For each={["grid", "list"] as const}>
                 {(option) => (
@@ -187,7 +191,7 @@ export function ArtifactGrid(props: GridProps): JSX.Element {
                     <span aria-hidden="true" class="artifact-menu__check">
                       {layout() === option ? "✓" : ""}
                     </span>
-                    {option === "grid" ? "Grid" : "List"}
+                    {option === "grid" ? language.t("atlas.results.grid") : language.t("atlas.results.list")}
                   </button>
                 )}
               </For>
@@ -204,7 +208,7 @@ export function ArtifactGrid(props: GridProps): JSX.Element {
                 <span aria-hidden="true" class="artifact-menu__check">
                   {sizes() ? "✓" : ""}
                 </span>
-                Show file sizes
+                {language.t("atlas.results.sizes")}
               </button>
             </div>
           </Show>
@@ -218,11 +222,11 @@ export function ArtifactGrid(props: GridProps): JSX.Element {
             {/* "No artifacts saved yet." is false when a search simply matched
                 nothing, and the count beside it already says 0. */}
             <div class="files-empty files-empty--artifacts" data-artifact-empty>
-              <strong>{props.filtered ? "No matching results" : "No saved results yet"}</strong>
+              <strong>
+                {props.filtered ? language.t("atlas.results.noMatches") : language.t("atlas.results.empty")}
+              </strong>
               <span>
-                {props.filtered
-                  ? "Try a different name or clear the search."
-                  : "Deliverables saved by a session appear here with their versions intact."}
+                {props.filtered ? language.t("atlas.files.searchHint") : language.t("atlas.results.emptyHint")}
               </span>
             </div>
           </Show>
@@ -231,11 +235,13 @@ export function ArtifactGrid(props: GridProps): JSX.Element {
         <For each={groups()}>
           {(group) => (
             <>
-              <Show when={group.label}>
+              <Show when={group.key === props.currentSession ? language.t("atlas.files.source.session") : group.label}>
                 <div class="artifact-group" data-artifact-group>
-                  <span class="artifact-group__name">{group.label}</span>
+                  <span class="artifact-group__name">
+                    {group.key === props.currentSession ? language.t("atlas.files.source.session") : group.label}
+                  </span>
                   <span class="artifact-group__meta">
-                    {group.artifacts.length} · {age(group.newest)}
+                    {group.artifacts.length} · {age(group.newest, language.locale())}
                   </span>
                 </div>
               </Show>

@@ -11,11 +11,13 @@ import { StartupUpdateCheck } from "./startup-update"
 export function createStartupUpdateFixture(platform: Platform) {
   return () => (
     <PlatformProvider value={platform}>
-      <SettingsProvider>
-        <DialogProvider>
-          <StartupUpdateCheck />
-        </DialogProvider>
-      </SettingsProvider>
+      <LanguageProvider>
+        <SettingsProvider>
+          <DialogProvider>
+            <StartupUpdateCheck />
+          </DialogProvider>
+        </SettingsProvider>
+      </LanguageProvider>
     </PlatformProvider>
   )
 }

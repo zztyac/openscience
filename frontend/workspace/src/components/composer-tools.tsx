@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import type { JSX } from "solid-js"
 import { Icon } from "@synsci/ui/icon"
 import { composerOverlays, registerOverlayDetails } from "./overlay-group"
@@ -17,6 +18,7 @@ export function ComposerTools(props: {
   /** Called when the menu closes, whoever closed it. */
   onClose?: () => void
 }): JSX.Element {
+  const language = useLanguage()
   return (
     <details
       ref={(element) => {
@@ -30,11 +32,15 @@ export function ComposerTools(props: {
         props.onClose?.()
       }}
     >
-      <summary aria-label="Tools">
-        <span class="workspace-composer__research-tools-label">Tools</span>
+      <summary aria-label={language.t("interface.composer.tools")}>
+        <span class="workspace-composer__research-tools-label">{language.t("interface.composer.tools")}</span>
         <Icon name="chevron-down" size="small" />
       </summary>
-      <div class="workspace-composer__research-tools-menu" role="group" aria-label="Tools">
+      <div
+        class="workspace-composer__research-tools-menu"
+        role="group"
+        aria-label={language.t("interface.composer.tools")}
+      >
         {props.children}
       </div>
     </details>

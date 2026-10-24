@@ -22,6 +22,7 @@ const platform = (await server.ssrLoadModule("/src/context/platform.tsx")) as ty
 const persist = (await server.ssrLoadModule("/src/utils/persist.ts")) as typeof import("../utils/persist")
 const subject = (await server.ssrLoadModule("/src/atlas/Toast.tsx")) as typeof import("./Toast")
 const uiToast = (await server.ssrLoadModule("@synsci/ui/toast")) as typeof import("@synsci/ui/toast")
+const fixture = (await server.ssrLoadModule("/test/language.tsx")) as typeof import("../../test/language")
 
 const cleanups: Array<() => void> = []
 const original = Object.getOwnPropertyDescriptor(globalThis, "localStorage")
@@ -64,7 +65,15 @@ function quotaStorage(limit: number) {
 function mountContainer() {
   const host = document.createElement("div")
   document.body.append(host)
-  const dispose = web.render(() => web.createComponent(subject.ToastContainer, {}), host)
+  const dispose = web.render(
+    () =>
+      web.createComponent(fixture.TestLanguage, {
+        get children() {
+          return web.createComponent(subject.ToastContainer, {})
+        },
+      }),
+    host,
+  )
   cleanups.push(dispose)
   return dispose
 }

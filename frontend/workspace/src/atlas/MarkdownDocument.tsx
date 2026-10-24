@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { createMemo, For, Show, type ComponentProps } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Markdown } from "@synsci/ui/markdown"
@@ -18,6 +19,7 @@ export function MarkdownDocument(
     name?: string
   },
 ) {
+  const language = useLanguage()
   const [reading, setReading] = createStore(readDocumentPreferences())
   const markdown = createMemo(() => splitAlignedMarkdown(props.text))
   const change = (next: Partial<DocumentPreferences>) => {
@@ -37,34 +39,38 @@ export function MarkdownDocument(
   return (
     <article
       class="atlas-file-document atlas-markdown-document"
-      aria-label={props.name ? `${props.name} preview` : "Markdown preview"}
+      aria-label={
+        props.name
+          ? language.t("atlas.reading.namedPreview", { name: props.name })
+          : language.t("atlas.reading.preview")
+      }
       data-reading-font={reading.font}
       data-reading-width={reading.width}
       style={{ "--document-font-size": `${reading.size}px` }}
     >
       <div class="atlas-document-tools">
         <Popover
-          title="Reading options"
-          description="Saved on this device. Your file stays unchanged."
+          title={language.t("atlas.reading.options")}
+          description={language.t("atlas.reading.description")}
           placement="bottom-end"
           class="atlas-reading-options"
           triggerAs="button"
           triggerProps={{
             type: "button",
             class: "atlas-file-button atlas-reading-trigger",
-            "aria-label": "Reading options",
-            title: "Reading options",
+            "aria-label": language.t("atlas.reading.options"),
+            title: language.t("atlas.reading.options"),
           }}
           trigger={<span aria-hidden="true">Aa</span>}
         >
           <fieldset>
-            <legend>Text size</legend>
-            <div class="atlas-reading-choices" role="group" aria-label="Document text size">
+            <legend>{language.t("atlas.reading.size")}</legend>
+            <div class="atlas-reading-choices" role="group" aria-label={language.t("atlas.reading.documentSize")}>
               <For each={[13, 15, 17, 19]}>
                 {(size) => (
                   <button
                     type="button"
-                    aria-label={`${size} pixels`}
+                    aria-label={language.t("atlas.reading.pixels", { size })}
                     aria-pressed={reading.size === size}
                     onClick={() => change({ size })}
                   >
@@ -75,33 +81,33 @@ export function MarkdownDocument(
             </div>
           </fieldset>
           <fieldset>
-            <legend>Typeface</legend>
-            <div class="atlas-reading-choices" role="group" aria-label="Document typeface">
+            <legend>{language.t("atlas.reading.font")}</legend>
+            <div class="atlas-reading-choices" role="group" aria-label={language.t("atlas.reading.documentFont")}>
               <button type="button" aria-pressed={reading.font === "sans"} onClick={() => change({ font: "sans" })}>
-                Sans
+                {language.t("atlas.reading.sans")}
               </button>
               <button type="button" aria-pressed={reading.font === "serif"} onClick={() => change({ font: "serif" })}>
-                Serif
+                {language.t("atlas.reading.serif")}
               </button>
             </div>
           </fieldset>
           <fieldset>
-            <legend>Page width</legend>
-            <div class="atlas-reading-choices" role="group" aria-label="Document page width">
+            <legend>{language.t("atlas.reading.width")}</legend>
+            <div class="atlas-reading-choices" role="group" aria-label={language.t("atlas.reading.documentWidth")}>
               <button
                 type="button"
                 aria-pressed={reading.width === "readable"}
                 onClick={() => change({ width: "readable" })}
               >
-                Readable
+                {language.t("atlas.reading.readable")}
               </button>
               <button type="button" aria-pressed={reading.width === "full"} onClick={() => change({ width: "full" })}>
-                Full width
+                {language.t("atlas.reading.full")}
               </button>
             </div>
           </fieldset>
           <button type="button" class="atlas-reading-reset" onClick={() => change(documentDefaults)}>
-            Reset reading options
+            {language.t("atlas.reading.reset")}
           </button>
         </Popover>
       </div>

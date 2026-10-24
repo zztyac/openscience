@@ -16,6 +16,7 @@ const server = await createServer({
 })
 const subject = (await server.ssrLoadModule("/src/atlas/files/RemoteFileView.tsx")) as typeof import("./RemoteFileView")
 const web = (await server.ssrLoadModule("solid-js/web")) as typeof import("solid-js/web")
+const { TestLanguage } = (await server.ssrLoadModule("/test/language.tsx")) as typeof import("../../../test/language")
 const cleanups: Array<() => void> = []
 
 afterAll(() => server.close())
@@ -27,7 +28,17 @@ afterEach(() => {
 const mount = (view: () => JSX.Element) => {
   const host = document.createElement("div")
   document.body.append(host)
-  cleanups.push(web.render(view, host))
+  cleanups.push(
+    web.render(
+      () =>
+        web.createComponent(TestLanguage, {
+          get children() {
+            return view()
+          },
+        }),
+      host,
+    ),
+  )
   return host
 }
 

@@ -18,6 +18,8 @@ const [subject, web] = await Promise.all([
   server.ssrLoadModule("solid-js/web") as Promise<typeof import("solid-js/web")>,
 ])
 const cleanups: Array<() => void> = []
+const languageFixture = (await server.ssrLoadModule("/test/language.tsx")) as typeof import("../../../test/language")
+
 afterAll(() => server.close())
 afterEach(() => {
   cleanups.splice(0).forEach((cleanup) => cleanup())
@@ -28,7 +30,17 @@ const cost = { input: 5.275, output: 31.65, cache: { read: 0.5275, write: 6.5937
 const mount = (props: Parameters<typeof subject.ModelRateDetails>[0]) => {
   const host = document.createElement("div")
   document.body.append(host)
-  cleanups.push(web.render(() => web.createComponent(subject.ModelRateDetails, props), host))
+  cleanups.push(
+    web.render(
+      () =>
+        web.createComponent(languageFixture.TestLanguage, {
+          get children() {
+            return (() => web.createComponent(subject.ModelRateDetails, props))()
+          },
+        }),
+      host,
+    ),
+  )
   return host
 }
 

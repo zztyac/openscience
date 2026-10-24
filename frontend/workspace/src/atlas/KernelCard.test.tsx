@@ -19,6 +19,7 @@ const [subject, web] = await Promise.all([
   server.ssrLoadModule("/src/atlas/KernelCard.tsx") as Promise<typeof import("./KernelCard")>,
   server.ssrLoadModule("solid-js/web") as Promise<typeof import("solid-js/web")>,
 ])
+const { TestLanguage } = (await server.ssrLoadModule("/test/language.tsx")) as typeof import("../../test/language")
 const cleanups: Array<() => void> = []
 
 afterAll(() => server.close())
@@ -50,10 +51,24 @@ const kernel = (value: Partial<KernelStatus> = {}): KernelStatus => ({
   ...value,
 })
 
-const mount = (view: () => JSX.Element) => {
+const core = (await server.ssrLoadModule("solid-js")) as typeof import("solid-js")
+const mount = (view: () => JSX.Element, locale: () => import("@/context/language").Locale = () => "en") => {
   const host = document.createElement("div")
   document.body.append(host)
-  cleanups.push(web.render(view, host))
+  cleanups.push(
+    web.render(
+      () =>
+        web.createComponent(TestLanguage, {
+          get locale() {
+            return locale()
+          },
+          get children() {
+            return view()
+          },
+        }),
+      host,
+    ),
+  )
   return host
 }
 
@@ -115,4 +130,36 @@ describe("kernel tracker row", () => {
     expect(host.textContent).not.toContain("analysis/titanic.py")
     expect(host.textContent).not.toContain("model.fit")
   })
+})
+
+test("kernel telemetry follows Chinese and English while retaining the execution title", async () => {
+  const [locale, setLocale] = core.createSignal<import("@/context/language").Locale>("en")
+  const host = mount(
+    () =>
+      subject.KernelCard({
+        kernel: kernel({
+          last_execution: {
+            title: "My analysis",
+            source: null,
+            code: "print(1)",
+            status: "running",
+            execution_count: 7,
+            message_id: null,
+            call_id: null,
+          },
+          queue_depth: 2,
+        }),
+      }),
+    locale,
+  )
+  setLocale("zh")
+  for (let attempt = 0; attempt < 50 && !host.textContent?.includes("正在运行"); attempt++) await Bun.sleep(10)
+  expect(host.querySelector("strong")?.textContent).toBe("My analysis")
+  expect(host.textContent).toContain("已完成 7 次运行")
+  expect(host.textContent).toContain("2 个排队中")
+  expect(host.querySelector('[data-metric="cpu"]')?.textContent).toContain("1.8 核心")
+  setLocale("en")
+  await Bun.sleep(0)
+  expect(host.textContent).toContain("Running · 7 runs completed · 2 queued")
+  expect(host.querySelector("strong")?.textContent).toBe("My analysis")
 })

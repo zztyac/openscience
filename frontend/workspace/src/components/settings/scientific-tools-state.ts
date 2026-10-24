@@ -1,3 +1,4 @@
+import type { useLanguage } from "@/context/language"
 type CapabilityMaturity = "verified" | "experimental" | "blocked"
 type CapabilityAvailability = "ready" | "configured" | "setup_needed" | "degraded" | "unavailable" | "not_applicable"
 
@@ -107,27 +108,37 @@ export function hostedOnly(record: ScientificCapabilityRecord) {
 }
 
 /** The sentence a row adds to its description when its local route is missing. */
-export function capabilityNote(record: ScientificCapabilityRecord) {
+export function capabilityNote(record: ScientificCapabilityRecord, t?: ReturnType<typeof useLanguage>["t"]) {
   if (hostedOnly(record))
-    return "No packaged local environment for this device; runs on Modal once Compute is connected."
+    return (
+      t?.("settings.copy.helper.noPackagedLocalEnvironmentForThisDeviceRuns") ??
+      "No packaged local environment for this device; runs on Modal once Compute is connected."
+    )
   return undefined
 }
 
-export function capabilityState(record: ScientificCapabilityRecord) {
+export function capabilityState(record: ScientificCapabilityRecord, t?: ReturnType<typeof useLanguage>["t"]) {
   const target = scientificCapabilityTarget(record)
-  if (!target) return { label: "Unavailable", tone: "danger" as const, action: undefined }
+  if (!target)
+    return { label: t?.("settings.copy.unavailable") ?? "Unavailable", tone: "danger" as const, action: undefined }
   const availability = target === "local" ? record.current_availability.local : record.current_availability.hosted
   const action =
     target === "local" ? ("setup" as const) : target === "nvidia" ? ("credentials" as const) : ("compute" as const)
-  if (availability === "degraded") return { label: "Needs attention", tone: "warning" as const, action }
+  if (availability === "degraded")
+    return { label: t?.("settings.copy.helper.needsAttention") ?? "Needs attention", tone: "warning" as const, action }
   // Stored service credentials prove a connection, not a verified run; only a
   // local environment that inspected clean is ready.
   if (availability === "configured" && target !== "local")
-    return { label: "Connected", tone: "neutral" as const, action: undefined }
+    return { label: t?.("settings.models.codexConnected") ?? "Connected", tone: "neutral" as const, action: undefined }
   if (availability === "ready" || availability === "configured")
-    return { label: "Ready", tone: "success" as const, action: undefined }
+    return { label: t?.("settings.copy.ready") ?? "Ready", tone: "success" as const, action: undefined }
   return {
-    label: target === "local" ? "Not installed" : hostedOnly(record) ? "Hosted only" : "Setup needed",
+    label:
+      target === "local"
+        ? (t?.("settings.copy.helper.notInstalled") ?? "Not installed")
+        : hostedOnly(record)
+          ? (t?.("settings.copy.helper.hostedOnly") ?? "Hosted only")
+          : (t?.("settings.copy.setupNeeded") ?? "Setup needed"),
     tone: "neutral" as const,
     action,
   }

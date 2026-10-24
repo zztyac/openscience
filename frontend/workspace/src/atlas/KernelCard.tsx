@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { Show, createEffect, createSignal, onCleanup, type JSX } from "solid-js"
 import { FileIcon } from "@synsci/ui/file-icon"
 import { kernelLabel, kernelLanguageLabel, kernelMemoryLabel, type KernelStatus } from "@/atlas/kernel-runtime"
@@ -17,14 +18,42 @@ const memory = (value?: number) => {
   return label === "Unavailable" ? "— RSS" : `${label} RSS`
 }
 
-const cores = (value?: number) => {
-  if (value === undefined || !Number.isFinite(value) || value < 0) return "— cores"
-  return `${(value / 100).toFixed(1)} cores`
+const cores = (value?: number, translate?: ReturnType<typeof useLanguage>["t"]) => {
+  if (value === undefined || !Number.isFinite(value) || value < 0)
+    return translate?.("research.compute.coreUnknown") ?? "— cores"
+  return (
+    translate?.("research.compute.coreCount", { count: (value / 100).toFixed(1) }) ??
+    `${(value / 100).toFixed(1)} cores`
+  )
 }
 
 const runs = (kernel: KernelStatus) => `${kernel.execution_count} ${kernel.execution_count === 1 ? "run" : "runs"}`
 
-export const kernelActivity = (kernel: KernelStatus, now = Date.now()) => {
+export const kernelActivity = (
+  kernel: KernelStatus,
+  now = Date.now(),
+  translate?: ReturnType<typeof useLanguage>["t"],
+) => {
+  if (translate) {
+    const state = {
+      lazy: "research.compute.lazy",
+      starting: "research.compute.starting",
+      idle: "research.compute.idle",
+      running: "research.compute.running",
+      stopped: "research.compute.stopped",
+      crashed: "research.compute.crashed",
+    } as const
+    const count = translate(
+      kernel.execution_count === 1 ? "research.compute.runCount.one" : "research.compute.runCount",
+      { count: kernel.execution_count },
+    )
+    const queued =
+      kernel.queue_depth > 0 ? ` · ${translate("research.compute.queued", { count: kernel.queue_depth })}` : ""
+    if (kernel.state === "running")
+      return `${translate(state.running)}${kernel.execution_count > 0 ? ` · ${translate(kernel.execution_count === 1 ? "research.compute.completedRuns.one" : "research.compute.completedRuns", { count: kernel.execution_count })}` : ""}${queued}`
+    const idle = kernel.state === "idle" ? age(kernel.last_activity_at, now) : ""
+    return `${translate(state[kernel.state])}${idle ? ` ${idle}` : ""} · ${count}${queued}`
+  }
   const queued = kernel.queue_depth > 0 ? ` · ${kernel.queue_depth} queued` : ""
   if (kernel.state === "running") {
     const completed = kernel.execution_count > 0 ? ` · ${runs(kernel)} completed` : ""
@@ -48,6 +77,7 @@ const environment = (kernel: KernelStatus) => {
 }
 
 export function KernelCard(props: { kernel: KernelStatus; sample?: number }): JSX.Element {
+  const language = useLanguage()
   const [now, setNow] = createSignal(Date.now())
 
   createEffect(() => {
@@ -59,7 +89,7 @@ export function KernelCard(props: { kernel: KernelStatus; sample?: number }): JS
   const title = () =>
     props.kernel.last_execution?.title?.trim() ||
     props.kernel.last_execution?.source?.trim() ||
-    kernelLabel(props.kernel)
+    kernelLabel(props.kernel, language.t)
 
   return (
     <article class="compute-row kernel-card" data-kernel-id={props.kernel.id} data-state={props.kernel.state}>
@@ -69,13 +99,13 @@ export function KernelCard(props: { kernel: KernelStatus; sample?: number }): JS
       <div class="compute-row__copy">
         <strong title={title()}>{title()}</strong>
         <span data-slot="kernel-card-executions">
-          {kernelActivity(props.kernel, now())}
+          {kernelActivity(props.kernel, now(), language.t)}
           <Show when={environment(props.kernel)}>{(name) => ` · ${name()}`}</Show>
         </span>
       </div>
-      <div class="compute-row__telemetry" aria-label="Current kernel resources">
+      <div class="compute-row__telemetry" aria-label={language.t("research.compute.kernelResources")}>
         <span data-metric="memory">{memory(props.kernel.resources?.memory_bytes)}</span>
-        <span data-metric="cpu">{cores(props.kernel.resources?.cpu_percent)}</span>
+        <span data-metric="cpu">{cores(props.kernel.resources?.cpu_percent, language.t)}</span>
       </div>
     </article>
   )

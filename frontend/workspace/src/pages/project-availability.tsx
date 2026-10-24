@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import type { JSX } from "solid-js"
 
 function record(value: unknown): Record<string, unknown> | undefined {
@@ -35,26 +36,24 @@ export function ProjectUnavailable(props: {
   onBack: () => void
   onRemove: () => void
 }): JSX.Element {
+  const language = useLanguage()
   return (
     <main class="app-not-found project-unavailable" aria-labelledby="project-unavailable-title">
-      <span class="app-not-found__eyebrow">Folder unavailable</span>
-      <h1 id="project-unavailable-title">This project folder can’t be found</h1>
-      <p>
-        OpenScience still has this project in your history, but its folder is no longer available. It won’t recreate the
-        folder or switch this session to another location.
-      </p>
+      <span class="app-not-found__eyebrow">{language.t("pages.copy.folderUnavailable")}</span>
+      <h1 id="project-unavailable-title">{language.t("pages.copy.projectFolderMissing")}</h1>
+      <p>{language.t("pages.copy.projectFolderMissingHint")}</p>
       <code class="project-unavailable__path" title={props.directory}>
         {props.directory}
       </code>
       <div class="project-unavailable__actions">
         <button class="app-not-found__action" type="button" onClick={props.onBack}>
-          Back to Projects
+          {language.t("pages.copy.backProjects")}
         </button>
         <button class="app-not-found__action app-not-found__action--quiet" type="button" onClick={props.onRemove}>
-          Remove from home
+          {language.t("pages.copy.removeHome")}
         </button>
       </div>
-      <p class="project-unavailable__note">Removing it from home does not delete saved sessions or any files.</p>
+      <p class="project-unavailable__note">{language.t("pages.copy.removeHomeHint")}</p>
     </main>
   )
 }

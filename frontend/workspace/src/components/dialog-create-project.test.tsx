@@ -28,6 +28,18 @@ const [subject, dialogs, web] = await Promise.all([
   server.ssrLoadModule("solid-js/web") as Promise<typeof import("solid-js/web")>,
 ])
 
+const { TestLanguage } = (await server.ssrLoadModule("/test/language.tsx")) as typeof import("../../test/language")
+const localizedRender = (view: () => JSX.Element, host: HTMLElement) =>
+  web.render(
+    () =>
+      web.createComponent(TestLanguage, {
+        get children() {
+          return view()
+        },
+      }),
+    host,
+  )
+
 afterAll(() => server.close())
 
 afterEach(() => {
@@ -38,7 +50,7 @@ afterEach(() => {
 const mount = (view: () => JSX.Element) => {
   const host = document.createElement("div")
   document.body.append(host)
-  cleanups.push(web.render(view, host))
+  cleanups.push(localizedRender(view, host))
   return host
 }
 

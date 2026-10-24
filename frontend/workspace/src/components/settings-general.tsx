@@ -101,7 +101,9 @@ export const AppearanceSections: Component<{ services?: CommandLineServices }> =
   // is a second press. An installation without in-app staging has neither, so
   // the copy and the button both point at the release page. The banner reads
   // the same notice, so the two surfaces cannot describe one update differently.
-  const notice = createMemo(() => updateNotice(updates.state, platform.stageUpdate ? "download" : "installer"))
+  const notice = createMemo(() =>
+    updateNotice(updates.state, platform.stageUpdate ? "download" : "installer", language.t),
+  )
   const updateDescription = createMemo(() => {
     const current = notice()
     return current ? updateNoticeLine(current) : language.t("settings.updates.row.check.description")
@@ -122,7 +124,7 @@ export const AppearanceSections: Component<{ services?: CommandLineServices }> =
   const cancelUpdate = () => {
     void updates.cancel().catch((error: unknown) => {
       showToast({
-        title: "OpenScience kept the update",
+        title: language.t("settings.copy.openscienceKeptTheUpdate"),
         description: error instanceof Error ? error.message : String(error),
       })
     })
@@ -155,9 +157,12 @@ export const AppearanceSections: Component<{ services?: CommandLineServices }> =
     <>
       <SettingsSection title={language.t("settings.general.section.appearance")}>
         <div class="settings-card">
-          <SettingsRow title="Theme" description="Choose a complete color system for the workspace.">
+          <SettingsRow
+            title={language.t("command.category.theme")}
+            description={language.t("settings.copy.chooseACompleteColorSystemForTheWorkspace")}
+          >
             <Select
-              aria-label="Theme"
+              aria-label={language.t("command.category.theme")}
               options={themeOptions()}
               current={themeOptions().find((option) => option.value === theme.themeId())}
               value={(option) => option.value}
@@ -381,7 +386,7 @@ export const AppearanceSections: Component<{ services?: CommandLineServices }> =
           >
             <div class="flex max-w-full flex-wrap items-center justify-end gap-2">
               <Button size="small" variant="secondary" onClick={() => platform.openLink(URLS.releases)}>
-                View notes
+                {language.t("settings.copy.viewNotes")}
               </Button>
               <Switch
                 hideLabel
@@ -408,10 +413,10 @@ export const AppearanceSections: Component<{ services?: CommandLineServices }> =
               >
                 <Button size="small" variant="secondary" disabled={updates.state.cancelling} onClick={cancelUpdate}>
                   {updates.state.cancelling
-                    ? "Discarding…"
+                    ? language.t("settings.copy.discarding")
                     : updates.state.phase === "ready"
-                      ? "Discard"
-                      : "Cancel download"}
+                      ? language.t("settings.copy.discard")
+                      : language.t("settings.copy.cancelDownload")}
                 </Button>
               </Show>
               <Button
@@ -428,7 +433,10 @@ export const AppearanceSections: Component<{ services?: CommandLineServices }> =
           </SettingsRow>
         </div>
         <Show when={store.releases.length > 0}>
-          <div class="settings-card settings-update-history" aria-label="Recent OpenScience releases">
+          <div
+            class="settings-card settings-update-history"
+            aria-label={language.t("settings.copy.recentOpenscienceReleases")}
+          >
             <For each={store.releases.slice(0, 3)}>
               {(release) => (
                 <button
@@ -470,11 +478,12 @@ export const AppearanceSections: Component<{ services?: CommandLineServices }> =
 // Only the desktop app can own the link in ~/.openscience/bin, so the web
 // build neither shows the row nor asks the server about it.
 const CommandLineSection: Component<{ services?: CommandLineServices }> = (props) => {
+  const language = useLanguage()
   const sdk = props.services?.sdk ?? useGlobalSDK()
   const platform = usePlatform()
   const client = createCommandLineClient(sdk.url, platform.fetch ?? fetch)
   return (
-    <SettingsSection title="Command line">
+    <SettingsSection title={language.t("settings.copy.commandLine")}>
       <div class="settings-card">
         <CommandLineToolRow client={client} />
       </div>
@@ -488,7 +497,10 @@ export const SettingsGeneral: Component = () => {
   const language = useLanguage()
   return (
     <PanelScroll>
-      <PanelHeader title={language.t("settings.tab.general")} description="Appearance, notifications, and updates." />
+      <PanelHeader
+        title={language.t("settings.tab.general")}
+        description={language.t("settings.copy.appearanceNotificationsAndUpdates")}
+      />
       <PanelBody>
         <AppearanceSections />
       </PanelBody>

@@ -1,3 +1,4 @@
+import type { useLanguage } from "@/context/language"
 import { projectContains } from "@/utils/project-file"
 import { resolveArtifactPath } from "@/artifacts/context"
 
@@ -201,38 +202,58 @@ function format(value?: string) {
   return value?.trim().replace(/^\./, "").toLowerCase() ?? ""
 }
 
-function label(kind: FileKind, value?: string) {
+function label(kind: FileKind, value?: string, translate?: ReturnType<typeof useLanguage>["t"]) {
   const type = format(value)
   if (kind === "markdown") return "Markdown"
   if (kind === "notebook")
-    return type === "rmd" ? "R Markdown document" : type === "qmd" ? "Quarto document" : "Jupyter notebook"
-  if (kind === "html") return "HTML document"
-  if (kind === "pdf") return "PDF document"
-  if (kind === "image") return type ? `${type.toUpperCase()} image` : "Image"
+    return type === "rmd"
+      ? (translate?.("atlas.fileKind.rMarkdown") ?? "R Markdown document")
+      : type === "qmd"
+        ? (translate?.("atlas.fileKind.quarto") ?? "Quarto document")
+        : (translate?.("atlas.fileKind.notebook") ?? "Jupyter notebook")
+  if (kind === "html") return translate?.("atlas.fileKind.html") ?? "HTML document"
+  if (kind === "pdf") return translate?.("atlas.fileKind.pdf") ?? "PDF document"
+  if (kind === "image")
+    return type
+      ? (translate?.("atlas.fileKind.imageType", { format: type.toUpperCase() }) ?? `${type.toUpperCase()} image`)
+      : (translate?.("atlas.fileKind.image") ?? "Image")
   if (kind === "table") {
-    if (type === "jsonl") return "JSON Lines data"
-    return type ? `${type.toUpperCase()} data` : "Tabular data"
+    if (type === "jsonl") return translate?.("atlas.fileKind.jsonLines") ?? "JSON Lines data"
+    return type
+      ? (translate?.("atlas.fileKind.dataType", { format: type.toUpperCase() }) ?? `${type.toUpperCase()} data`)
+      : (translate?.("atlas.fileKind.table") ?? "Tabular data")
   }
-  if (kind === "scientific-data") return type ? `${type.toUpperCase()} data` : "Scientific data"
-  if (kind === "scientific-binary") return type ? `${type.toUpperCase()} dataset` : "Scientific dataset"
-  if (kind === "science") return type ? `${type.toUpperCase()} scientific file` : "Scientific file"
-  if (kind === "binary") return "Binary file"
-  if (type === "py") return "Python source"
-  if (type === "r") return "R source"
-  if (type === "tex" || type === "latex") return "LaTeX source"
-  if (type === "mdx") return "MDX source"
-  if (type === "txt" || !type) return "Text file"
-  return `${type.toUpperCase()} source`
+  if (kind === "scientific-data")
+    return type
+      ? (translate?.("atlas.fileKind.dataType", { format: type.toUpperCase() }) ?? `${type.toUpperCase()} data`)
+      : (translate?.("atlas.fileKind.scienceData") ?? "Scientific data")
+  if (kind === "scientific-binary")
+    return type
+      ? (translate?.("atlas.fileKind.datasetType", { format: type.toUpperCase() }) ?? `${type.toUpperCase()} dataset`)
+      : (translate?.("atlas.fileKind.dataset") ?? "Scientific dataset")
+  if (kind === "science")
+    return type
+      ? (translate?.("atlas.fileKind.scienceType", { format: type.toUpperCase() }) ??
+          `${type.toUpperCase()} scientific file`)
+      : (translate?.("atlas.fileKind.scienceFile") ?? "Scientific file")
+  if (kind === "binary") return translate?.("atlas.fileKind.binary") ?? "Binary file"
+  if (type === "py") return translate?.("atlas.fileKind.python") ?? "Python source"
+  if (type === "r") return translate?.("atlas.fileKind.r") ?? "R source"
+  if (type === "tex" || type === "latex") return translate?.("atlas.fileKind.latex") ?? "LaTeX source"
+  if (type === "mdx") return translate?.("atlas.fileKind.mdx") ?? "MDX source"
+  if (type === "txt" || !type) return translate?.("atlas.fileKind.text") ?? "Text file"
+  return translate?.("atlas.fileKind.sourceType", { format: type.toUpperCase() }) ?? `${type.toUpperCase()} source`
 }
 
 export function describeFile(input: {
+  translate?: ReturnType<typeof useLanguage>["t"]
   kind: FileKind
   format?: string
   binary?: boolean
   truncated?: boolean
 }): FileDescription {
   return {
-    label: label(input.kind, input.format),
+    label: label(input.kind, input.format, input.translate),
     source: !input.binary && !input.truncated && sources.has(input.kind),
     copy: !input.binary && !input.truncated,
     download: true,

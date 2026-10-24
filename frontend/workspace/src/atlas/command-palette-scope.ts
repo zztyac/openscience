@@ -1,8 +1,8 @@
 import { projectName, type ProjectRecord } from "@/pages/home-projects"
 
-function routeName(project: { worktree: string }) {
+function routeName(project: { worktree: string }, fallback: string) {
   const parts = project.worktree.split(/[\\/]/).filter(Boolean)
-  return parts[parts.length - 1] ?? "Current project"
+  return parts[parts.length - 1] ?? fallback
 }
 
 /** The project the palette is searching, as the person knows it. A project
@@ -11,8 +11,9 @@ function routeName(project: { worktree: string }) {
 export function scopeLabel(
   active: { projectID: string; project: { worktree: string } } | undefined,
   catalog: readonly ProjectRecord[],
+  labels = { all: "All projects", current: "Current project" },
 ) {
-  if (!active) return "All projects"
+  if (!active) return labels.all
   const record = catalog.find((item) => item.id === active.projectID)
-  return record ? projectName(record) : routeName(active.project)
+  return record ? projectName(record) : routeName(active.project, labels.current)
 }

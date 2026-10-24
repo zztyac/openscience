@@ -32,6 +32,7 @@ const fixture = (await server.ssrLoadModule(
   "/src/atlas/files/artifact-boundary-fixture.tsx",
 )) as typeof import("./artifact-boundary-fixture")
 const web = (await server.ssrLoadModule("solid-js/web")) as typeof import("solid-js/web")
+const { TestLanguage } = (await server.ssrLoadModule("/test/language.tsx")) as typeof import("../../../test/language")
 const cleanups: Array<() => void> = []
 
 afterAll(() => server.close())
@@ -47,7 +48,17 @@ const settle = (ms = 60) => new Promise((resolve) => setTimeout(resolve, ms))
 const mountGuarded = (view: () => JSX.Element) => {
   const host = document.createElement("div")
   document.body.append(host)
-  cleanups.push(web.render(() => fixture.Guarded({ view }), host))
+  cleanups.push(
+    web.render(
+      () =>
+        web.createComponent(TestLanguage, {
+          get children() {
+            return fixture.Guarded({ view })
+          },
+        }),
+      host,
+    ),
+  )
   return host
 }
 

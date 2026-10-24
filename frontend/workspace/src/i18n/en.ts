@@ -1,4 +1,15 @@
+import { dict as researchCopy } from "./en-research-copy"
+import { dict as atlasCopy } from "./en-atlas-copy"
+import { dict as coreCopy } from "./en-core-copy"
+import { dict as settingsCopy } from "./en-settings-copy"
+import { dict as pagesCopy } from "./en-pages-copy"
 export const dict = {
+  ...researchCopy,
+  ...atlasCopy,
+  ...coreCopy,
+  ...settingsCopy,
+  ...pagesCopy,
+
   "terminal.claude.open": "Open Claude Code",
   "terminal.claude.description":
     "Run the installed Claude CLI in your working folder using its own login and permissions",

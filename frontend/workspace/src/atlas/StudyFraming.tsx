@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { Show, createEffect, on } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Button } from "@synsci/ui/button"
@@ -6,6 +7,7 @@ export function StudyFraming(props: {
   study: { id: string; question?: string; hypothesis?: string }
   save: (input: { question: string; hypothesis: string }) => Promise<void>
 }) {
+  const language = useLanguage()
   const [state, setState] = createStore({ editing: false, busy: false, question: "", hypothesis: "", error: "" })
   createEffect(
     on(
@@ -24,27 +26,26 @@ export function StudyFraming(props: {
         if (props.study.id === id) setState({ editing: false })
       })
       .catch(() => {
-        if (props.study.id === id)
-          setState({ error: "Could not save the research question and hypothesis. Please retry." })
+        if (props.study.id === id) setState({ error: language.t("atlas.study.saveError") })
       })
       .finally(() => {
         if (props.study.id === id) setState({ busy: false })
       })
   }
   return (
-    <section aria-label="Research question and hypothesis">
+    <section aria-label={language.t("atlas.study.title")}>
       <Show
         when={state.editing}
         fallback={
           <>
             <dl class="ar-facts">
               <div>
-                <dt>Research question</dt>
-                <dd>{props.study.question || "Not recorded"}</dd>
+                <dt>{language.t("atlas.study.question")}</dt>
+                <dd>{props.study.question || language.t("atlas.study.empty")}</dd>
               </div>
               <div>
-                <dt>Hypothesis</dt>
-                <dd>{props.study.hypothesis || "Not recorded"}</dd>
+                <dt>{language.t("atlas.study.hypothesis")}</dt>
+                <dd>{props.study.hypothesis || language.t("atlas.study.empty")}</dd>
               </div>
             </dl>
             <Button
@@ -59,7 +60,7 @@ export function StudyFraming(props: {
                 })
               }
             >
-              Edit question and hypothesis
+              {language.t("atlas.study.edit")}
             </Button>
           </>
         }
@@ -72,7 +73,7 @@ export function StudyFraming(props: {
           }}
         >
           <label>
-            Research question
+            {language.t("atlas.study.question")}
             <textarea
               value={state.question}
               maxLength={4000}
@@ -81,7 +82,7 @@ export function StudyFraming(props: {
             />
           </label>
           <label>
-            Hypothesis
+            {language.t("atlas.study.hypothesis")}
             <textarea
               value={state.hypothesis}
               maxLength={4000}
@@ -90,7 +91,7 @@ export function StudyFraming(props: {
             />
           </label>
           <Button type="submit" size="small" disabled={state.busy}>
-            Save
+            {language.t("common.save")}
           </Button>
           <Button
             type="button"
@@ -99,7 +100,7 @@ export function StudyFraming(props: {
             disabled={state.busy}
             onClick={() => setState({ editing: false, error: "" })}
           >
-            Cancel
+            {language.t("common.cancel")}
           </Button>
           <Show when={state.error}>
             <p role="alert">{state.error}</p>

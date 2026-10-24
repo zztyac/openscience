@@ -24,6 +24,8 @@ const ready = async (predicate: () => boolean) => {
   for (let index = 0; index < 100 && !predicate(); index++) await Bun.sleep(10)
   expect(predicate()).toBe(true)
 }
+const languageFixture = (await vite.ssrLoadModule("/test/language.tsx")) as typeof import("../../../test/language")
+
 afterAll(() => vite.close())
 afterEach(() => {
   cleanups.splice(0).forEach((dispose) => dispose())
@@ -90,12 +92,17 @@ async function mount() {
   cleanups.push(
     web.render(
       () =>
-        subject.BillingImports({
-          base: `http://127.0.0.1:${address.port}`,
-          fetch,
-          start: "2026-10-18",
-          end: "2026-10-18",
-          changed: () => state.changed++,
+        web.createComponent(languageFixture.TestLanguage, {
+          get children() {
+            return (() =>
+              subject.BillingImports({
+                base: `http://127.0.0.1:${address.port}`,
+                fetch,
+                start: "2026-10-18",
+                end: "2026-10-18",
+                changed: () => state.changed++,
+              }))()
+          },
         }),
       host,
     ),

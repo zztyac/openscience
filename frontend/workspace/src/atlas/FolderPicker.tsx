@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { createSignal, createMemo, createResource, createEffect, onCleanup, type JSX, For, Show } from "solid-js"
 import { Dialog } from "@synsci/ui/dialog"
 import { Button } from "@synsci/ui/button"
@@ -80,6 +81,7 @@ function pushRecent(path: string) {
  * and returns absolute paths.
  */
 export function FolderPicker(props: PickerProps): JSX.Element {
+  const language = useLanguage()
   const sdk = useGlobalSDK()
   const sync = useGlobalSync()
   const dialog = useDialog()
@@ -204,13 +206,13 @@ export function FolderPicker(props: PickerProps): JSX.Element {
   const sidebarLinks = createMemo(() => {
     const h = home()
     const links: Array<{ label: string; path: string; icon: IconProps["name"] }> = [
-      { label: "Home", path: h, icon: "home" },
-      { label: "Desktop", path: joinLocalPath(h, "Desktop"), icon: "layout-grid" },
-      { label: "Documents", path: joinLocalPath(h, "Documents"), icon: "file" },
-      { label: "Downloads", path: joinLocalPath(h, "Downloads"), icon: "download" },
+      { label: language.t("pages.overlay.home"), path: h, icon: "home" },
+      { label: language.t("settings.section.desktop"), path: joinLocalPath(h, "Desktop"), icon: "layout-grid" },
+      { label: language.t("pages.overlay.documents"), path: joinLocalPath(h, "Documents"), icon: "file" },
+      { label: language.t("pages.overlay.downloads"), path: joinLocalPath(h, "Downloads"), icon: "download" },
     ]
     if (localPathPlatform(h) === "macos")
-      links.push({ label: "Applications", path: "/Applications", icon: "folder-tree" })
+      links.push({ label: language.t("pages.overlay.applications"), path: "/Applications", icon: "folder-tree" })
     return links
   })
 
@@ -218,15 +220,18 @@ export function FolderPicker(props: PickerProps): JSX.Element {
 
   return (
     <Dialog
-      title={props.title ?? (props.kind === "file" ? "Choose a file" : "Choose a folder")}
+      title={
+        props.title ??
+        (props.kind === "file" ? language.t("pages.overlay.chooseFile") : language.t("interface.project.chooseFolder"))
+      }
       size="large"
       class="folder-picker-dialog"
       transition
     >
       <div class="folder-picker">
-        <aside class="folder-picker__sidebar" aria-label="Folder locations">
+        <aside class="folder-picker__sidebar" aria-label={language.t("pages.overlay.folderLocations")}>
           <div class="folder-picker__sidebar-group">
-            <SectionLabel>Favorites</SectionLabel>
+            <SectionLabel>{language.t("pages.overlay.favorites")}</SectionLabel>
             <div class="folder-picker__sidebar-list">
               <For each={sidebarLinks()}>
                 {(location) => (
@@ -242,7 +247,7 @@ export function FolderPicker(props: PickerProps): JSX.Element {
           </div>
           <Show when={recents().length > 0}>
             <div class="folder-picker__sidebar-group">
-              <SectionLabel>Recent</SectionLabel>
+              <SectionLabel>{language.t("interface.composer.recent")}</SectionLabel>
               <div class="folder-picker__sidebar-list">
                 <For each={recents()}>
                   {(path) => (
@@ -261,15 +266,15 @@ export function FolderPicker(props: PickerProps): JSX.Element {
           </Show>
         </aside>
 
-        <section class="folder-picker__main" aria-label="Folder browser">
-          <nav class="folder-picker__location" aria-label="Current folder">
+        <section class="folder-picker__main" aria-label={language.t("pages.overlay.folderBrowser")}>
+          <nav class="folder-picker__location" aria-label={language.t("atlas.files.currentFolder")}>
             <div class="folder-picker__navigation">
               <button
                 type="button"
                 class="folder-picker__icon-button"
                 onClick={goUp}
-                aria-label="Parent folder"
-                title="Parent folder"
+                aria-label={language.t("atlas.files.parent")}
+                title={language.t("atlas.files.parent")}
                 disabled={isLocalPathRoot(cwd())}
               >
                 <Icon name="arrow-up" size="small" />
@@ -278,8 +283,8 @@ export function FolderPicker(props: PickerProps): JSX.Element {
                 type="button"
                 class="folder-picker__icon-button"
                 onClick={() => goTo(home())}
-                aria-label="Home folder"
-                title="Home folder"
+                aria-label={language.t("pages.overlay.homeFolder")}
+                title={language.t("pages.overlay.homeFolder")}
               >
                 <Icon name="home" size="small" />
               </button>
@@ -312,8 +317,8 @@ export function FolderPicker(props: PickerProps): JSX.Element {
               type="button"
               class="folder-picker__icon-button folder-picker__refresh"
               onClick={refresh}
-              aria-label="Refresh folder"
-              title="Refresh folder"
+              aria-label={language.t("pages.overlay.refreshFolder")}
+              title={language.t("pages.overlay.refreshFolder")}
             >
               <Icon name="refresh" size="small" />
             </button>
@@ -322,16 +327,22 @@ export function FolderPicker(props: PickerProps): JSX.Element {
           <div class="folder-picker__tools">
             <label class="folder-picker__field folder-picker__search">
               <Icon name="magnifying-glass" size="small" />
-              <span class="folder-picker__visually-hidden">Filter this folder</span>
+              <span class="folder-picker__visually-hidden">{language.t("atlas.files.filter")}</span>
               <input
                 value={filter()}
                 onInput={(e) => setFilter(e.currentTarget.value)}
-                placeholder={props.kind === "file" ? "Filter files and folders…" : "Filter folders…"}
+                placeholder={
+                  props.kind === "file"
+                    ? language.t("pages.overlay.filterFilesFolders")
+                    : language.t("pages.overlay.filterFolders")
+                }
                 autofocus
                 autocomplete="off"
               />
               <span class="folder-picker__count tab-fig" aria-live="polite">
-                {filtered().length} {filtered().length === 1 ? "item" : "items"}
+                {language.t(filtered().length === 1 ? "pages.overlay.itemCount.one" : "pages.overlay.itemCount.other", {
+                  count: filtered().length,
+                })}
               </span>
             </label>
 
@@ -346,22 +357,22 @@ export function FolderPicker(props: PickerProps): JSX.Element {
               }}
             >
               <Icon name="folder-tree" size="small" />
-              <span class="folder-picker__field-label">Path</span>
+              <span class="folder-picker__field-label">{language.t("pages.overlay.path")}</span>
               <input
                 value={pathInput()}
                 onInput={(e) => {
                   navigation.invalidate()
                   setPathInput(e.currentTarget.value)
                 }}
-                aria-label="Go to path"
+                aria-label={language.t("pages.overlay.goPath")}
                 placeholder={
-                  localPathRoot(home()) === "/" ? "/Users/you/research or ~/research" : "C:\\Users\\you\\research"
+                  localPathRoot(home()) === "/" ? language.t("pages.overlay.pathExample") : "C:\\Users\\you\\research"
                 }
                 spellcheck={false}
                 autocomplete="off"
               />
               <button type="submit" class="folder-picker__go" disabled={!pathInput().trim()}>
-                Go
+                {language.t("pages.overlay.go")}
               </button>
             </form>
           </div>
@@ -378,7 +389,11 @@ export function FolderPicker(props: PickerProps): JSX.Element {
             }}
           >
             <Show when={entries.loading}>
-              <div class="folder-picker__loading" role="progressbar" aria-label="Loading folder">
+              <div
+                class="folder-picker__loading"
+                role="progressbar"
+                aria-label={language.t("pages.overlay.loadingFolder")}
+              >
                 <span />
               </div>
             </Show>
@@ -391,16 +406,19 @@ export function FolderPicker(props: PickerProps): JSX.Element {
                     fallback={
                       <div class="folder-picker__empty folder-picker__empty--error atlas-fade-in" role="alert">
                         <Icon name="alert-circle" size="normal" />
-                        <strong>Couldn’t read this folder</strong>
+                        <strong>{language.t("pages.overlay.readFolderFailed")}</strong>
                         <p>{error()}</p>
                         <button type="button" class="folder-picker__retry" onClick={refresh}>
-                          Retry
+                          {language.t("settings.connectors.retry")}
                         </button>
                       </div>
                     }
                   >
                     <div class="folder-picker__empty atlas-fade-in">
-                      <Show when={(entries() ?? []).length === 0} fallback={<span>Nothing matches the filter.</span>}>
+                      <Show
+                        when={(entries() ?? []).length === 0}
+                        fallback={<span>{language.t("pages.overlay.filterEmpty")}</span>}
+                      >
                         <Show
                           when={
                             localPathPlatform(home()) === "macos" &&
@@ -409,19 +427,15 @@ export function FolderPicker(props: PickerProps): JSX.Element {
                           fallback={
                             <span>
                               {props.kind === "file"
-                                ? "This folder does not contain any files."
-                                : "This folder is empty. You can still choose it below."}
+                                ? language.t("pages.overlay.folderEmptyFiles")
+                                : language.t("pages.overlay.folderEmptyHint")}
                             </span>
                           }
                         >
                           <strong>
-                            macOS is blocking the listing of <code>{basenameLocalPath(cwd())}</code>
+                            {language.t("pages.overlay.macListing", { folder: basenameLocalPath(cwd()) })}
                           </strong>
-                          <p>
-                            To list this folder, the <code>openscience</code> binary needs Full Disk Access. For now,
-                            paste the absolute path of the folder you want into the path field above. OpenScience can
-                            still open a path you provide explicitly.
-                          </p>
+                          <p>{language.t("pages.overlay.macListingHint")}</p>
                         </Show>
                       </Show>
                     </div>
@@ -449,7 +463,7 @@ export function FolderPicker(props: PickerProps): JSX.Element {
             </span>
             <div class="folder-picker__footer-actions">
               <Button type="button" size="normal" variant="ghost" onClick={cancel}>
-                Cancel
+                {language.t("common.cancel")}
               </Button>
               <Show when={props.kind !== "file"}>
                 <Button
@@ -457,9 +471,9 @@ export function FolderPicker(props: PickerProps): JSX.Element {
                   size="normal"
                   variant="primary"
                   onClick={pickCurrent}
-                  title="Choose the current folder"
+                  title={language.t("pages.overlay.chooseCurrentFolder")}
                 >
-                  Use this folder
+                  {language.t("pages.overlay.useFolder")}
                   <Icon name="arrow-right" size="small" />
                 </Button>
               </Show>
@@ -477,6 +491,7 @@ function PickerRow(props: {
   onPick: () => void
   pickingFile: boolean
 }): JSX.Element {
+  const language = useLanguage()
   const folder = () => props.entry.type === "directory"
   return (
     <div class="folder-picker__row" data-kind={props.entry.type}>
@@ -485,19 +500,31 @@ function PickerRow(props: {
         class="folder-picker__row-open"
         onClick={props.onOpen}
         onDblClick={() => (folder() ? props.onPick() : undefined)}
-        title={folder() ? `${props.entry.absolute} · open folder` : `${props.entry.absolute} · choose this file`}
+        title={
+          folder()
+            ? language.t("pages.overlay.openFolderPath", { path: props.entry.absolute })
+            : language.t("pages.overlay.chooseFilePath", { path: props.entry.absolute })
+        }
       >
         <Icon name={folder() ? "folder" : "file"} size="small" />
         <span class="folder-picker__row-name">{props.entry.name}</span>
-        <Show when={folder()} fallback={<span class="folder-picker__pick-label">Choose</span>}>
+        <Show
+          when={folder()}
+          fallback={<span class="folder-picker__pick-label">{language.t("pages.overlay.choose")}</span>}
+        >
           <span class="folder-picker__row-chevron" aria-hidden="true">
             <Icon name="chevron-right" size="small" />
           </span>
         </Show>
       </button>
       <Show when={folder() && !props.pickingFile}>
-        <button type="button" class="folder-picker__choose" onClick={props.onPick} title="Choose this folder">
-          Choose
+        <button
+          type="button"
+          class="folder-picker__choose"
+          onClick={props.onPick}
+          title={language.t("pages.overlay.chooseThisFolder")}
+        >
+          {language.t("pages.overlay.choose")}
         </button>
       </Show>
     </div>

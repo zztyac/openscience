@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { For } from "solid-js"
 import { modelPricing, pricingUpstream } from "@/context/model-pricing"
 
@@ -8,6 +9,7 @@ export function ModelRateDetails(
     limit: { context: number; output: number }
   },
 ) {
+  const language = useLanguage()
   const pricing = () => modelPricing(props)
   return (
     <div class="models-rate-route">
@@ -16,12 +18,16 @@ export function ModelRateDetails(
       </strong>
       <dl>
         <div>
-          <dt>Context</dt>
-          <dd>{props.limit.context.toLocaleString()} tokens</dd>
+          <dt>{language.t("command.category.context")}</dt>
+          <dd>
+            {props.limit.context.toLocaleString()} {language.t("settings.copy.tokens")}
+          </dd>
         </div>
         <div>
-          <dt>Max output</dt>
-          <dd>{props.limit.output.toLocaleString()} tokens</dd>
+          <dt>{language.t("settings.copy.maxOutput")}</dt>
+          <dd>
+            {props.limit.output.toLocaleString()} {language.t("settings.copy.tokens")}
+          </dd>
         </div>
         <For each={pricing().lines}>
           {(line) => (

@@ -1,3 +1,5 @@
+import { scientificSummaryCopy, scientificCategoryCopy } from "./catalog-copy"
+import { useLanguage } from "@/context/language"
 import { Button } from "@synsci/ui/button"
 import { For, Show, createMemo, createSignal, onMount } from "solid-js"
 import { usePlatform } from "@/context/platform"
@@ -18,6 +20,7 @@ import "./scientific-tools.css"
 import { ScientificToolLogo } from "./ScientificToolLogo"
 
 export default function ScientificTools() {
+  const language = useLanguage()
   const server = useServer()
   const platform = usePlatform()
   const navigate = useSettingsNav()
@@ -48,7 +51,7 @@ export default function ScientificTools() {
     try {
       await setupScientificTool(server.url, fetchFn(), record.id)
       await load(true)
-      setNotice(`${record.name} is ready. The packaged environment is shared by all five local tools.`)
+      setNotice(language.t("settings.copy.science.ready", { name: record.name }))
     } catch (error) {
       setProblem(error instanceof Error ? error.message : String(error))
     } finally {
@@ -71,11 +74,9 @@ export default function ScientificTools() {
   const modalOnly = createMemo(() => hosted().filter(hostedOnly).length)
   const hostedDescription = () =>
     [
-      `${hosted().length} hosted tools.`,
-      modalOnly() > 0
-        ? `${modalOnly()} have no packaged environment for this device and run on Modal once Compute is connected.`
-        : "",
-      "NVIDIA tools share one API key in Credentials; runs use your NVIDIA account, not your Ace balance.",
+      language.t("settings.copy.science.hosted", { count: hosted().length }),
+      modalOnly() > 0 ? language.t("settings.copy.science.modalOnly", { count: modalOnly() }) : "",
+      language.t("settings.copy.nvidiaToolsShareOneApiKeyInCredentials"),
     ]
       .filter(Boolean)
       .join(" ")
@@ -83,7 +84,10 @@ export default function ScientificTools() {
   return (
     <PanelScroll>
       <div class="scientific-tools-panel">
-        <PanelHeader title="Tools" description="Scientific tools you can run here or connect with your own account." />
+        <PanelHeader
+          title={language.t("settings.shell.panel.scientific-tools")}
+          description={language.t("settings.copy.scientificToolsYouCanRunHereOrConnect")}
+        />
         <PanelBody>
           <Show when={problem()}>
             <div class="settings-alert" data-tone="critical" role="alert">
@@ -96,7 +100,7 @@ export default function ScientificTools() {
                   disabled={loading()}
                   onClick={() => void load(true)}
                 >
-                  Retry
+                  {language.t("settings.connectors.retry")}
                 </Button>
               </Show>
             </div>
@@ -109,7 +113,11 @@ export default function ScientificTools() {
           </Show>
 
           <Show when={loading() && !state()}>
-            <div class="settings-panel-loading__rows" role="status" aria-label="Loading tools">
+            <div
+              class="settings-panel-loading__rows"
+              role="status"
+              aria-label={language.t("settings.copy.loadingTools")}
+            >
               <span />
               <span />
               <span />
@@ -122,16 +130,16 @@ export default function ScientificTools() {
               fallback={
                 <EmptyState
                   icon="flask"
-                  title="No runnable tools for this device"
-                  hint="OpenScience only lists tools with a real packaged runtime or a supported connection path."
+                  title={language.t("settings.copy.noRunnableToolsForThisDevice")}
+                  hint={language.t("settings.copy.openscienceOnlyListsToolsWithARealPackaged")}
                 />
               }
             >
               <Show when={local().length > 0}>
                 <Section
                   id="scientific-tools-local"
-                  title="Local science"
-                  description={`${local().length} tools share one exact Python environment on this device. Install it once.`}
+                  title={language.t("settings.copy.localScience")}
+                  description={language.t("settings.copy.science.local", { count: local().length })}
                 >
                   <div class="settings-card scientific-tools-list" role="list">
                     <For each={local()}>
@@ -150,7 +158,11 @@ export default function ScientificTools() {
               </Show>
 
               <Show when={hosted().length > 0}>
-                <Section id="scientific-tools-connected" title="Connected science" description={hostedDescription()}>
+                <Section
+                  id="scientific-tools-connected"
+                  title={language.t("settings.copy.connectedScience")}
+                  description={hostedDescription()}
+                >
                   <div class="settings-card scientific-tools-list" role="list">
                     <For each={hosted()}>
                       {(record) => {
@@ -172,7 +184,7 @@ export default function ScientificTools() {
             </Show>
 
             <p class="scientific-tools-footnote">
-              Only executable adapters are listed. Runs use this device or a service you connect directly.
+              {language.t("settings.copy.onlyExecutableAdaptersAreListedRunsUseThis")}
             </p>
           </Show>
         </PanelBody>
@@ -188,16 +200,20 @@ function CapabilityRow(props: {
   onAction: () => void
   onOpenSource: () => void
 }) {
-  const status = () => capabilityState(props.record)
+  const language = useLanguage()
+  const status = () => capabilityState(props.record, language.t)
   const target = () => scientificCapabilityTarget(props.record)
   const actionLabel = () => {
-    if (props.active) return "Installing…"
-    if (status().action === "setup") return status().tone === "warning" ? "Repair" : "Install"
-    if (status().action === "credentials") return status().tone === "warning" ? "Review" : "Connect"
-    if (status().action === "compute") return status().tone === "warning" ? "Review" : "Connect Modal"
+    if (props.active) return language.t("settings.copy.installing")
+    if (status().action === "setup")
+      return status().tone === "warning" ? language.t("settings.copy.repair") : language.t("settings.copy.install")
+    if (status().action === "credentials")
+      return status().tone === "warning" ? language.t("settings.copy.review") : language.t("settings.copy.connect")
+    if (status().action === "compute")
+      return status().tone === "warning" ? language.t("settings.copy.review") : language.t("settings.copy.connectModal")
     return undefined
   }
-  const note = () => capabilityNote(props.record)
+  const note = () => capabilityNote(props.record, language.t)
   return (
     <article class="settings-row settings-row--grammar scientific-tool-row" data-target={target()} role="listitem">
       <span class="settings-row-logo">
@@ -207,15 +223,16 @@ function CapabilityRow(props: {
         title={props.record.name}
         description={
           <>
-            {categoryLabel(props.record.category)} · {props.record.summary}
+            {scientificCategoryCopy(props.record.category, language.t)} ·{" "}
+            {scientificSummaryCopy(props.record, language.t)}
             <Show when={note()}>{(text) => <> {text()}</>}</Show>{" "}
             <button
               type="button"
               class="settings-inline-link"
-              aria-label={`Open ${props.record.name} source`}
+              aria-label={language.t("settings.copy.science.source", { name: props.record.name })}
               onClick={props.onOpenSource}
             >
-              Source
+              {language.t("settings.copy.source")}
             </button>
           </>
         }
@@ -240,9 +257,4 @@ function CapabilityRow(props: {
       </Show>
     </article>
   )
-}
-
-function categoryLabel(value: string) {
-  const label = value.replaceAll("_", " ")
-  return label.charAt(0).toUpperCase() + label.slice(1)
 }

@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { useParams } from "@solidjs/router"
 import { createMemo, createResource, createSignal, onCleanup, type Accessor } from "solid-js"
 import { useSDK } from "@/context/sdk"
@@ -9,6 +10,7 @@ import {
 } from "./execution-authority"
 
 export function useExecutionAuthority(capability: ExecutionCapability | Accessor<ExecutionCapability>) {
+  const language = useLanguage()
   const sdk = useSDK()
   const params = useParams()
   const api = createExecutionAuthorityAPI(sdk.request)
@@ -57,13 +59,13 @@ export function useExecutionAuthority(capability: ExecutionCapability | Accessor
   onCleanup(instance)
 
   const message = createMemo(() => {
-    if (!params.id || params.id === "new") return "Save this session before starting a process."
-    if (!sdk.projectID) return "Execution access is unavailable until the project is ready."
-    if (decision.error) return executionAuthorityError(decision.error)
-    if (decision.loading) return "Checking execution access…"
+    if (!params.id || params.id === "new") return language.t("pages.surface.saveSessionBeforeProcess")
+    if (!sdk.projectID) return language.t("pages.surface.projectNotReady")
+    if (decision.error) return executionAuthorityError(decision.error, language.t)
+    if (decision.loading) return language.t("pages.surface.checkingExecution")
     const value = decision.latest
-    if (!value) return "Checking execution access…"
-    return executionAuthorityMessage(value)
+    if (!value) return language.t("pages.surface.checkingExecution")
+    return executionAuthorityMessage(value, language.t)
   })
   const allowed = createMemo(() => {
     if (decision.error || decision.loading) return false
@@ -84,7 +86,7 @@ export function useExecutionAuthority(capability: ExecutionCapability | Accessor
   })
   const trustProject = async () => {
     const value = decision.latest
-    if (!value || !canTrust() || trusting()) throw new Error("Project trust is not currently available.")
+    if (!value || !canTrust() || trusting()) throw new Error(language.t("pages.surface.trustUnavailable"))
     setTrusting(true)
     try {
       await api.trust(value)

@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { createEffect, type JSX, For, onCleanup } from "solid-js"
 import { Dialog as Kobalte } from "@kobalte/core/dialog"
 import { FONT_SANS } from "@/styles/tokens"
@@ -10,31 +11,32 @@ interface HelpOverlayProps {
   onClose: () => void
 }
 
-const SECTIONS: Array<{ title: string; rows: Array<{ keys: string[]; label: string }> }> = [
-  {
-    title: "Navigation",
-    rows: [
-      { keys: ["⌘", "K"], label: "Open the command palette" },
-      { keys: ["⌘", "N"], label: "Create a project or session" },
-      { keys: ["?"], label: "Open keyboard shortcuts" },
-    ],
-  },
-  {
-    title: "Chat",
-    rows: [
-      { keys: ["↵"], label: "Send message" },
-      { keys: ["⇧", "↵"], label: "Insert a new line" },
-      { keys: ["/"], label: "Open skills and commands" },
-      { keys: ["Esc"], label: "Close the active dialog" },
-    ],
-  },
-  {
-    title: "Sessions",
-    rows: [{ keys: ["Double-click"], label: "Rename a session" }],
-  },
-]
-
 export function HelpOverlay(props: HelpOverlayProps): JSX.Element {
+  const language = useLanguage()
+  const sections = (): Array<{ title: string; rows: Array<{ keys: string[]; label: string }> }> => [
+    {
+      title: language.t("settings.shortcuts.group.navigation"),
+      rows: [
+        { keys: ["⌘", "K"], label: language.t("pages.overlay.openPalette") },
+        { keys: ["⌘", "N"], label: language.t("pages.overlay.createProjectOrSession") },
+        { keys: ["?"], label: language.t("pages.overlay.openShortcuts") },
+      ],
+    },
+    {
+      title: language.t("pages.overlay.chat"),
+      rows: [
+        { keys: ["↵"], label: language.t("pages.overlay.sendMessage") },
+        { keys: ["⇧", "↵"], label: language.t("pages.overlay.newLine") },
+        { keys: ["/"], label: language.t("pages.overlay.openSkillsCommands") },
+        { keys: ["Esc"], label: language.t("pages.overlay.closeDialog") },
+      ],
+    },
+    {
+      title: language.t("pages.copy.sessions"),
+      rows: [{ keys: ["Double-click"], label: language.t("pages.overlay.renameSessionHelp") }],
+    },
+  ]
+
   const command = useCommand()
   let closeRef: HTMLButtonElement | undefined
   let restoreFocus: HTMLElement | undefined
@@ -92,13 +94,13 @@ export function HelpOverlay(props: HelpOverlayProps): JSX.Element {
                 color: "var(--color-text)",
               }}
             >
-              Keyboard shortcuts
+              {language.t("settings.shortcuts.title")}
             </Kobalte.Title>
             <span style={{ flex: 1 }} />
             <Kobalte.CloseButton
               ref={closeRef}
               type="button"
-              aria-label="Close keyboard shortcuts"
+              aria-label={language.t("pages.overlay.closeShortcuts")}
               style={{
                 all: "unset",
                 "box-sizing": "border-box",
@@ -126,7 +128,7 @@ export function HelpOverlay(props: HelpOverlayProps): JSX.Element {
               gap: "20px",
             }}
           >
-            <For each={SECTIONS}>
+            <For each={sections()}>
               {(section) => (
                 <section style={{ display: "flex", "flex-direction": "column", gap: "8px" }}>
                   <div
@@ -164,7 +166,7 @@ export function HelpOverlay(props: HelpOverlayProps): JSX.Element {
                                   color: "var(--color-text-muted)",
                                 }}
                               >
-                                {k}
+                                {k === "Double-click" ? language.t("pages.overlay.doubleClick") : k}
                               </kbd>
                             )}
                           </For>

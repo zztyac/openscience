@@ -345,7 +345,7 @@ export function SessionContextTab(props: SessionContextTabProps) {
             sessionID={sessionID()}
             load={async () => {
               const result = await sdk.client.session.receipts({ sessionID: sessionID() })
-              if (!result.data) throw new Error("Receipt lookup failed")
+              if (!result.data) throw new Error(language.t("interface.context.receiptFailed"))
               return result.data
             }}
           />
@@ -357,15 +357,15 @@ export function SessionContextTab(props: SessionContextTabProps) {
           <h3 class="context-panel__title">{language.t("context.section.lastRequest")}</h3>
           <dl>
             <dt>{language.t("context.stats.inputTokens")}</dt>
-            <dd>{ctx()?.input == null ? "Unknown" : number(ctx()?.input)}</dd>
+            <dd>{ctx()?.input == null ? language.t("interface.context.unknown") : number(ctx()?.input)}</dd>
             <dt>{language.t("context.stats.cacheRead")}</dt>
-            <dd>{ctx()?.cacheRead == null ? "Unknown" : number(ctx()?.cacheRead)}</dd>
+            <dd>{ctx()?.cacheRead == null ? language.t("interface.context.unknown") : number(ctx()?.cacheRead)}</dd>
             <dt>{language.t("context.stats.cacheWrite")}</dt>
-            <dd>{ctx()?.cacheWrite == null ? "Unknown" : number(ctx()?.cacheWrite)}</dd>
+            <dd>{ctx()?.cacheWrite == null ? language.t("interface.context.unknown") : number(ctx()?.cacheWrite)}</dd>
             <dt>{language.t("context.stats.outputTokens")}</dt>
-            <dd>{ctx()?.output == null ? "Unknown" : number(ctx()?.output)}</dd>
+            <dd>{ctx()?.output == null ? language.t("interface.context.unknown") : number(ctx()?.output)}</dd>
             <dt>{language.t("context.stats.reasoningTokens")}</dt>
-            <dd>{ctx()?.reasoning == null ? "Unknown" : number(ctx()?.reasoning)}</dd>
+            <dd>{ctx()?.reasoning == null ? language.t("interface.context.unknown") : number(ctx()?.reasoning)}</dd>
             <dt>{language.t("context.stats.limit")}</dt>
             <dd>
               {number(ctx()?.window)}
@@ -388,7 +388,7 @@ export function SessionContextTab(props: SessionContextTabProps) {
                 })}
               </small>
             </dd>
-            <dt>Recorded accounting total</dt>
+            <dt>{language.t("interface.context.recordedTotal")}</dt>
             <dd>{cost()}</dd>
             <dt>{language.t("context.stats.sessionCreated")}</dt>
             <dd>{time(props.info()?.time.created)}</dd>

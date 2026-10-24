@@ -15,6 +15,7 @@ const vite = await createTestServer({
 })
 const web = (await vite.ssrLoadModule("solid-js/web")) as typeof import("solid-js/web")
 const subject = (await vite.ssrLoadModule("/src/atlas/StudyFraming.tsx")) as typeof import("./StudyFraming")
+const { TestLanguage } = (await vite.ssrLoadModule("/test/language.tsx")) as typeof import("../../test/language")
 const cleanups: Array<() => void> = []
 
 function mount(reject = false) {
@@ -28,12 +29,16 @@ function mount(reject = false) {
   cleanups.push(
     web.render(
       () =>
-        subject.StudyFraming({
-          study: state.study,
-          save: async (input) => {
-            state.writes.push(input)
-            if (state.reject) throw new Error("fixture unavailable")
-            Object.assign(state.study, input)
+        web.createComponent(TestLanguage, {
+          get children() {
+            return subject.StudyFraming({
+              study: state.study,
+              save: async (input) => {
+                state.writes.push(input)
+                if (state.reject) throw new Error("fixture unavailable")
+                Object.assign(state.study, input)
+              },
+            })
           },
         }),
       host,

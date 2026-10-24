@@ -22,6 +22,7 @@ const marked = (await server.ssrLoadModule("@synsci/ui/context/marked")) as type
 const subject = (await server.ssrLoadModule("/src/atlas/FilePreview.tsx")) as typeof import("./FilePreview")
 const drafts = (await server.ssrLoadModule("/src/atlas/file-drafts.ts")) as typeof import("./file-drafts")
 const codemirror = (await server.ssrLoadModule("@codemirror/view")) as typeof import("@codemirror/view")
+const { TestLanguage } = (await server.ssrLoadModule("/test/language.tsx")) as typeof import("../../test/language")
 const cleanups: Array<() => void> = []
 const settle = () => new Promise((resolve) => setTimeout(resolve, 30))
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status })
@@ -48,7 +49,11 @@ const mount = (view: () => JSX.Element) => {
     () =>
       marked.MarkedProvider({
         get children() {
-          return view()
+          return web.createComponent(TestLanguage, {
+            get children() {
+              return view()
+            },
+          })
         },
       }),
     host,

@@ -26,6 +26,18 @@ const [subject, web] = await Promise.all([
 ])
 const cleanups: Array<() => void> = []
 
+const { TestLanguage } = (await server.ssrLoadModule("/test/language.tsx")) as typeof import("../../test/language")
+const localizedRender = (view: () => JSX.Element, host: HTMLElement) =>
+  web.render(
+    () =>
+      web.createComponent(TestLanguage, {
+        get children() {
+          return view()
+        },
+      }),
+    host,
+  )
+
 afterAll(() => server.close())
 
 afterEach(() => {
@@ -36,7 +48,7 @@ afterEach(() => {
 const mount = (view: () => JSX.Element) => {
   const host = document.createElement("div")
   document.body.append(host)
-  cleanups.push(web.render(view, host))
+  cleanups.push(localizedRender(view, host))
   return host
 }
 
@@ -572,4 +584,43 @@ describe("reasoning effort and Fast mode", () => {
     expect(trigger.textContent).not.toContain("Fast")
     expect(trigger.getAttribute("aria-label")).toBe("Context window: 1.05M. Model options")
   })
+})
+
+test("switches model controls between Chinese and English while preserving option ids", async () => {
+  const { createStore } = (await server.ssrLoadModule("solid-js/store")) as typeof import("solid-js/store")
+  const [state, setState] = createStore<{ locale: "en" | "zh" }>({ locale: "zh" })
+  const selected: string[] = []
+  const host = document.createElement("div")
+  document.body.append(host)
+  cleanups.push(
+    web.render(
+      () =>
+        web.createComponent(TestLanguage, {
+          get locale() {
+            return state.locale
+          },
+          get children() {
+            return web.createComponent(subject.ModelEffortPanel, {
+              current: "high",
+              options: [
+                { id: "low", label: "Low" },
+                { id: "high", label: "High" },
+              ],
+              onEffortSelect: (id) => selected.push(id),
+              onTierSelect: () => {},
+            })
+          },
+        }),
+      host,
+    ),
+  )
+  for (let attempt = 0; attempt < 100 && !host.textContent?.includes("推理强度"); attempt++) await Bun.sleep(10)
+  expect(host.textContent).toContain("推理强度")
+  expect(host.querySelector('[data-model-option="effort"]')?.textContent).toContain("低")
+  host.querySelector<HTMLButtonElement>('[data-model-option="effort"]')!.click()
+  expect(selected).toEqual(["low"])
+  setState("locale", "en")
+  expect(host.textContent).toContain("Effort")
+  expect(host.textContent).toContain("High")
+  expect(host.textContent).not.toContain("推理强度")
 })

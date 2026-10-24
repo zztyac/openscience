@@ -18,9 +18,10 @@ const server = await createServer({
     resolve: { conditions: ["browser", "production"] },
   },
 })
-const [subject, web] = await Promise.all([
+const [subject, web, fixture] = await Promise.all([
   server.ssrLoadModule("/src/pages/session-tabs.tsx") as Promise<typeof import("./session-tabs")>,
   server.ssrLoadModule("solid-js/web") as Promise<typeof import("solid-js/web")>,
+  server.ssrLoadModule("/src/pages/language.fixture.tsx") as Promise<typeof import("./language.fixture")>,
 ])
 const SessionTabStrip = subject.SessionTabStrip
 const sessionTabEditorBounds = subject.sessionTabEditorBounds
@@ -32,10 +33,21 @@ afterEach(() => {
   document.body.replaceChildren()
 })
 
-const mount = (view: () => JSX.Element) => {
+const mount = (view: () => JSX.Element, onLanguage?: Parameters<typeof fixture.LanguageFixture>[0]["onLanguage"]) => {
   const host = document.createElement("div")
   document.body.append(host)
-  cleanups.push(web.render(view, host))
+  cleanups.push(
+    web.render(
+      () =>
+        fixture.LanguageFixture({
+          get children() {
+            return view()
+          },
+          onLanguage,
+        }),
+      host,
+    ),
+  )
   return host
 }
 
@@ -63,6 +75,44 @@ const tabs = [
 ]
 
 describe("SessionTabStrip", () => {
+  test("updates session controls on language changes while preserving user titles and navigation", async () => {
+    const current: { language?: ReturnType<typeof import("@/context/language").useLanguage> } = {}
+    const closed: string[] = []
+    const host = mount(
+      () =>
+        SessionTabStrip({
+          tabs,
+          active: "session-a",
+          onSelect() {},
+          onClose: (id) => {
+            closed.push(id)
+          },
+          onReorder() {},
+          async onRename() {
+            return true
+          },
+        }),
+      (language) => {
+        current.language = language
+      },
+    )
+    current.language!.setLocale("zh")
+    for (
+      let attempt = 0;
+      attempt < 100 && host.querySelector("nav")?.getAttribute("aria-label") !== "打开的会话";
+      attempt++
+    ) {
+      await settle()
+    }
+    expect(host.querySelector("nav")?.getAttribute("aria-label")).toBe("打开的会话")
+    expect(host.querySelector('[role="tab"]')?.getAttribute("aria-label")).toContain("工作中")
+    expect(host.querySelector('[role="tab"]')?.textContent).toContain("Protein screen")
+    host.querySelector<HTMLButtonElement>('button[aria-label="关闭 Protein screen"]')?.click()
+    expect(closed).toEqual(["session-a"])
+    current.language!.setLocale("en")
+    expect(host.querySelector("nav")?.getAttribute("aria-label")).toBe("Open sessions")
+  })
+
   test("keeps the rename editor fully inside narrow and right-scrolled strips", () => {
     expect(sessionTabEditorBounds(260, 180, 320)).toEqual({ left: 140, width: 180 })
     expect(sessionTabEditorBounds(-48, 180, 320)).toEqual({ left: 0, width: 180 })

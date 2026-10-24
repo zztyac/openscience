@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import {
   For,
   Show,
@@ -206,32 +207,35 @@ export const SearchInput: Component<{
   onInput: (v: string) => void
   placeholder?: string
   ariaLabel?: string
-}> = (props) => (
-  <div class={`${controlBase} settings-control--search max-w-full`}>
-    <Icon name="magnifying-glass" size="small" class="text-icon-weak-base flex-shrink-0" />
-    <input
-      type="text"
-      aria-label={props.ariaLabel ?? props.placeholder ?? "Search"}
-      value={props.value}
-      placeholder={props.placeholder ?? "Search"}
-      spellcheck={false}
-      autocapitalize="off"
-      autocomplete="off"
-      class="min-w-0 flex-1 bg-transparent outline-none text-text-strong placeholder:text-text-weak/60"
-      onInput={(e) => props.onInput(e.currentTarget.value)}
-    />
-    <Show when={props.value}>
-      <button
-        type="button"
-        class="shrink-0 text-icon-weak-base hover:text-text-strong"
-        aria-label="Clear search"
-        onClick={() => props.onInput("")}
-      >
-        <Icon name="circle-x" size="small" />
-      </button>
-    </Show>
-  </div>
-)
+}> = (props) => {
+  const language = useLanguage()
+  return (
+    <div class={`${controlBase} settings-control--search max-w-full`}>
+      <Icon name="magnifying-glass" size="small" class="text-icon-weak-base flex-shrink-0" />
+      <input
+        type="text"
+        aria-label={props.ariaLabel ?? props.placeholder ?? language.t("settings.copy.search")}
+        value={props.value}
+        placeholder={props.placeholder ?? language.t("settings.copy.search")}
+        spellcheck={false}
+        autocapitalize="off"
+        autocomplete="off"
+        class="min-w-0 flex-1 bg-transparent outline-none text-text-strong placeholder:text-text-weak/60"
+        onInput={(e) => props.onInput(e.currentTarget.value)}
+      />
+      <Show when={props.value}>
+        <button
+          type="button"
+          class="shrink-0 text-icon-weak-base hover:text-text-strong"
+          aria-label={language.t("settings.copy.clearSearch")}
+          onClick={() => props.onInput("")}
+        >
+          <Icon name="circle-x" size="small" />
+        </button>
+      </Show>
+    </div>
+  )
+}
 
 export interface FilterOption {
   id: string

@@ -1,22 +1,26 @@
+import { useLanguage } from "@/context/language"
 import { type Component } from "solid-js"
 import { CredentialServices } from "./CredentialServices"
 import { PanelBody, PanelHeader, PanelScroll } from "./_shared"
 
-const Credentials: Component = () => (
-  <PanelScroll>
-    <PanelHeader
-      title="Credentials"
-      description="Add service credentials once and make them available to the tools that need them."
-    />
-    <PanelBody>
-      <CredentialServices
-        category="integration"
-        title="Integrations"
-        description="NVIDIA, GitHub, OpenAlex, Hugging Face, and other research services."
-        custom
+const Credentials: Component = () => {
+  const language = useLanguage()
+  return (
+    <PanelScroll>
+      <PanelHeader
+        title={language.t("settings.shell.panel.credentials")}
+        description={language.t("settings.copy.addServiceCredentialsOnceAndMakeThemAvailable")}
       />
-    </PanelBody>
-  </PanelScroll>
-)
+      <PanelBody>
+        <CredentialServices
+          category="integration"
+          title={language.t("settings.copy.integrations")}
+          description={language.t("settings.copy.nvidiaGithubOpenalexHuggingFaceAndOtherResearch")}
+          custom
+        />
+      </PanelBody>
+    </PanelScroll>
+  )
+}
 
 export default Credentials

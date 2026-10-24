@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { Show, createEffect, createMemo, onCleanup, type Component } from "solid-js"
 import { Button } from "@synsci/ui/button"
 import { Icon } from "@synsci/ui/icon"
@@ -36,18 +37,27 @@ export type UpdateNotice = {
  */
 export type UpdatePress = "download-and-restart" | "download" | "installer"
 
-const offerCopy: Record<UpdatePress, (version: string) => { detail: string; label: string }> = {
-  "download-and-restart": () => ({
-    detail: "One press downloads and verifies the signed update, then restarts OpenScience.",
-    label: "Download and restart",
+const offerCopy: Record<
+  UpdatePress,
+  (version: string, t?: ReturnType<typeof useLanguage>["t"]) => { detail: string; label: string }
+> = {
+  "download-and-restart": (_version, t) => ({
+    detail:
+      t?.("settings.copy.helper.onePressDownloadsAndVerifiesTheSignedUpdate") ??
+      "One press downloads and verifies the signed update, then restarts OpenScience.",
+    label: t?.("settings.copy.helper.downloadAndRestart") ?? "Download and restart",
   }),
-  download: (version) => ({
-    detail: "Download the signed update and restart when you are ready.",
-    label: `Download ${version}`,
+  download: (version, t) => ({
+    detail:
+      t?.("settings.copy.helper.downloadTheSignedUpdateAndRestartWhenYou") ??
+      "Download the signed update and restart when you are ready.",
+    label: t?.("settings.copy.update.download", { version: version }) ?? `Download ${version}`,
   }),
-  installer: () => ({
-    detail: "Get the installer from the releases page and reinstall to update.",
-    label: "Download installer",
+  installer: (_version, t) => ({
+    detail:
+      t?.("settings.copy.helper.getTheInstallerFromTheReleasesPageAnd") ??
+      "Get the installer from the releases page and reinstall to update.",
+    label: t?.("settings.copy.downloadInstaller") ?? "Download installer",
   }),
 }
 
@@ -56,13 +66,17 @@ const offerCopy: Record<UpdatePress, (version: string) => { detail: string; labe
  * the app can still move to outranks a finished update result: the result is
  * about a version already installed, the release is the one thing left to do.
  */
-export function updateNotice(state: NoticeState, press: UpdatePress): UpdateNotice | undefined {
+export function updateNotice(
+  state: NoticeState,
+  press: UpdatePress,
+  t?: ReturnType<typeof useLanguage>["t"],
+): UpdateNotice | undefined {
   const offered = offeredUpdate(state)
   if (offered) {
-    const copy = offerCopy[press](offered)
+    const copy = offerCopy[press](offered, t)
     return {
       kind: "available",
-      title: `OpenScience ${offered} is available`,
+      title: t?.("settings.copy.update.available", { version: offered }) ?? `OpenScience ${offered} is available`,
       detail: copy.detail,
       primary: { label: copy.label, busy: false },
     }
@@ -70,53 +84,86 @@ export function updateNotice(state: NoticeState, press: UpdatePress): UpdateNoti
   if (state.phase === "ready") {
     return {
       kind: "ready",
-      title: `OpenScience ${state.version ?? state.available} is verified`,
+      title:
+        t?.("settings.copy.update.verified", { version: state.version ?? state.available ?? "" }) ??
+        `OpenScience ${state.version ?? state.available} is verified`,
       detail: state.migration_required
-        ? "This copy is administrator-owned. OpenScience will install the verified update in your user Applications folder, then reopen there."
-        : "Ready when you are. Restart only after your current work is finished.",
-      primary: { label: state.migration_required ? "Move & restart" : "Restart to update", busy: false },
+        ? (t?.("settings.copy.helper.thisCopyIsAdministratorOwnedOpenscienceWillInstall") ??
+          "This copy is administrator-owned. OpenScience will install the verified update in your user Applications folder, then reopen there.")
+        : (t?.("settings.copy.helper.readyWhenYouAreRestartOnlyAfterYour") ??
+          "Ready when you are. Restart only after your current work is finished."),
+      primary: {
+        label: state.migration_required
+          ? (t?.("settings.copy.helper.moveRestart") ?? "Move & restart")
+          : (t?.("settings.copy.helper.restartToUpdate") ?? "Restart to update"),
+        busy: false,
+      },
     }
   }
   if (state.phase === "succeeded") {
     return {
       kind: "succeeded",
-      title: `Updated to OpenScience ${state.version}`,
-      detail: "The signed update is installed and your workspace is healthy.",
+      title:
+        t?.("settings.copy.update.succeeded", { version: state.version ?? "" }) ??
+        `Updated to OpenScience ${state.version}`,
+      detail:
+        t?.("settings.copy.helper.theSignedUpdateIsInstalledAndYourWorkspace") ??
+        "The signed update is installed and your workspace is healthy.",
     }
   }
   if (state.phase === "restarting") {
     return {
       kind: "restarting",
-      title: `Restarting OpenScience ${state.version ?? ""}`.trim(),
-      detail: "Finishing the update. OpenScience will reopen automatically.",
-      primary: { label: "Restarting…", busy: true },
+      title: (
+        t?.("settings.copy.update.restarting", { version: state.version ?? "" }) ??
+        `Restarting OpenScience ${state.version ?? ""}`
+      ).trim(),
+      detail:
+        t?.("settings.copy.helper.finishingTheUpdateOpenscienceWillReopenAutomatically") ??
+        "Finishing the update. OpenScience will reopen automatically.",
+      primary: { label: t?.("settings.copy.helper.restarting") ?? "Restarting…", busy: true },
     }
   }
   if (state.phase === "restart_blocked") {
     return {
       kind: "blocked",
-      title: "OpenScience is waiting to restart safely",
-      detail: state.error ?? "Finish or close the active runtime, then retry the restart.",
-      primary: { label: "Retry restart", busy: false },
+      title:
+        t?.("settings.copy.helper.openscienceIsWaitingToRestartSafely") ?? "OpenScience is waiting to restart safely",
+      detail:
+        state.error ??
+        t?.("settings.copy.helper.finishOrCloseTheActiveRuntimeThenRetry") ??
+        "Finish or close the active runtime, then retry the restart.",
+      primary: { label: t?.("settings.copy.helper.retryRestart") ?? "Retry restart", busy: false },
     }
   }
   if (state.phase === "failed") {
     return {
       kind: "failed",
-      title: "OpenScience could not prepare the update",
+      title:
+        t?.("settings.copy.helper.openscienceCouldNotPrepareTheUpdate") ?? "OpenScience could not prepare the update",
       detail: state.error,
-      primary: { label: "Retry", busy: false },
+      primary: { label: t?.("settings.connectors.retry") ?? "Retry", busy: false },
     }
   }
   if (state.phase === "idle") return undefined
   return {
     kind: "preparing",
-    title: `Preparing OpenScience ${state.version ?? state.available}`,
+    title:
+      t?.("settings.copy.update.preparing", { version: state.version ?? state.available ?? "" }) ??
+      `Preparing OpenScience ${state.version ?? state.available}`,
     detail:
       state.phase === "downloading"
-        ? `${formatUpdateBytes(state.transferred)}${state.total ? ` of ${formatUpdateBytes(state.total)}` : ""} downloaded`
-        : "Checking the signed, notarized app before restart.",
-    primary: { label: "Preparing…", busy: true },
+        ? t
+          ? state.total
+            ? t("settings.copy.update.downloadedOf", {
+                transferred: formatUpdateBytes(state.transferred),
+                total: formatUpdateBytes(state.total),
+              })
+            : t("settings.copy.update.downloaded", { transferred: formatUpdateBytes(state.transferred) })
+          : `${formatUpdateBytes(state.transferred)}${state.total ? ` of ${formatUpdateBytes(state.total)}` : ""} downloaded`
+        : (t?.("settings.copy.helper.checkingTheSignedNotarizedAppBeforeRestart") ??
+          "Checking the signed, notarized app before restart."),
+    primary: { label: t?.("settings.copy.preparing") ?? "Preparing…", busy: true },
   }
 }
 
@@ -164,6 +211,7 @@ export function queueStartupUpdateCheck(input: {
  * "Check for updates on startup" preference.
  */
 export const StartupUpdateCheck: Component = () => {
+  const language = useLanguage()
   const platform = usePlatform()
   const settings = useSettings()
   const dialog = useDialog()
@@ -181,21 +229,21 @@ export const StartupUpdateCheck: Component = () => {
         // and this module's pure helpers are imported in server-side tests.
         const { confirmDialog } = await import("@/atlas/dialogs")
         const ok = await confirmDialog(dialog, {
-          title: "Pause running work and restart?",
+          title: language.t("settings.copy.pauseRunningWorkAndRestart"),
           message: (
             <>
-              {error.blockers.join(", ")} still running. Restarting now pauses each turn; OpenScience continues them
-              where they stopped once it is back. Compute jobs already on Modal keep running.
+              {error.blockers.join(", ")}{" "}
+              {language.t("settings.copy.stillRunningRestartingNowPausesEachTurnOpenscience")}
             </>
           ),
-          confirmLabel: "Pause and restart",
-          cancelLabel: "Not yet",
+          confirmLabel: language.t("settings.copy.pauseAndRestart"),
+          cancelLabel: language.t("settings.copy.notYet"),
         })
         if (!ok) return
         await updates.apply({ mode: "now" }).catch((again: unknown) => {
           showToast({
             variant: "error",
-            title: "OpenScience could not restart",
+            title: language.t("settings.copy.openscienceCouldNotRestart"),
             description: again instanceof Error ? again.message : String(again),
           })
         })
@@ -203,7 +251,7 @@ export const StartupUpdateCheck: Component = () => {
       }
       showToast({
         variant: "error",
-        title: "OpenScience is still running",
+        title: language.t("settings.copy.openscienceIsStillRunning"),
         description: error instanceof Error ? error.message : String(error),
       })
     })
@@ -218,7 +266,7 @@ export const StartupUpdateCheck: Component = () => {
     await updates.downloadAndRestart(restart).catch((error: unknown) => {
       showToast({
         variant: "error",
-        title: "Update failed",
+        title: language.t("settings.copy.updateFailed"),
         description: error instanceof Error ? error.message : String(error),
       })
     })
@@ -228,7 +276,7 @@ export const StartupUpdateCheck: Component = () => {
     await updates.cancel().catch((error: unknown) => {
       showToast({
         variant: "error",
-        title: "OpenScience kept the update",
+        title: language.t("settings.copy.openscienceKeptTheUpdate"),
         description: error instanceof Error ? error.message : String(error),
       })
     })
@@ -247,14 +295,14 @@ export const StartupUpdateCheck: Component = () => {
 
   onCleanup(() => cancel())
   const notice = createMemo(() =>
-    updateNotice(updates.state, platform.stageUpdate ? "download-and-restart" : "installer"),
+    updateNotice(updates.state, platform.stageUpdate ? "download-and-restart" : "installer", language.t),
   )
   return (
     <Show when={!updates.state.dismissed && notice()}>
       <aside
         class="startup-update"
         data-phase={updates.state.phase}
-        aria-label="OpenScience update"
+        aria-label={language.t("settings.copy.openscienceUpdate")}
         aria-live="polite"
         aria-busy={notice()?.primary?.busy === true}
       >
@@ -265,7 +313,11 @@ export const StartupUpdateCheck: Component = () => {
           <strong>{notice()?.title}</strong>
           <small>{notice()?.detail}</small>
           <Show when={updates.state.progress !== undefined && updates.state.phase === "downloading"}>
-            <progress max="1" value={updates.state.progress} aria-label="Update download progress" />
+            <progress
+              max="1"
+              value={updates.state.progress}
+              aria-label={language.t("settings.copy.updateDownloadProgress")}
+            />
           </Show>
         </span>
         <Show when={notice()?.primary}>
@@ -284,12 +336,16 @@ export const StartupUpdateCheck: Component = () => {
             disabled={updates.state.cancelling}
             onClick={() => void cancelUpdate()}
           >
-            {updates.state.cancelling ? "Discarding…" : updates.state.phase === "ready" ? "Discard" : "Cancel download"}
+            {updates.state.cancelling
+              ? language.t("settings.copy.discarding")
+              : updates.state.phase === "ready"
+                ? language.t("settings.copy.discard")
+                : language.t("settings.copy.cancelDownload")}
           </Button>
         </Show>
         <Show when={notice()?.kind === "available"}>
           <Button size="small" variant="secondary" onClick={() => updates.dismiss()}>
-            Later
+            {language.t("settings.copy.later")}
           </Button>
         </Show>
         <Button
@@ -306,13 +362,15 @@ export const StartupUpdateCheck: Component = () => {
             dialog.show(() => <DialogSettings initial="general" />)
           }}
         >
-          {platform.stageUpdate && updates.state.phase === "failed" ? "Download installer" : "What's new"}
+          {platform.stageUpdate && updates.state.phase === "failed"
+            ? language.t("settings.copy.downloadInstaller")
+            : language.t("settings.copy.helper.whatSNew")}
         </Button>
         <Show when={!["restarting", "restart_blocked"].includes(updates.state.phase)}>
           <button
             type="button"
             class="startup-update__dismiss"
-            aria-label="Dismiss update notice"
+            aria-label={language.t("settings.copy.dismissUpdateNotice")}
             onClick={() => updates.dismiss()}
           >
             <Icon name="close" size="small" />

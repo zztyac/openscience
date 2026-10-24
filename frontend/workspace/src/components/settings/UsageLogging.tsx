@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { Show, onCleanup, onMount } from "solid-js"
 import { createStore, reconcile } from "solid-js/store"
 import { Switch } from "@synsci/ui/switch"
@@ -16,6 +17,7 @@ type Services = {
 }
 
 export function UsageLogging(props: { services?: Services } = {}) {
+  const language = useLanguage()
   const sdk = props.services?.sdk ?? useGlobalSDK()
   const platform = props.services?.platform ?? usePlatform()
   const [state, setState] = createStore<{ status?: Status; busy: boolean; error?: string; revision: number }>({
@@ -36,7 +38,8 @@ export function UsageLogging(props: { services?: Services } = {}) {
         if (revision === state.revision) setState("status", reconcile(status))
       })
       .catch(() => {
-        if (revision === state.revision) setState({ error: "Could not read or save trace sharing. Please retry." })
+        if (revision === state.revision)
+          setState({ error: language.t("settings.copy.couldNotReadOrSaveTraceSharingPlease") })
       })
       .finally(() => {
         if (revision === state.revision) setState({ busy: false })
@@ -53,12 +56,15 @@ export function UsageLogging(props: { services?: Services } = {}) {
   onCleanup(() => window.removeEventListener("openscience:account-changed", accountChanged))
 
   return (
-    <Section title="Data & privacy" description="Control session trace sharing from this device.">
+    <Section
+      title={language.t("settings.copy.dataPrivacy")}
+      description={language.t("settings.copy.controlSessionTraceSharingFromThisDevice")}
+    >
       <Card>
         <Row>
           <RowCopy
-            title="Share session traces"
-            description="On by default while signed in, subject to your account preferences. Shares prompts, provider-visible reasoning, answers, tool inputs and outputs, and reported usage. Turn off to stop uploads from this device."
+            title={language.t("settings.copy.shareSessionTraces")}
+            description={language.t("settings.copy.onByDefaultWhileSignedInSubjectTo")}
           />
           <Switch
             hideLabel
@@ -66,24 +72,24 @@ export function UsageLogging(props: { services?: Services } = {}) {
             disabled={!state.status || state.busy}
             onChange={load}
           >
-            Share session traces
+            {language.t("settings.copy.shareSessionTraces")}
           </Switch>
         </Row>
         <Row>
           <RowCopy
-            title="Logging health"
+            title={language.t("settings.copy.loggingHealth")}
             description={
               !state.status
-                ? "Loading…"
+                ? language.t("settings.copy.loading")
                 : !state.status.enabled
-                  ? "Sharing is off. Queued records have been cleared."
+                  ? language.t("settings.copy.sharingIsOffQueuedRecordsHaveBeenCleared")
                   : !state.status.signedIn
-                    ? "Sign in to share traces. No records are sent while signed out."
+                    ? language.t("settings.copy.signInToShareTracesNoRecordsAre")
                     : `${state.status.queued} queued · ${state.status.delivered} acknowledged · ${state.status.quarantined} need attention`
             }
           />
           <button type="button" class="settings-preference-action" disabled={state.busy} onClick={() => load()}>
-            Refresh
+            {language.t("settings.copy.refresh")}
           </button>
         </Row>
         <Show when={state.status}>
@@ -91,14 +97,16 @@ export function UsageLogging(props: { services?: Services } = {}) {
             <>
               <Row>
                 <RowCopy
-                  title="Last acknowledgement"
-                  description={status().lastDelivery ?? "No delivery has been acknowledged on this device yet."}
+                  title={language.t("settings.copy.lastAcknowledgement")}
+                  description={
+                    status().lastDelivery ?? language.t("settings.copy.noDeliveryHasBeenAcknowledgedOnThisDevice")
+                  }
                 />
               </Row>
               <Show when={status().oldestQueuedAt}>
                 <Row>
                   <RowCopy
-                    title="Oldest queued record"
+                    title={language.t("settings.copy.oldestQueuedRecord")}
                     description={`${status().oldestQueuedAt}${status().stalled ? " · waiting more than five minutes for acknowledgement" : ""}`}
                   />
                 </Row>
@@ -107,7 +115,7 @@ export function UsageLogging(props: { services?: Services } = {}) {
                 {(attempt) => (
                   <Row>
                     <RowCopy
-                      title="Last delivery attempt"
+                      title={language.t("settings.copy.lastDeliveryAttempt")}
                       description={`${attempt().startedAt} · ${attempt().state}${attempt().httpStatus === undefined ? "" : ` · HTTP ${attempt().httpStatus}`} · ${attempt().deliveryID}`}
                     />
                   </Row>
@@ -117,8 +125,8 @@ export function UsageLogging(props: { services?: Services } = {}) {
                 {(rejection) => (
                   <Row>
                     <RowCopy
-                      title="Latest rejected record"
-                      description={`${rejection().eventID} · ${rejection().reason === "local_size_limit" ? "Record exceeds the delivery size limit" : /^http_[1-5][0-9]{2}$/.test(rejection().reason) ? `HTTP ${rejection().reason.slice(5)}` : "Reason unavailable"}`}
+                      title={language.t("settings.copy.latestRejectedRecord")}
+                      description={`${rejection().eventID} · ${rejection().reason === "local_size_limit" ? language.t("settings.copy.recordExceedsTheDeliverySizeLimit") : /^http_[1-5][0-9]{2}$/.test(rejection().reason) ? `HTTP ${rejection().reason.slice(5)}` : language.t("settings.copy.reasonUnavailable")}`}
                     />
                   </Row>
                 )}
@@ -126,15 +134,15 @@ export function UsageLogging(props: { services?: Services } = {}) {
               <Show when={status().quarantined > 0}>
                 <Row>
                   <RowCopy
-                    title="Rejected records"
+                    title={language.t("settings.copy.rejectedRecords")}
                     description={`${status().quarantined} rejected records are kept on this device and are not retried automatically. Turning off sharing discards queued and rejected records.`}
                   />
                 </Row>
               </Show>
               <Row>
                 <RowCopy
-                  title="What this checks"
-                  description="These counts describe trace delivery from this device. Acknowledgement does not verify complete model usage or agreement with Ace charges. Check server reads stored evidence separately; it cannot see records still queued or rejected on this device, or requests rejected before a receipt. Refresh reads device status; it does not retry uploads."
+                  title={language.t("settings.copy.whatThisChecks")}
+                  description={language.t("settings.copy.theseCountsDescribeTraceDeliveryFromThisDevice")}
                 />
               </Row>
             </>

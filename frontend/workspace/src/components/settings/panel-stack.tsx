@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { Dynamic } from "solid-js/web"
 import { For, Suspense, createEffect, onCleanup, type Accessor, type Component } from "solid-js"
 import { AtomLoader } from "@synsci/ui/atom-loader"
@@ -19,6 +20,7 @@ export function SettingsPanelStack<Id extends string>(props: {
   active: Accessor<Id>
   panels: Accessor<SettingsPanelStackItem<Id>[]>
 }) {
+  const language = useLanguage()
   const slots = new Map<Id, HTMLElement>()
 
   createEffect(() => {
@@ -52,8 +54,12 @@ export function SettingsPanelStack<Id extends string>(props: {
         >
           <Suspense
             fallback={
-              <div class="settings-panel-loading" role="status" aria-label="Loading settings">
-                <AtomLoader size={144} caption="Loading settings" />
+              <div
+                class="settings-panel-loading"
+                role="status"
+                aria-label={language.t("settings.copy.loadingSettings")}
+              >
+                <AtomLoader size={144} caption={language.t("settings.copy.loadingSettings")} />
               </div>
             }
           >

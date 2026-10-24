@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { Show, type JSX } from "solid-js"
 import { IconCpu, IconFolder, IconTerminal, IconActivity } from "@/atlas/shared/Icon"
 import { preloadTerminal } from "@/components/terminal"
@@ -10,6 +11,7 @@ export function CompactContextActions(props: {
   contextOpen: boolean
   onContext: (context: SessionContext) => void
 }): JSX.Element {
+  const language = useLanguage()
   return (
     <div class="workspace-header__context-actions" style={{ display: "contents" }}>
       <button
@@ -19,7 +21,7 @@ export function CompactContextActions(props: {
         onClick={() => props.onContext("files")}
       >
         <IconFolder size={16} strokeWidth={1.5} />
-        Files
+        {language.t("palette.group.files")}
       </button>
       <button
         type="button"
@@ -30,7 +32,7 @@ export function CompactContextActions(props: {
         onClick={() => props.onContext("terminal")}
       >
         <IconTerminal size={16} strokeWidth={1.5} />
-        Terminal
+        {language.t("terminal.title")}
       </button>
       <button
         type="button"
@@ -39,7 +41,7 @@ export function CompactContextActions(props: {
         onClick={() => props.onContext("kernels")}
       >
         <IconCpu size={16} strokeWidth={1.5} />
-        Compute
+        {language.t("settings.shell.panel.compute")}
       </button>
       <button
         type="button"
@@ -48,7 +50,7 @@ export function CompactContextActions(props: {
         onClick={() => props.onContext("autoresearch")}
       >
         <IconActivity size={16} strokeWidth={1.5} />
-        Autoresearch
+        {language.t("pages.copy.autoresearch")}
       </button>
     </div>
   )
@@ -98,25 +100,26 @@ export function SessionSidebarActions(props: {
   contextOpen: boolean
   onContext: (context: SessionContext) => void
 }): JSX.Element {
+  const language = useLanguage()
   return (
     <div class="session-sidebar__context-actions">
       <div class="session-sidebar__group-label" aria-hidden="true">
-        Workspace
+        {language.t("command.category.workspace")}
       </div>
       <div class="session-sidebar__action-list">
         <SidebarAction
-          label="Files"
-          detail="Project files"
-          ariaLabel="Open project files"
+          label={language.t("palette.group.files")}
+          detail={language.t("pages.copy.projectFiles")}
+          ariaLabel={language.t("pages.copy.openProjectFiles")}
           active={props.context === "files" && props.contextOpen}
           onClick={(_event?: Event) => props.onContext("files")}
         >
           <IconFolder size={16} strokeWidth={1.5} />
         </SidebarAction>
         <SidebarAction
-          label="Terminal"
-          detail="Project shell"
-          ariaLabel="Open project terminal"
+          label={language.t("terminal.title")}
+          detail={language.t("pages.copy.projectShell")}
+          ariaLabel={language.t("pages.copy.openProjectTerminal")}
           shortcut="⌃`"
           active={props.context === "terminal" && props.contextOpen}
           onWarm={preloadTerminal}
@@ -125,18 +128,18 @@ export function SessionSidebarActions(props: {
           <IconTerminal size={16} strokeWidth={1.5} />
         </SidebarAction>
         <SidebarAction
-          label="Compute"
-          detail="Runtimes and jobs"
-          ariaLabel="Open project compute"
+          label={language.t("settings.shell.panel.compute")}
+          detail={language.t("pages.copy.runtimesJobs")}
+          ariaLabel={language.t("pages.copy.openProjectCompute")}
           active={props.context === "kernels" && props.contextOpen}
           onClick={(_event?: Event) => props.onContext("kernels")}
         >
           <IconCpu size={16} strokeWidth={1.5} />
         </SidebarAction>
         <SidebarAction
-          label="Autoresearch"
-          detail="Studies and tracked runs"
-          ariaLabel="Open project autoresearch"
+          label={language.t("pages.copy.autoresearch")}
+          detail={language.t("pages.copy.studiesRuns")}
+          ariaLabel={language.t("pages.copy.openProjectAutoresearch")}
           active={props.context === "autoresearch" && props.contextOpen}
           onClick={(_event?: Event) => props.onContext("autoresearch")}
         >

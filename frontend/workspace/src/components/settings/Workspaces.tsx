@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { For, Show, createMemo, createResource, onCleanup, type Component } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useParams } from "@solidjs/router"
@@ -25,19 +26,21 @@ export function WorkspaceFolders(props: {
   confirm?: (folder: FilesystemGrant) => Promise<boolean>
   watch?: (refresh: () => void) => () => void
 }) {
+  const language = useLanguage()
   const [state, set] = createStore({ path: "", access: "write" as "read" | "write", busy: false, error: "" })
   const lifetime = new AbortController()
   onCleanup(() => lifetime.abort())
   const request = async (path: string, init?: RequestInit) => {
     const response = await props.request(path, init)
     const body = await response.json()
-    if (!response.ok) throw new Error(body?.data?.message || body?.message || "Folder settings could not be saved.")
+    if (!response.ok)
+      throw new Error(body?.data?.message || body?.message || language.t("settings.copy.folderSettingsCouldNotBeSaved"))
     return body as unknown
   }
   const [snapshot, actions] = createResource(async () => {
     const body = await request("/project/current/filesystem")
     const value = parseFilesystemSnapshot(body, { projectID: props.projectID, directory: props.directory })
-    if (!value) throw new Error("Folder settings belong to a different workspace.")
+    if (!value) throw new Error(language.t("settings.copy.folderSettingsBelongToADifferentWorkspace"))
     return value
   })
   const watch = props.watch?.(() => void actions.refetch())
@@ -103,24 +106,22 @@ export function WorkspaceFolders(props: {
       })
   }
   return (
-    <div class="workspace-folders" aria-label="Workspace folders" aria-busy={state.busy}>
+    <div class="workspace-folders" aria-label={language.t("settings.copy.workspaceFolders")} aria-busy={state.busy}>
       <Show
         when={!snapshot.error}
         fallback={
           <div class="settings-alert" role="alert">
-            <span>Folders could not be loaded.</span>
-            <Button onClick={() => void actions.refetch()}>Retry</Button>
+            <span>{language.t("settings.copy.foldersCouldNotBeLoaded")}</span>
+            <Button onClick={() => void actions.refetch()}>{language.t("settings.connectors.retry")}</Button>
           </div>
         }
       >
-        <Show when={snapshot.latest} fallback={<p role="status">Loading folders…</p>}>
+        <Show when={snapshot.latest} fallback={<p role="status">{language.t("settings.copy.loadingFolders")}</p>}>
           <div class="workspace-folders__list">
             <For
               each={folders()}
               fallback={
-                <p class="workspace-folders__empty">
-                  No folders connected. Add one to work with files on your computer.
-                </p>
+                <p class="workspace-folders__empty">{language.t("settings.copy.noFoldersConnectedAddOneToWorkWith")}</p>
               }
             >
               {(folder) => (
@@ -130,7 +131,7 @@ export function WorkspaceFolders(props: {
                     <strong>{fileSourceName(folder.path)}</strong>
                     <span title={folder.path}>{folder.path}</span>
                     <Show when={snapshot.latest?.toolDirectory === folder.path}>
-                      <small>Default working folder</small>
+                      <small>{language.t("settings.copy.defaultWorkingFolder")}</small>
                     </Show>
                   </div>
                   <div class="workspace-folders__actions">
@@ -140,8 +141,8 @@ export function WorkspaceFolders(props: {
                       disabled={state.busy}
                       onChange={(event) => void connect(folder.path, event.currentTarget.value as "read" | "write")}
                     >
-                      <option value="write">Read & write</option>
-                      <option value="read">Read only</option>
+                      <option value="write">{language.t("settings.copy.readWrite")}</option>
+                      <option value="read">{language.t("settings.copy.readOnly")}</option>
                     </select>
                     <Show when={folder.access === "write" && snapshot.latest?.toolDirectory !== folder.path}>
                       <Button
@@ -151,7 +152,7 @@ export function WorkspaceFolders(props: {
                         onClick={() => void working(folder.path)}
                         aria-label={`Use ${folder.path} by default`}
                       >
-                        Use by default
+                        {language.t("settings.copy.useByDefault")}
                       </Button>
                     </Show>
                     <Button
@@ -161,7 +162,7 @@ export function WorkspaceFolders(props: {
                       onClick={() => void disconnect(folder)}
                       aria-label={`Disconnect ${folder.path}`}
                     >
-                      Disconnect
+                      {language.t("settings.models.codexDisconnect")}
                     </Button>
                   </div>
                 </div>
@@ -176,9 +177,9 @@ export function WorkspaceFolders(props: {
             }}
           >
             <label class="workspace-folders__path">
-              <span>Connect a folder</span>
+              <span>{language.t("settings.copy.connectAFolder")}</span>
               <input
-                aria-label="Folder path"
+                aria-label={language.t("settings.copy.folderPath")}
                 placeholder="/path/to/folder"
                 value={state.path}
                 disabled={state.busy}
@@ -189,38 +190,38 @@ export function WorkspaceFolders(props: {
             </label>
             <div class="workspace-folders__controls">
               <select
-                aria-label="New folder access"
+                aria-label={language.t("settings.copy.newFolderAccess")}
                 value={state.access}
                 disabled={state.busy}
                 onChange={(event) => set("access", event.currentTarget.value as "read" | "write")}
               >
-                <option value="write">Read & write</option>
-                <option value="read">Read only</option>
+                <option value="write">{language.t("settings.copy.readWrite")}</option>
+                <option value="read">{language.t("settings.copy.readOnly")}</option>
               </select>
               <Show when={props.choose}>
                 <Button type="button" variant="secondary" disabled={state.busy} onClick={() => void browse()}>
-                  Browse…
+                  {language.t("settings.copy.browse")}
                 </Button>
               </Show>
               <Button type="submit" variant="primary" disabled={state.busy || !state.path.trim()}>
-                Connect folder
+                {language.t("settings.copy.connectFolder")}
               </Button>
             </div>
           </form>
           <Show when={folders().some((folder) => folder.access === "write") || snapshot.latest?.workingRoot}>
             <label class="workspace-folders__default">
-              <span>Default location for new conversations</span>
+              <span>{language.t("settings.copy.defaultLocationForNewConversations")}</span>
               <select
-                aria-label="Default working folder"
+                aria-label={language.t("settings.copy.defaultWorkingFolder")}
                 disabled={state.busy}
                 value={snapshot.latest?.workingRoot ?? ""}
                 onChange={(event) => void working(event.currentTarget.value || null)}
               >
-                <option value="">Automatic</option>
+                <option value="">{language.t("settings.copy.automatic")}</option>
                 <Show when={unavailable()}>
                   {(root) => (
                     <option value={root()} disabled>
-                      Previous folder unavailable — using scratch
+                      {language.t("settings.copy.previousFolderUnavailableUsingScratch")}
                     </option>
                   )}
                 </Show>
@@ -231,7 +232,7 @@ export function WorkspaceFolders(props: {
                     </option>
                   )}
                 </For>
-                <option value="scratch">Temporary scratch</option>
+                <option value="scratch">{language.t("settings.copy.temporaryScratch")}</option>
               </select>
             </label>
           </Show>
@@ -242,15 +243,13 @@ export function WorkspaceFolders(props: {
           {state.error}
         </p>
       </Show>
-      <p class="workspace-folders__hint">
-        Connected folders are shared by this project's conversations. Read only prevents edits. Disconnecting leaves
-        your files in place.
-      </p>
+      <p class="workspace-folders__hint">{language.t("settings.copy.connectedFoldersAreSharedByThisProjectS")}</p>
     </div>
   )
 }
 
 const Workspaces: Component = () => {
+  const language = useLanguage()
   const sdk = useGlobalSDK()
   const sync = useGlobalSync()
   const platform = usePlatform()
@@ -268,7 +267,7 @@ const Workspaces: Component = () => {
   const choose = async () => {
     if (platform.openDirectoryPickerDialog && server.isLocal()) {
       const result = await platform
-        .openDirectoryPickerDialog({ title: "Connect a folder", serverUrl: sdk.url })
+        .openDirectoryPickerDialog({ title: language.t("settings.copy.connectAFolder"), serverUrl: sdk.url })
         .catch((error) => {
           if (error instanceof NativeDirectoryPickerUnavailable) return undefined
           throw error
@@ -280,7 +279,7 @@ const Workspaces: Component = () => {
         () => (
           <FolderPicker
             kind="folder"
-            title="Connect a folder"
+            title={language.t("settings.copy.connectAFolder")}
             onSelect={(value) => resolve(Array.isArray(value) ? value[0] : (value ?? undefined))}
           />
         ),
@@ -290,11 +289,14 @@ const Workspaces: Component = () => {
   }
   return (
     <PanelScroll>
-      <PanelHeader title="Workspaces" description="Choose where each project works and which folders it can access." />
+      <PanelHeader
+        title={language.t("settings.shell.panel.workspaces")}
+        description={language.t("settings.copy.chooseWhereEachProjectWorksAndWhichFolders")}
+      />
       <PanelBody>
         <Show
           when={selected()}
-          fallback={<p class="settings-card-empty">Create a project to connect its folders.</p>}
+          fallback={<p class="settings-card-empty">{language.t("settings.copy.createAProjectToConnectItsFolders")}</p>}
           keyed
         >
           {(project) => {
@@ -307,20 +309,22 @@ const Workspaces: Component = () => {
             return (
               <>
                 <label class="workspace-project">
-                  <span>Project</span>
+                  <span>{language.t("command.category.project")}</span>
                   <select
-                    aria-label="Project workspace"
+                    aria-label={language.t("settings.copy.projectWorkspace")}
                     value={project.id}
                     onChange={(event) => set("project", event.currentTarget.value)}
                   >
                     <For each={projects()}>
-                      {(item) => <option value={item.id}>{item.name || "Untitled project"}</option>}
+                      {(item) => (
+                        <option value={item.id}>{item.name || language.t("settings.copy.untitledProject")}</option>
+                      )}
                     </For>
                   </select>
                 </label>
                 <Section
-                  title="Folders"
-                  description="Work with your existing files from the first message. Choose a default folder here, or override it for a conversation from the composer."
+                  title={language.t("settings.copy.folders")}
+                  description={language.t("settings.copy.workWithYourExistingFilesFromTheFirst")}
                 >
                   <WorkspaceFolders
                     request={request}
@@ -334,10 +338,11 @@ const Workspaces: Component = () => {
                     }
                     confirm={(folder) =>
                       confirmDialog(dialog, {
-                        title: `Disconnect ${fileSourceName(folder.path)}?`,
-                        message:
-                          "This project will lose access to the folder. Affected running tools will stop. Your files will stay where they are.",
-                        confirmLabel: "Disconnect folder",
+                        title: language.t("settings.copy.workspaces.disconnectTitle", {
+                          folder: fileSourceName(folder.path),
+                        }),
+                        message: language.t("settings.copy.thisProjectWillLoseAccessToTheFolder"),
+                        confirmLabel: language.t("settings.copy.disconnectFolder"),
                         danger: true,
                       })
                     }

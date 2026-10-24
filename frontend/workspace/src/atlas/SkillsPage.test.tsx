@@ -20,6 +20,7 @@ const [subject, web, stores] = await Promise.all([
   vite.ssrLoadModule("solid-js/web") as Promise<typeof import("solid-js/web")>,
   vite.ssrLoadModule("solid-js/store") as Promise<typeof import("solid-js/store")>,
 ])
+const { TestLanguage } = (await vite.ssrLoadModule("/test/language.tsx")) as typeof import("../../test/language")
 const cleanups: Array<() => void> = []
 afterAll(() => vite.close())
 afterEach(() => {
@@ -51,6 +52,7 @@ function fixture(
   hold?: Promise<void>,
   catalog: typeof fixtures = fixtures,
 ) {
+  const [language, setLanguage] = stores.createStore({ locale: "en" as import("@/context/language").Locale })
   const [config, setConfig] = stores.createStore({ disabled })
   const calls: Array<{ names: string[]; enabled: boolean }> = []
   const writes: Array<{ name: string; content: string }> = []
@@ -107,8 +109,21 @@ function fixture(
   }
   const host = document.createElement("div")
   document.body.append(host)
-  cleanups.push(web.render(() => subject.default({ embedded: true, services: service }), host))
-  return { host, calls, writes, removed, added, service, config }
+  cleanups.push(
+    web.render(
+      () =>
+        web.createComponent(TestLanguage, {
+          get locale() {
+            return language.locale
+          },
+          get children() {
+            return subject.default({ embedded: true, services: service })
+          },
+        }),
+      host,
+    ),
+  )
+  return { host, calls, writes, removed, added, service, config, setLanguage }
 }
 const button = (host: HTMLElement, prefix: string) =>
   Array.from(host.querySelectorAll<HTMLButtonElement>("button")).find((element) =>
@@ -273,4 +288,22 @@ test("skill labels keep acronym casing instead of sentence-casing it", async () 
       .map((row) => row.querySelector(".skills-workspace__identity strong")?.textContent)
       .sort()
   expect(labels()).toEqual(["API", "LLM judge", "MCP"])
+})
+
+test("changing the language updates skill controls while preserving catalog content", async () => {
+  const { host, setLanguage } = fixture("http://skills-test:translated")
+  await settle()
+  const search = host.querySelector<HTMLInputElement>('input[placeholder="Search skills"]')!
+  expect(search).toBeTruthy()
+  setLanguage("locale", "zh")
+  for (let attempt = 0; attempt < 50 && search.placeholder !== "搜索技能"; attempt++) await settle()
+  expect(search.placeholder).toBe("搜索技能")
+  expect(host.querySelector("h2")?.textContent).toBe("技能")
+  expect(host.textContent).toContain("研究工具集")
+  expect(host.textContent).toContain("figures research workflow")
+  expect(host.textContent).toContain("/my-notes")
+  setLanguage("locale", "en")
+  await settle()
+  expect(search.placeholder).toBe("Search skills")
+  expect(host.querySelector("h2")?.textContent).toBe("Skills")
 })

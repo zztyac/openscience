@@ -39,6 +39,7 @@ const vite = await createServer({
             import { createComponent, createEffect, Suspense } from "solid-js"
             import { render } from "solid-js/web"
             import { useExecutionAuthority } from "@/atlas/use-execution-authority"
+            import { TestLanguage } from "/test/language.tsx"
 
             function Probe() {
               const authority = useExecutionAuthority("shell")
@@ -64,10 +65,10 @@ const vite = await createServer({
 
             export function mountExecutionAuthorityInSuspense(fallback, host) {
               return render(
-                () => createComponent(Suspense, {
+                () => createComponent(TestLanguage, { get children() { return createComponent(Suspense, {
                   get fallback() { return fallback() },
                   get children() { return createComponent(Probe, {}) },
-                }),
+                }) } }),
                 host,
               )
             }

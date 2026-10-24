@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import {
   For,
   Match,
@@ -213,18 +214,6 @@ interface ConnectInput {
   scope: FilesystemScope
 }
 
-const ACCESS: Array<{ value: FilesystemAccess; label: string }> = [
-  { value: "read", label: "Read only" },
-  { value: "write", label: "Read & write" },
-]
-
-// Read versus write is a security boundary, not a preference, so the pane
-// says what each one actually authorises at the moment of choosing.
-const accessNote = (access: FilesystemAccess) => {
-  if (access === "read") return "Files can be inspected but not changed."
-  return "Approved tools and sandboxed runtimes can read and write files in this folder."
-}
-
 async function grantAccess(transport: Transport, input: ConnectInput) {
   return transport("/project/current/filesystem", {
     method: "POST",
@@ -304,6 +293,7 @@ function RenameArtifact(props: {
   onSubmit: (title: string) => Promise<unknown>
   onClose: () => void
 }): JSX.Element {
+  const language = useLanguage()
   const [title, setTitle] = createSignal(props.artifact.title)
 
   return (
@@ -316,22 +306,22 @@ function RenameArtifact(props: {
       }}
     >
       <label class="files-connect__field">
-        <span>Result name</span>
+        <span>{language.t("atlas.files.resultName")}</span>
         <input
           data-rename-input
           value={title()}
           autofocus
           maxlength={200}
-          aria-label="Result name"
+          aria-label={language.t("atlas.files.resultName")}
           onInput={(event) => setTitle(event.currentTarget.value)}
         />
       </label>
       <div class="files-connect__row files-connect__row--end">
         <button type="button" class="files-connect__cancel" onClick={() => props.onClose()}>
-          Cancel
+          {language.t("common.cancel")}
         </button>
         <button type="submit" class="files-connect__submit" disabled={!title().trim()}>
-          Rename
+          {language.t("common.rename")}
         </button>
       </div>
     </form>
@@ -363,12 +353,24 @@ export function FilesPane(
     onRevokeSource?: (source: PaneSource, submit: () => Promise<unknown>) => void
   } = {},
 ): JSX.Element {
+  const language = useLanguage()
   // The `request` prop is a standalone test seam (see FilesPane.test.ts) that
-  // mounts with no providers at all. Key the context reads off the prop
+  // mounts with only the language provider. Key the context reads off the prop
   // itself rather than swallowing whatever throws: in production `standalone`
   // is always false, so a missing provider is a real wiring bug and throws
   // loudly instead of quietly degrading into a fake "could not be read".
   // `session` and `directory` supply the route identity in isolated tests.
+  const accessOptions = (): Array<{ value: FilesystemAccess; label: string }> => [
+    { value: "read", label: language.t("atlas.files.readOnly") },
+    { value: "write", label: language.t("atlas.files.readWrite") },
+  ]
+
+  // Explain the access boundary at the moment the user chooses it.
+  const accessNote = (access: FilesystemAccess) => {
+    if (access === "read") return language.t("atlas.files.readPermission")
+    return language.t("atlas.files.writePermission")
+  }
+
   const standalone = Boolean(props.request)
   const sdk = standalone ? undefined : useSDK()
   const sync = standalone ? undefined : useSync()
@@ -388,8 +390,8 @@ export function FilesPane(
     // names. If metadata has not arrived yet, keep the label human rather than
     // flashing an opaque UUID in the source menu.
     if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(folder))
-      return "Project files"
-    return folder || "Project files"
+      return language.t("atlas.files.project")
+    return folder || language.t("atlas.files.project")
   }
   const routeSessionID = () => props.session ?? (params.id && params.id !== "new" ? params.id : undefined)
   /**
@@ -459,7 +461,7 @@ export function FilesPane(
   onCleanup(() => (mounted = false))
 
   const blocked = () => {
-    if (!projectRoot()) return "Open a project first: a folder is connected to the project you are working in."
+    if (!projectRoot()) return language.t("atlas.files.openProject")
     return ""
   }
 
@@ -525,6 +527,7 @@ export function FilesPane(
 
   const sources = createMemo(() =>
     buildSources({
+      translate: language.t,
       projectRoot: projectRoot(),
       projectName: projectName(),
       grants: connectedFilesystemGrants(accessSnapshot()),
@@ -659,7 +662,7 @@ export function FilesPane(
               if (owns()) void refetchEntries()
             })
           } else {
-            setListingError("Refresh was interrupted. Showing the last known files.")
+            setListingError(language.t("atlas.files.refreshInterrupted"))
           }
           return previous
         }
@@ -752,7 +755,8 @@ export function FilesPane(
 
   /** Naming the location while the pane is still deciding on one would put
    * "Loading Project files" over a wait that ends somewhere else. */
-  const loadingLabel = () => (resolving() ? "Loading files" : `Loading ${current().name}`)
+  const loadingLabel = () =>
+    resolving() ? language.t("atlas.files.loading") : language.t("atlas.files.loadingSource", { name: current().name })
 
   const sourceError = createMemo(() => {
     const kind = current().kind
@@ -830,9 +834,9 @@ export function FilesPane(
   })
 
   const filterCopy = createMemo(() => {
-    if (current().kind === "artifacts") return "Search artifacts"
-    if (current().kind === "trash") return "Search trash"
-    return "Filter this folder"
+    if (current().kind === "artifacts") return language.t("atlas.files.searchResults")
+    if (current().kind === "trash") return language.t("atlas.files.searchTrash")
+    return language.t("atlas.files.filter")
   })
 
   /**
@@ -848,21 +852,21 @@ export function FilesPane(
     if (["artifacts", "trash", "project", "session"].includes(source.kind)) return
     if (source.kind === "modal")
       return {
-        label: "Remote files",
-        copy: "Browse and download from configured Modal Volumes.",
-        badge: "Read only",
+        label: language.t("atlas.files.remote"),
+        copy: language.t("atlas.files.remoteHint"),
+        badge: language.t("atlas.files.readOnly"),
       }
     if (source.kind === "connected")
       return source.readonly
         ? {
-            label: "Connected folder",
-            copy: "Files can be inspected without changing the folder.",
-            badge: "Read only",
+            label: language.t("atlas.files.connected"),
+            copy: language.t("atlas.files.connectedReadHint"),
+            badge: language.t("atlas.files.readOnly"),
           }
         : {
-            label: "Connected folder",
-            copy: "Approved tools and sandboxed runtimes can read and write files here.",
-            badge: "Read & write",
+            label: language.t("atlas.files.connected"),
+            copy: language.t("atlas.files.connectedWriteHint"),
+            badge: language.t("atlas.files.readWrite"),
           }
     return
   })
@@ -939,7 +943,7 @@ export function FilesPane(
         window.dispatchEvent(new CustomEvent("openscience:artifacts-changed"))
         return refetchArtifacts()
       },
-      "The Result could not be moved to Trash.",
+      language.t("atlas.files.trashResultError"),
     )
   }
 
@@ -961,7 +965,7 @@ export function FilesPane(
           window.dispatchEvent(new CustomEvent("openscience:artifacts-changed"))
           return refetchArtifacts()
         },
-        "The Result could not be renamed.",
+        language.t("atlas.files.renameResultError"),
       )
     }
     if (props.onRenameArtifact) return props.onRenameArtifact(artifact, submit)
@@ -1065,7 +1069,7 @@ export function FilesPane(
       const next = name.trim()
       if (!next || next === row.name) return
       if (next === "." || next === ".." || /[\\/\u0000]/u.test(next)) {
-        setError("A file name cannot contain a path separator.")
+        setError(language.t("atlas.files.invalidName"))
         return
       }
       const target = [parent, next].filter(Boolean).join("/")
@@ -1084,10 +1088,10 @@ export function FilesPane(
     if (props.onRenameFile) return props.onRenameFile(row, submit)
     if (!dialog) return
     void promptDialog(dialog, {
-      title: `Rename ${row.type === "directory" ? "folder" : "file"}`,
-      message: "Enter a new name. Existing files will never be replaced.",
+      title: row.type === "directory" ? language.t("atlas.files.renameFolder") : language.t("atlas.files.renameFile"),
+      message: language.t("atlas.files.renameHint"),
       initial: row.name,
-      confirmLabel: "Rename",
+      confirmLabel: language.t("common.rename"),
     }).then((name) => (name === null ? undefined : submit(name)))
   }
 
@@ -1113,9 +1117,9 @@ export function FilesPane(
     if (props.onTrashFile) return props.onTrashFile(row, submit)
     if (!dialog) return
     void confirmDialog(dialog, {
-      title: `Move ${row.name} to Trash?`,
-      message: "You can restore it from Files for 30 days.",
-      confirmLabel: "Move to Trash",
+      title: language.t("atlas.files.trashConfirm", { name: row.name }),
+      message: language.t("atlas.files.restoreHint"),
+      confirmLabel: language.t("atlas.files.moveToTrash"),
       danger: true,
     }).then((confirmed) => (confirmed ? submit() : undefined))
   }
@@ -1129,7 +1133,7 @@ export function FilesPane(
     const ticket = operation()
     if (platform?.openDirectoryPickerDialog && server?.isLocal()) {
       const result = await platform
-        .openDirectoryPickerDialog({ title: "Connect a folder", serverUrl: sdk?.url })
+        .openDirectoryPickerDialog({ title: language.t("atlas.files.connect"), serverUrl: sdk?.url })
         .catch((error) => {
           if (!owns(ticket)) return
           if (!(error instanceof NativeDirectoryPickerUnavailable)) {
@@ -1148,7 +1152,7 @@ export function FilesPane(
     dialog?.show(() => (
       <FolderPicker
         kind="folder"
-        title="Connect a folder"
+        title={language.t("atlas.files.connect")}
         onSelect={(result) => {
           if (!owns(ticket)) return
           const picked = Array.isArray(result) ? result[0] : result
@@ -1166,7 +1170,7 @@ export function FilesPane(
     // The submit button is disabled for this case, but a form still submits on
     // Enter in the path field, so the reason is surfaced rather than dropped.
     if (!current) {
-      setError(blocked() || "This folder could not be connected.")
+      setError(blocked() || language.t("atlas.files.connectError"))
       return
     }
     const ticket = operation()
@@ -1180,7 +1184,7 @@ export function FilesPane(
           setConnect({ open: false, path: "", access: "read", scope: "project" })
         }
       },
-      "This folder could not be connected.",
+      language.t("atlas.files.connectError"),
     )
   }
 
@@ -1212,7 +1216,7 @@ export function FilesPane(
     void confirmDialog(dialog, {
       title: confirmation.title,
       message: confirmation.message,
-      confirmLabel: "Revoke folder access",
+      confirmLabel: language.t("atlas.files.revokeAccess"),
       danger: true,
     }).then((confirmed) => (confirmed ? submit() : undefined))
   }
@@ -1223,7 +1227,7 @@ export function FilesPane(
       operation(),
       () => restoreStoredArtifact(ask, artifact.id),
       () => refetchArtifacts(),
-      "The Result could not be restored.",
+      language.t("atlas.files.restoreResultError"),
     )
   }
 
@@ -1264,9 +1268,9 @@ export function FilesPane(
     if (props.onPurgeFile) return props.onPurgeFile(file, submit)
     if (!dialog) return
     void confirmDialog(dialog, {
-      title: `Delete ${file.filename} permanently?`,
-      message: "This cannot be undone.",
-      confirmLabel: "Delete permanently",
+      title: language.t("atlas.files.deleteConfirm", { name: file.filename }),
+      message: language.t("atlas.files.cannotUndo"),
+      confirmLabel: language.t("atlas.files.deletePermanently"),
       danger: true,
     }).then((confirmed) => (confirmed ? submit() : undefined))
   }
@@ -1275,7 +1279,7 @@ export function FilesPane(
     <div class="files-browser" data-files-browser data-source-kind={current().kind}>
       <header class="files-browser__header">
         <div class="files-browser__toolbar">
-          <div class="files-workspace-switcher" role="tablist" aria-label="Project file locations">
+          <div class="files-workspace-switcher" role="tablist" aria-label={language.t("atlas.files.locations")}>
             <For each={primary()}>
               {(source) => (
                 <button
@@ -1310,7 +1314,7 @@ export function FilesPane(
           <SourceMenu
             sources={overflowSources()}
             active={current()}
-            triggerLabel={primaryActive() ? "More" : undefined}
+            triggerLabel={primaryActive() ? language.t("atlas.files.more") : undefined}
             onOpen={() => {
               setOpened(opened() + 1)
               // Grants may be added by another surface or process. The picker
@@ -1341,7 +1345,7 @@ export function FilesPane(
                 type="button"
                 class="files-search__clear"
                 data-search-clear
-                aria-label="Clear file search"
+                aria-label={language.t("atlas.files.clearSearch")}
                 onClick={() => setFilter("")}
               >
                 <IconX size={12} strokeWidth={1.5} />
@@ -1352,8 +1356,8 @@ export function FilesPane(
             type="button"
             class="files-refresh"
             data-refresh-source
-            aria-label={`Refresh ${current().name}`}
-            title={`Refresh ${current().name}`}
+            aria-label={language.t("atlas.files.refreshSource", { name: current().name })}
+            title={language.t("atlas.files.refreshSource", { name: current().name })}
             disabled={sourceLoading()}
             onClick={retrySource}
           >
@@ -1381,13 +1385,13 @@ export function FilesPane(
             </Show>
           }
         >
-          <nav class="files-path" aria-label="Current folder">
+          <nav class="files-path" aria-label={language.t("atlas.files.currentFolder")}>
             <button
               type="button"
               class="files-path__root"
               data-path-root
-              aria-label={`Open the root of ${current().name}`}
-              title={`Open the root of ${current().name}`}
+              aria-label={language.t("atlas.files.openRoot", { name: current().name })}
+              title={language.t("atlas.files.openRoot", { name: current().name })}
               onClick={() => {
                 setPath([])
                 setFilter("")
@@ -1426,16 +1430,16 @@ export function FilesPane(
       </header>
 
       <Show when={connect.open}>
-        <form class="files-connect" aria-label="Connect a folder" onSubmit={submit}>
+        <form class="files-connect" aria-label={language.t("atlas.files.connect")} onSubmit={submit}>
           <div class="files-connect__heading">
             <span>
-              <strong>Connect a folder</strong>
-              <small>Available to every conversation in this project.</small>
+              <strong>{language.t("atlas.files.connect")}</strong>
+              <small>{language.t("atlas.files.availableToProject")}</small>
             </span>
             <button
               type="button"
               class="files-connect__dismiss"
-              aria-label="Close folder connection form"
+              aria-label={language.t("atlas.files.closeConnection")}
               onClick={() => setConnect("open", false)}
             >
               <IconX size={12} strokeWidth={1.5} />
@@ -1445,28 +1449,28 @@ export function FilesPane(
             <input
               class="files-connect__path"
               value={connect.path}
-              aria-label="Folder path"
+              aria-label={language.t("atlas.files.folderPath")}
               placeholder="/home/you/data"
               spellcheck={false}
               onInput={(event) => setConnect("path", event.currentTarget.value)}
             />
             <Show when={dialog}>
               <button type="button" class="files-connect__browse" data-connect-browse onClick={browse}>
-                Browse…
+                {language.t("atlas.files.browse")}
               </button>
             </Show>
           </div>
 
           <div class="files-connect__row">
             <label class="files-connect__field">
-              <span>Access</span>
+              <span>{language.t("atlas.files.access")}</span>
               <select
-                aria-label="Folder access"
+                aria-label={language.t("atlas.files.folderAccess")}
                 data-connect-access
                 value={connect.access}
                 onChange={(event) => setConnect("access", event.currentTarget.value as FilesystemAccess)}
               >
-                <For each={ACCESS}>{(option) => <option value={option.value}>{option.label}</option>}</For>
+                <For each={accessOptions()}>{(option) => <option value={option.value}>{option.label}</option>}</For>
               </select>
             </label>
           </div>
@@ -1483,7 +1487,7 @@ export function FilesPane(
 
           <div class="files-connect__row files-connect__row--end">
             <button type="button" class="files-connect__cancel" onClick={() => setConnect("open", false)}>
-              Cancel
+              {language.t("common.cancel")}
             </button>
             <button
               type="submit"
@@ -1492,7 +1496,7 @@ export function FilesPane(
               title={blocked() || undefined}
               disabled={!connect.path.trim() || busy() || Boolean(blocked())}
             >
-              {busy() ? "Connecting…" : "Connect"}
+              {busy() ? language.t("atlas.files.connecting") : language.t("common.connect")}
             </button>
           </div>
         </form>
@@ -1518,7 +1522,7 @@ export function FilesPane(
         <div class="files-notice files-notice--error" role="alert" data-files-error>
           <span>{sourceError()}</span>
           <button type="button" class="files-notice__retry" onClick={retrySource}>
-            Retry
+            {language.t("atlas.common.retry")}
           </button>
         </div>
       </Show>
@@ -1600,7 +1604,7 @@ export function FilesPane(
   )
 
   return (
-    <section class="files-pane" aria-label="Files">
+    <section class="files-pane" aria-label={language.t("atlas.files.title")}>
       <Show when={remoteOpen()} keyed fallback={browser()}>
         {(file) => (
           <RemoteFileView

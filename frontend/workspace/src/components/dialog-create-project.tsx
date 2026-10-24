@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { Button } from "@synsci/ui/button"
 import { useDialog } from "@synsci/ui/context/dialog"
 import { Dialog } from "@synsci/ui/dialog"
@@ -21,6 +22,7 @@ export function DialogCreateProject(props: {
   onRemoveSource?: (path: string) => void
   onCreate: (input: ProjectCreateInput) => Promise<void>
 }): JSX.Element {
+  const language = useLanguage()
   const dialog = useDialog()
   const [state, setState] = createStore({
     name: props.name ?? "",
@@ -30,9 +32,9 @@ export function DialogCreateProject(props: {
 
   // A native folder dialog belongs to one file manager; without one the in-app picker opens, which is neither.
   const hint = () => {
-    if (props.os === "macos") return "Choose with Finder"
-    if (props.os === "windows") return "Choose with File Explorer"
-    return "Choose a folder"
+    if (props.os === "macos") return language.t("interface.project.finder")
+    if (props.os === "windows") return language.t("interface.project.explorer")
+    return language.t("interface.project.chooseFolder")
   }
 
   const submit = async (event: SubmitEvent) => {
@@ -40,7 +42,7 @@ export function DialogCreateProject(props: {
     if (state.busy) return
     const name = state.name.trim()
     if (!name) {
-      setState("error", "Enter a project name.")
+      setState("error", language.t("interface.project.nameRequired"))
       return
     }
 
@@ -59,8 +61,8 @@ export function DialogCreateProject(props: {
 
   return (
     <Dialog
-      title="Create project"
-      description="Name the workspace and optionally connect folders now or later."
+      title={language.t("interface.project.create")}
+      description={language.t("interface.project.description")}
       class="project-create-dialog"
       fit
       transition
@@ -68,7 +70,7 @@ export function DialogCreateProject(props: {
       <form class="project-create" onSubmit={submit}>
         <div class="project-create__body">
           <label class="project-create__field">
-            <span class="project-create__label">Project name</span>
+            <span class="project-create__label">{language.t("interface.project.name")}</span>
             <span data-focus-frame class="project-create__input-frame">
               <span class="project-create__input-icon" aria-hidden="true">
                 <IconFolder size={16} strokeWidth={1.5} />
@@ -81,7 +83,7 @@ export function DialogCreateProject(props: {
                 disabled={state.busy}
                 maxlength={100}
                 autocomplete="off"
-                placeholder="Project name"
+                placeholder={language.t("interface.project.name")}
                 aria-invalid={state.error ? "true" : undefined}
                 aria-describedby={state.error ? "project-create-error" : undefined}
                 class="project-create__input"
@@ -96,8 +98,8 @@ export function DialogCreateProject(props: {
 
           <section class="project-create__sources" aria-labelledby="source-folders-heading">
             <div class="project-create__section-heading">
-              <h2 id="source-folders-heading">Source folders</h2>
-              <p>Optional folders this project can access.</p>
+              <h2 id="source-folders-heading">{language.t("interface.project.sources")}</h2>
+              <p>{language.t("interface.project.sourcesDescription")}</p>
             </div>
 
             <Show
@@ -113,7 +115,7 @@ export function DialogCreateProject(props: {
                     <IconFolderAdd size={16} strokeWidth={1.5} />
                   </span>
                   <span class="project-create__source-empty-copy">
-                    <strong>Add source folders</strong>
+                    <strong>{language.t("interface.project.addSources")}</strong>
                     <span>{hint()}</span>
                   </span>
                 </button>
@@ -132,8 +134,8 @@ export function DialogCreateProject(props: {
                       </span>
                       <button
                         type="button"
-                        aria-label={`Remove source folder ${path}`}
-                        title="Remove source folder"
+                        aria-label={language.t("interface.project.removeNamed", { path })}
+                        title={language.t("interface.project.removeSource")}
                         class="project-create__remove-source"
                         onClick={() => props.onRemoveSource?.(path)}
                       >
@@ -149,7 +151,7 @@ export function DialogCreateProject(props: {
                   onClick={props.onChooseSources}
                 >
                   <IconPlus size={12} strokeWidth={1.5} />
-                  Add folders
+                  {language.t("interface.project.addFolders")}
                 </button>
               </div>
             </Show>
@@ -164,10 +166,10 @@ export function DialogCreateProject(props: {
 
         <div class="project-create__footer">
           <Button type="button" size="large" variant="ghost" disabled={state.busy} onClick={() => dialog.close()}>
-            Cancel
+            {language.t("interface.common.cancel")}
           </Button>
           <Button type="submit" size="large" variant="primary" disabled={state.busy || !state.name.trim()}>
-            {state.busy ? "Creating…" : "Create project"}
+            {state.busy ? language.t("interface.project.creating") : language.t("interface.project.create")}
           </Button>
         </div>
       </form>

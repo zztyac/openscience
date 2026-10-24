@@ -1149,7 +1149,7 @@ export function SessionTurn(
                             data-slot="session-turn-response-copy-wrapper"
                             data-copied={copy.copied ? "true" : undefined}
                             role="group"
-                            aria-label="Response actions"
+                            aria-label={i18n.t("ui.sessionTurn.responseActions")}
                           >
                             <Button
                               icon={copy.copied ? "check" : "copy"}
@@ -1160,12 +1160,12 @@ export function SessionTurn(
                                 event.stopPropagation()
                                 void handleCopy()
                               }}
-                              aria-label="Copy response"
+                              aria-label={i18n.t("ui.sessionTurn.copyResponse")}
                             >
                               {copy.copied ? i18n.t("ui.message.copied") : i18n.t("ui.message.copy")}
                             </Button>
                             <span role="status" aria-live="polite">
-                              {copy.error ? "Could not copy. Select the response text and copy it manually." : ""}
+                              {copy.error ? i18n.t("ui.sessionTurn.copyFailed") : ""}
                             </span>
                           </div>
                         </Show>

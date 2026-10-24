@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { createEffect, createMemo, For, Match, onCleanup, Show, Switch, type ComponentProps } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Markdown } from "@synsci/ui/markdown"
@@ -23,6 +24,7 @@ export function NotebookDocument(
     run?: (cell: NotebookCell, index: number) => Promise<NotebookExecution>
   },
 ) {
+  const copy = useLanguage()
   const document = createMemo(() => ({
     name: props.name,
     session: props.sessionID,
@@ -80,13 +82,11 @@ export function NotebookDocument(
         )}
       </Show>
       <Show when={!document().error && !document().cells.length}>
-        <p class="atlas-notebook-hint">This document has no cells yet. Open Edit to add content.</p>
+        <p class="atlas-notebook-hint">{copy.t("interface.notebook.empty")}</p>
       </Show>
       <Show when={document().cells.some((cell) => cell.type === "code")}>
         <p class="atlas-notebook-hint">
-          {props.run
-            ? "Run cells in this session’s local kernel. New outputs stay in this preview; the file changes only when you edit and save it."
-            : "Saved outputs. Open this file in a research session to run Python or R cells."}
+          {props.run ? copy.t("interface.notebook.local") : copy.t("interface.notebook.saved")}
         </p>
       </Show>
       <For each={document().cells}>
@@ -99,7 +99,7 @@ export function NotebookDocument(
                 <Match when={cell.type === "markdown"}>{markdown(cell.source, cell)}</Match>
                 <Match when={cell.type === "raw"}>
                   <details>
-                    <summary>{cell.label ?? "Raw cell"}</summary>
+                    <summary>{cell.label ?? copy.t("interface.notebook.raw")}</summary>
                     <pre class="atlas-file-notebook-code">{cell.source}</pre>
                   </details>
                 </Match>
@@ -110,7 +110,7 @@ export function NotebookDocument(
                       <span class="atlas-notebook-count">[{execution()?.count ?? cell.count ?? " "}]</span>
                       <Show when={cell.label}> · {cell.label}</Show>
                     </span>
-                    <Show when={runnable(cell)} fallback={<span>Execution unavailable</span>}>
+                    <Show when={runnable(cell)} fallback={<span>{copy.t("interface.notebook.unavailable")}</span>}>
                       <button
                         type="button"
                         class="atlas-file-button"
@@ -119,11 +119,13 @@ export function NotebookDocument(
                         title={
                           props.run
                             ? `Run in the current local ${language(cell)} kernel`
-                            : "Open a research session to run this cell"
+                            : copy.t("interface.notebook.openSession")
                         }
                         onClick={() => void run(cell, index())}
                       >
-                        {state.running === index() ? "Running…" : "Run"}
+                        {state.running === index()
+                          ? copy.t("interface.notebook.running")
+                          : copy.t("interface.notebook.run")}
                       </button>
                     </Show>
                   </header>
@@ -133,7 +135,7 @@ export function NotebookDocument(
                   <Show when={execution() || outputs().length}>
                     <div class="atlas-file-notebook-output" aria-live="polite">
                       <div class="atlas-notebook-output-label">
-                        {execution() ? "Run output · not saved" : "Saved output"}
+                        {execution() ? copy.t("interface.notebook.output") : copy.t("interface.notebook.savedOutput")}
                       </div>
                       <Show when={execution()?.error}>
                         {(error) => (
@@ -143,10 +145,10 @@ export function NotebookDocument(
                         )}
                       </Show>
                       <Show when={execution()?.ok === false && !outputs().some((output) => output.kind === "error")}>
-                        <p role="alert">The kernel reported an unsuccessful execution.</p>
+                        <p role="alert">{copy.t("interface.notebook.failed")}</p>
                       </Show>
                       <Show when={execution()?.ok === true && !outputs().length}>
-                        <p class="atlas-notebook-hint">Completed without output.</p>
+                        <p class="atlas-notebook-hint">{copy.t("interface.notebook.noOutput")}</p>
                       </Show>
                       <For each={outputs()}>
                         {(output) => (

@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 // Storage — real on-disk footprint of the OpenScience data directory.
 // Backed by /settings/storage (routes/settings/storage.ts).
 import { type Component, For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js"
@@ -68,50 +69,64 @@ export async function storageLocationChoice(open: () => Promise<string | string[
     )
 }
 
-export function storageRelocationCopy(value: Relocation) {
+export function storageRelocationCopy(value: Relocation, t?: ReturnType<typeof useLanguage>["t"]) {
   if (value.phase === "recovery_required") {
     return {
-      title: "Storage move needs attention",
-      detail: value.error ?? "OpenScience could not safely read the recovery record.",
+      title: t?.("settings.copy.helper.storageMoveNeedsAttention") ?? "Storage move needs attention",
+      detail:
+        value.error ??
+        t?.("settings.copy.helper.openscienceCouldNotSafelyReadTheRecoveryRecord") ??
+        "OpenScience could not safely read the recovery record.",
       tone: "critical" as const,
     }
   }
   if (!value.active) {
     return {
-      title: "Storage move was interrupted",
-      detail: "Your current data is still protected. Resume to recover the verified transaction safely.",
+      title: t?.("settings.copy.helper.storageMoveWasInterrupted") ?? "Storage move was interrupted",
+      detail:
+        t?.("settings.copy.helper.yourCurrentDataIsStillProtectedResumeTo") ??
+        "Your current data is still protected. Resume to recover the verified transaction safely.",
       tone: "warning" as const,
     }
   }
   if (value.phase === "copying") {
     return {
-      title: "Copying and verifying data",
-      detail: "The current location remains active until the verified copy is ready.",
+      title: t?.("settings.copy.helper.copyingAndVerifyingData") ?? "Copying and verifying data",
+      detail:
+        t?.("settings.copy.helper.theCurrentLocationRemainsActiveUntilTheVerified") ??
+        "The current location remains active until the verified copy is ready.",
       tone: "neutral" as const,
     }
   }
   if (value.phase === "ready" || value.phase === "publishing") {
     return {
-      title: "Preparing the verified copy",
-      detail: "The current location remains active while the destination is committed.",
+      title: t?.("settings.copy.helper.preparingTheVerifiedCopy") ?? "Preparing the verified copy",
+      detail:
+        t?.("settings.copy.helper.theCurrentLocationRemainsActiveWhileTheDestination") ??
+        "The current location remains active while the destination is committed.",
       tone: "neutral" as const,
     }
   }
   if (value.phase === "published") {
     return {
-      title: "Switching storage location",
-      detail: "The verified destination is ready. OpenScience is switching running servers together.",
+      title: t?.("settings.copy.helper.switchingStorageLocation") ?? "Switching storage location",
+      detail:
+        t?.("settings.copy.helper.theVerifiedDestinationIsReadyOpenscienceIsSwitching") ??
+        "The verified destination is ready. OpenScience is switching running servers together.",
       tone: "neutral" as const,
     }
   }
   return {
-    title: "Finalizing storage location",
-    detail: "The new location is active. OpenScience is finishing recovery metadata.",
+    title: t?.("settings.copy.helper.finalizingStorageLocation") ?? "Finalizing storage location",
+    detail:
+      t?.("settings.copy.helper.theNewLocationIsActiveOpenscienceIsFinishing") ??
+      "The new location is active. OpenScience is finishing recovery metadata.",
     tone: "neutral" as const,
   }
 }
 
 export const Storage: Component = () => {
+  const language = useLanguage()
   const sdk = useGlobalSDK()
   const platform = usePlatform()
 
@@ -173,7 +188,10 @@ export const Storage: Component = () => {
     setPicker(undefined)
     if (!platform.openDirectoryPickerDialog) return
     const choice = await storageLocationChoice(() =>
-      platform.openDirectoryPickerDialog!({ title: "Choose a new OpenScience data location", serverUrl: sdk.url }),
+      platform.openDirectoryPickerDialog!({
+        title: language.t("settings.copy.chooseANewOpenscienceDataLocation"),
+        serverUrl: sdk.url,
+      }),
     )
     if (choice.kind === "error") {
       setPicker(`The system folder picker could not open. ${choice.message} Enter a path manually below.`)
@@ -245,7 +263,11 @@ export const Storage: Component = () => {
       const result = await settingsApi<{ ok: true; entries: number }>(base(), fetchFn(), "/settings/storage/cache", {
         method: "DELETE",
       })
-      setStatus(result.entries === 1 ? "Local cache cleared." : `Local cache cleared (${result.entries} entries).`)
+      setStatus(
+        result.entries === 1
+          ? language.t("settings.copy.localCacheCleared")
+          : `Local cache cleared (${result.entries} entries).`,
+      )
       await load({ refresh: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
@@ -266,7 +288,10 @@ export const Storage: Component = () => {
   return (
     <PanelScroll>
       <div class="settings-preferences-panel settings-preferences-panel--storage">
-        <PanelHeader title="Storage" description="Manage local data and review its disk usage." />
+        <PanelHeader
+          title={language.t("settings.shell.panel.storage")}
+          description={language.t("settings.copy.manageLocalDataAndReviewItsDiskUsage")}
+        />
         <PanelBody>
           <Show when={error()}>
             <div class="settings-alert whitespace-pre-wrap" data-tone="critical" role="alert">
@@ -278,7 +303,7 @@ export const Storage: Component = () => {
                 disabled={loading()}
                 onClick={() => void retry()}
               >
-                Retry
+                {language.t("settings.connectors.retry")}
               </Button>
             </div>
           </Show>
@@ -302,7 +327,7 @@ export const Storage: Component = () => {
                   disabled={busy()}
                   onClick={() => void chooseLocation()}
                 >
-                  Try again
+                  {language.t("settings.copy.tryAgain")}
                 </Button>
               </div>
             )}
@@ -311,16 +336,19 @@ export const Storage: Component = () => {
             {(message) => (
               <div class="settings-alert" data-tone="warning" role="status">
                 <Icon name="alert-circle" size="small" class="shrink-0 text-icon-weak-base" />
-                <span>Disk usage could not be refreshed. Cached values remain visible. {message()}</span>
+                <span>
+                  {language.t("settings.copy.diskUsageCouldNotBeRefreshedCachedValues")}
+                  {message()}
+                </span>
                 <Button size="small" variant="secondary" class="settings-panel-action" onClick={() => void retry()}>
-                  Retry
+                  {language.t("settings.connectors.retry")}
                 </Button>
               </div>
             )}
           </Show>
           <Show when={usage()?.relocation}>
             {(relocation) => {
-              const copy = () => storageRelocationCopy(relocation())
+              const copy = () => storageRelocationCopy(relocation(), language.t)
               return (
                 <div class="settings-alert" data-tone={copy().tone} role="status" aria-live="polite">
                   <Icon
@@ -352,7 +380,7 @@ export const Storage: Component = () => {
                       disabled={busy()}
                       onClick={() => void relocate(relocation().target)}
                     >
-                      Resume safely
+                      {language.t("settings.copy.resumeSafely")}
                     </button>
                   </Show>
                 </div>
@@ -364,7 +392,11 @@ export const Storage: Component = () => {
             when={!loading() && !error() && usage()}
             fallback={
               <Show when={loading()}>
-                <div class="settings-panel-loading__rows" role="status" aria-label="Loading storage settings">
+                <div
+                  class="settings-panel-loading__rows"
+                  role="status"
+                  aria-label={language.t("settings.copy.loadingStorageSettings")}
+                >
                   <span />
                   <span />
                   <span />
@@ -372,18 +404,25 @@ export const Storage: Component = () => {
               </Show>
             }
           >
-            <Section title="Data location" description="Sessions, credentials, skills, and logs live here.">
+            <Section
+              title={language.t("settings.copy.dataLocation")}
+              description={language.t("settings.copy.sessionsCredentialsSkillsAndLogsLiveHere")}
+            >
               <div class="settings-card settings-preferences-card">
                 <div class="settings-storage-location settings-row">
                   <div class="settings-row-copy">
-                    <strong>{usage()?.pointer ? "Custom data directory" : "Data directory"}</strong>
+                    <strong>
+                      {usage()?.pointer
+                        ? language.t("settings.copy.customDataDirectory")
+                        : language.t("settings.copy.dataDirectory")}
+                    </strong>
                     <span class="min-w-0 truncate" title={usage()?.data_dir}>
                       {usage()?.data_dir ?? "…"}
                     </span>
                   </div>
                   <span class="settings-row-status">
                     {usage()?.scanning && !usage()?.updated_at
-                      ? "Calculating…"
+                      ? language.t("settings.copy.calculating")
                       : `${fmt(usage()!.total_bytes)}${usage()?.scanning ? " · Updating…" : ""}`}
                   </span>
                   <div class="settings-storage-location__actions flex shrink-0 items-center gap-1">
@@ -395,7 +434,7 @@ export const Storage: Component = () => {
                         disabled={busy() || !usage()?.managed}
                         onClick={() => void resetLocation()}
                       >
-                        Use default
+                        {language.t("settings.copy.useDefault")}
                       </button>
                     </Show>
                     <Show when={!editing()}>
@@ -405,7 +444,7 @@ export const Storage: Component = () => {
                         disabled={busy() || !usage()?.managed}
                         onClick={() => void chooseLocation()}
                       >
-                        Change location
+                        {language.t("settings.copy.changeLocation")}
                       </button>
                     </Show>
                   </div>
@@ -413,7 +452,7 @@ export const Storage: Component = () => {
                 <Show when={editing()}>
                   <div class="settings-inline-editor">
                     <label for="storage-location-input" class="text-12-medium text-text-strong">
-                      New data directory
+                      {language.t("settings.copy.newDataDirectory")}
                     </label>
                     <input
                       id="storage-location-input"
@@ -430,8 +469,7 @@ export const Storage: Component = () => {
                       }}
                     />
                     <p class="max-w-[68ch] text-12-regular text-text-weak">
-                      OpenScience verifies files and SQLite data, pauses active writes, and switches every running
-                      server together. The current directory remains untouched as a safety copy.
+                      {language.t("settings.copy.openscienceVerifiesFilesAndSqliteDataPausesActive")}
                     </p>
                     <div class="settings-inline-editor__actions">
                       <Show when={platform.openDirectoryPickerDialog}>
@@ -442,7 +480,7 @@ export const Storage: Component = () => {
                           disabled={busy()}
                           onClick={() => void chooseLocation()}
                         >
-                          Browse…
+                          {language.t("settings.copy.browse")}
                         </button>
                       </Show>
                       <button
@@ -456,7 +494,7 @@ export const Storage: Component = () => {
                           setPicker(undefined)
                         }}
                       >
-                        Cancel
+                        {language.t("common.cancel")}
                       </button>
                       <button
                         type="button"
@@ -465,7 +503,7 @@ export const Storage: Component = () => {
                         disabled={busy() || !target().trim()}
                         onClick={() => void relocate()}
                       >
-                        {busy() ? "Moving…" : "Move data"}
+                        {busy() ? language.t("settings.copy.moving") : language.t("settings.copy.moveData")}
                       </button>
                     </div>
                   </div>
@@ -473,23 +511,28 @@ export const Storage: Component = () => {
                 <Show when={usage() && !usage()!.managed}>
                   <div class="settings-alert m-3 mt-0" data-tone="neutral">
                     <Icon name="alert-circle" size="small" class="shrink-0 text-icon-weak-base" />
-                    <span>OPENSCIENCE_DATA_DIR owns this process, so change that environment setting to move it.</span>
+                    <span>{language.t("settings.copy.openscienceDataDirOwnsThisProcessSoChange")}</span>
                   </div>
                 </Show>
               </div>
             </Section>
 
-            <Section title="Local cache" description="Downloaded runtime packages and metadata. Recreated when needed.">
+            <Section
+              title={language.t("settings.copy.localCache")}
+              description={language.t("settings.copy.downloadedRuntimePackagesAndMetadataRecreatedWhenNeeded")}
+            >
               <div class="settings-card settings-preferences-card">
                 <div class="settings-storage-cache settings-row settings-preference-row">
                   <div class="settings-row-copy">
-                    <strong>OpenScience cache</strong>
+                    <strong>{language.t("settings.copy.openscienceCache")}</strong>
                     <span class="min-w-0 truncate" title={usage()?.cache_dir}>
                       {usage()?.cache_dir}
                     </span>
                   </div>
                   <span class="settings-row-status">
-                    {usage()?.scanning && !usage()?.updated_at ? "Calculating…" : fmt(usage()?.cache_bytes ?? 0)}
+                    {usage()?.scanning && !usage()?.updated_at
+                      ? language.t("settings.copy.calculating")
+                      : fmt(usage()?.cache_bytes ?? 0)}
                   </span>
                   <button
                     type="button"
@@ -497,18 +540,18 @@ export const Storage: Component = () => {
                     disabled={clearing()}
                     onClick={() => void clearCache()}
                   >
-                    {clearing() ? "Clearing…" : "Clear cache"}
+                    {clearing() ? language.t("settings.copy.clearing") : language.t("settings.copy.clearCache")}
                   </button>
                 </div>
               </div>
             </Section>
 
             <Section
-              title="Disk usage"
+              title={language.t("settings.copy.diskUsage")}
               description={
                 usage()?.scanning
-                  ? "Calculating allocated disk usage. Cached entries remain visible while the scan runs."
-                  : "Top-level entries inside the data directory, largest first."
+                  ? language.t("settings.copy.calculatingAllocatedDiskUsageCachedEntriesRemainVisible")
+                  : language.t("settings.copy.topLevelEntriesInsideTheDataDirectoryLargest")
               }
             >
               <Show
@@ -516,7 +559,9 @@ export const Storage: Component = () => {
                 fallback={
                   <div class="settings-card settings-preferences-card">
                     <p class="settings-card-empty" role="status">
-                      {usage()?.scanning ? "Calculating disk usage…" : "Nothing stored yet."}
+                      {usage()?.scanning
+                        ? language.t("settings.copy.calculatingDiskUsage")
+                        : language.t("settings.copy.nothingStoredYet")}
                     </p>
                   </div>
                 }

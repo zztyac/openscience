@@ -18,9 +18,10 @@ const server = await createServer({
     resolve: { conditions: ["browser", "production"] },
   },
 })
-const [subject, web] = await Promise.all([
+const [subject, web, fixture] = await Promise.all([
   server.ssrLoadModule("/src/pages/project-availability.tsx") as Promise<typeof import("./project-availability")>,
   server.ssrLoadModule("solid-js/web") as Promise<typeof import("solid-js/web")>,
+  server.ssrLoadModule("/src/pages/language.fixture.tsx") as Promise<typeof import("./language.fixture")>,
 ])
 
 afterAll(() => server.close())
@@ -30,10 +31,21 @@ afterEach(() => {
   document.body.replaceChildren()
 })
 
-const mount = (view: () => JSX.Element) => {
+const mount = (view: () => JSX.Element, onLanguage?: Parameters<typeof fixture.LanguageFixture>[0]["onLanguage"]) => {
   const host = document.createElement("div")
   document.body.append(host)
-  cleanups.push(web.render(view, host))
+  cleanups.push(
+    web.render(
+      () =>
+        fixture.LanguageFixture({
+          get children() {
+            return view()
+          },
+          onLanguage,
+        }),
+      host,
+    ),
+  )
   return host
 }
 

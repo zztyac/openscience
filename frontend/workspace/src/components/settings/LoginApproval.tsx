@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { Show, createEffect, createSignal, onCleanup, type Component } from "solid-js"
 import { showToast } from "@synsci/ui/toast"
 
@@ -17,6 +18,7 @@ export const LoginApproval: Component<{
   class?: string
   linkClass?: string
 }> = (props) => {
+  const language = useLanguage()
   const [url, setUrl] = createSignal<string>()
 
   const onApproval = (event: Event) => {
@@ -33,7 +35,7 @@ export const LoginApproval: Component<{
 
   const copy = (value: string) =>
     navigator.clipboard?.writeText(value).then(
-      () => showToast({ title: "Sign-in link copied" }),
+      () => showToast({ title: language.t("settings.copy.signInLinkCopied") }),
       () => showToast({ title: "Couldn't copy the sign-in link", description: value }),
     )
 
@@ -41,17 +43,17 @@ export const LoginApproval: Component<{
     <Show when={props.active && url()}>
       {(value) => (
         <p class={props.class ?? "text-12-regular text-text-weak"} data-login-approval>
-          Browser didn't open?{" "}
+          {language.t("settings.copy.browserDidnTOpen")}{" "}
           <button
             type="button"
             class={props.linkClass ?? "settings-inline-link"}
             onClick={() => props.openLink(value())}
           >
-            Open the sign-in page
+            {language.t("settings.copy.openTheSignInPage")}
           </button>
           {" · "}
           <button type="button" class={props.linkClass ?? "settings-inline-link"} onClick={() => void copy(value())}>
-            Copy link
+            {language.t("settings.copy.copyLink")}
           </button>
         </p>
       )}

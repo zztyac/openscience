@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { Button } from "@synsci/ui/button"
 import { Select } from "@synsci/ui/select"
 import { useDialog } from "@synsci/ui/context/dialog"
@@ -59,6 +60,7 @@ const errorMessage = (error: unknown) => (error instanceof Error ? error.message
  * and identity; which models appear while you work lives under Models.
  */
 export default function Ace() {
+  const language = useLanguage()
   const sdk = useGlobalSDK()
   const sync = useGlobalSync()
   const platform = usePlatform()
@@ -88,7 +90,8 @@ export default function Ace() {
         ACCOUNT_DEADLINE_MS,
       )
       setAccount((current) => current && { ...current, credential_sync: result })
-      if (result.state !== "ready") throw new Error(result.error ?? "Sign in to sync workspace credentials.")
+      if (result.state !== "ready")
+        throw new Error(result.error ?? language.t("settings.copy.signInToSyncWorkspaceCredentials"))
       void sync
         .refreshProviders()
         .catch((cause) => setError(`Credentials synced, but models could not refresh: ${errorMessage(cause)}`))
@@ -105,7 +108,7 @@ export default function Ace() {
     setError(undefined)
     try {
       const result = await settingsApi<LoginResult>(sdk.url, fetchFn, "/account/login-browser", { method: "POST" })
-      if (!result.ok) throw new Error(result.error || "Sign in did not complete. Try again.")
+      if (!result.ok) throw new Error(result.error || language.t("settings.copy.signInDidNotCompleteTryAgain"))
       window.dispatchEvent(new Event("openscience:account-changed"))
       void sync
         .refreshProviders()
@@ -120,9 +123,9 @@ export default function Ace() {
   const logout = async () => {
     if (busy()) return
     const confirmed = await confirmDialog(dialog, {
-      title: "Disconnect Ace account?",
-      message: "This disconnects this device. Local projects, files, and your provider connections stay here.",
-      confirmLabel: "Disconnect",
+      title: language.t("settings.copy.disconnectAceAccount"),
+      message: language.t("settings.copy.thisDisconnectsThisDeviceLocalProjectsFilesAnd"),
+      confirmLabel: language.t("settings.models.codexDisconnect"),
       danger: true,
     })
     if (!confirmed) return
@@ -144,7 +147,7 @@ export default function Ace() {
   const workspaceOptions = createMemo<WorkspaceOption[]>(() => {
     const context = account()?.funding_context
     if (!context) return []
-    const personal: WorkspaceOption = { value: "personal", label: "Personal" }
+    const personal: WorkspaceOption = { value: "personal", label: language.t("settings.copy.personal") }
     const organizations = context.organizations
       .filter(
         (organization) =>
@@ -166,7 +169,11 @@ export default function Ace() {
   const workspaceLabel = createMemo(() => {
     const context = account()?.funding_context
     const selected = context?.organizations.find((item) => item.organization_id === context.organization_id)
-    return selected?.name ?? workspace()?.label ?? (context?.organization_id ? "Selected workspace" : "Personal")
+    return (
+      selected?.name ??
+      workspace()?.label ??
+      (context?.organization_id ? language.t("settings.copy.selectedWorkspace") : language.t("settings.copy.personal"))
+    )
   })
   const canDirectlySwitchWorkspace = createMemo(
     () =>
@@ -218,15 +225,19 @@ export default function Ace() {
   })
 
   const email = () => {
-    if (!account()) return error() ? "Account unavailable" : "Checking…"
-    if (!account()!.session) return "Not connected"
-    return account()!.user?.email || "Connected"
+    if (!account())
+      return error() ? language.t("settings.copy.accountUnavailable") : language.t("settings.copy.checking")
+    if (!account()!.session) return language.t("settings.copy.notConnected")
+    return account()!.user?.email || language.t("settings.copy.connected")
   }
 
   return (
     <PanelScroll>
       <div class="settings-preferences-panel settings-preferences-panel--ace settings-models-panel">
-        <PanelHeader title="Ace" description="Your Synthetic Sciences account, Wallet, and how models are funded." />
+        <PanelHeader
+          title="Ace"
+          description={language.t("settings.copy.yourSyntheticSciencesAccountWalletAndHowModels")}
+        />
         <PanelBody>
           <Show when={error()}>
             <div class="settings-alert" data-tone="critical" role="alert">
@@ -234,13 +245,15 @@ export default function Ace() {
             </div>
           </Show>
 
-          <Section id="ace-account" title="Account">
+          <Section id="ace-account" title={language.t("settings.shell.group.app")}>
             <div class="settings-card settings-preferences-card settings-account-card">
               <div class="settings-row settings-preference-row">
                 <div class="settings-row-copy">
                   <strong>{email()}</strong>
                   <span>
-                    {account()?.session ? "Connected on this device" : "Sign in for Ace or workspace credentials"}
+                    {account()?.session
+                      ? language.t("settings.copy.connectedOnThisDevice")
+                      : language.t("settings.copy.signInForAceOrWorkspaceCredentials")}
                   </span>
                 </div>
                 <div class="settings-preference-row__actions">
@@ -254,14 +267,18 @@ export default function Ace() {
                           disabled={Boolean(busy())}
                           onClick={() => void login("login")}
                         >
-                          {busy() === "login" ? "Waiting for browser…" : "Sign in"}
+                          {busy() === "login"
+                            ? language.t("settings.copy.waitingForBrowser")
+                            : language.t("settings.copy.signIn")}
                         </Button>
                         <LoginApproval active={busy() === "login"} openLink={(url) => platform.openLink(url)} />
                       </div>
                     }
                   >
                     <Button size="small" variant="secondary" disabled={Boolean(busy())} onClick={() => void logout()}>
-                      {busy() === "logout" ? "Disconnecting…" : "Disconnect"}
+                      {busy() === "logout"
+                        ? language.t("settings.copy.disconnecting")
+                        : language.t("settings.models.codexDisconnect")}
                     </Button>
                   </Show>
                 </div>
@@ -269,17 +286,17 @@ export default function Ace() {
 
               <Show when={account()?.session && account()?.funding_context}>
                 <AccountRow
-                  title="Workspace credentials"
-                  description="Synced to this device. Local keys take priority."
+                  title={language.t("settings.copy.workspaceCredentials")}
+                  description={language.t("settings.copy.syncedToThisDeviceLocalKeysTakePriority")}
                 >
                   <span class="settings-account-value" aria-live="polite">
                     {busy() === "sync"
-                      ? "Syncing…"
+                      ? language.t("settings.copy.syncing")
                       : account()?.credential_sync?.state === "ready"
-                        ? "Up to date"
+                        ? language.t("settings.copy.upToDate")
                         : account()?.credential_sync?.state === "error"
-                          ? "Sync unavailable"
-                          : "Ready to sync"}
+                          ? language.t("settings.copy.syncUnavailable")
+                          : language.t("settings.copy.readyToSync")}
                   </span>
                   <Button
                     size="small"
@@ -287,15 +304,17 @@ export default function Ace() {
                     disabled={Boolean(busy())}
                     onClick={() => void syncCredentials()}
                   >
-                    {account()?.credential_sync?.state === "error" ? "Retry sync" : "Sync now"}
+                    {account()?.credential_sync?.state === "error"
+                      ? language.t("settings.copy.retrySync")
+                      : language.t("settings.copy.syncNow")}
                   </Button>
                 </AccountRow>
                 <AccountRow
-                  title="Funding workspace"
+                  title={language.t("settings.copy.fundingWorkspace")}
                   description={
                     needsBrowserWorkspaceApproval()
-                      ? "Ace uses this Wallet. Switching requires browser approval."
-                      : "Ace uses this Wallet, with no automatic fallback to another workspace."
+                      ? language.t("settings.copy.aceUsesThisWalletSwitchingRequiresBrowserApproval")
+                      : language.t("settings.copy.aceUsesThisWalletWithNoAutomaticFallback")
                   }
                 >
                   <Show
@@ -309,7 +328,7 @@ export default function Ace() {
                   >
                     <div class="settings-account-workspace">
                       <Select
-                        aria-label="Funding workspace"
+                        aria-label={language.t("settings.copy.fundingWorkspace")}
                         options={workspaceOptions()}
                         current={workspace()}
                         value={(option) => option.value}
@@ -330,7 +349,9 @@ export default function Ace() {
                         disabled={Boolean(busy())}
                         onClick={() => void login("workspace")}
                       >
-                        {busy() === "workspace" ? "Waiting for browser…" : "Switch workspace"}
+                        {busy() === "workspace"
+                          ? language.t("settings.copy.waitingForBrowser")
+                          : language.t("settings.copy.switchWorkspace")}
                       </Button>
                       <LoginApproval active={busy() === "workspace"} openLink={(url) => platform.openLink(url)} />
                     </div>
@@ -340,7 +361,7 @@ export default function Ace() {
             </div>
           </Section>
 
-          <Section id="model-access" title="Model access">
+          <Section id="model-access" title={language.t("settings.copy.modelAccess")}>
             <div class="settings-card models-access-card">
               <ManagedInference onError={setError} accountOwnedByHost />
             </div>

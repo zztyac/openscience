@@ -1,9 +1,10 @@
+import { useLanguage } from "@/context/language"
 import { Show, type JSX } from "solid-js"
 import { Button } from "@synsci/ui/button"
 import { useDialog } from "@synsci/ui/context/dialog"
 import { useServer } from "@/context/server"
 import { DialogSelectServer } from "@/components/dialog-select-server"
-import { FONT_CODE, FONT_SANS } from "@/styles/tokens"
+import { FONT_SANS } from "@/styles/tokens"
 
 /**
  * Banner shown when the local openscience server is confirmed unreachable
@@ -12,6 +13,7 @@ import { FONT_CODE, FONT_SANS } from "@/styles/tokens"
  * banner clears itself on recovery.
  */
 export function DisconnectedPanel(): JSX.Element {
+  const language = useLanguage()
   const server = useServer()
   const dialog = useDialog()
 
@@ -19,7 +21,7 @@ export function DisconnectedPanel(): JSX.Element {
     <Show when={server.healthy() === false}>
       <div
         role="alert"
-        aria-label="Server connection lost"
+        aria-label={language.t("pages.surface.serverConnectionLost")}
         style={{
           display: "flex",
           "align-items": "center",
@@ -49,7 +51,7 @@ export function DisconnectedPanel(): JSX.Element {
               color: "var(--color-text)",
             }}
           >
-            Can't reach your local OpenScience server
+            {language.t("pages.surface.cannotReachServer")}
           </div>
           <div
             style={{
@@ -62,10 +64,13 @@ export function DisconnectedPanel(): JSX.Element {
             }}
           >
             {server.name} ·{" "}
-            <Show when={server.isLocal()} fallback="Check the server URL or switch servers">
-              Start it with <code style={{ "font-family": FONT_CODE }}>openscience serve</code>
+            <Show when={server.isLocal()} fallback={language.t("pages.surface.serverConnectionHint")}>
+              {language.t("pages.surface.startServer", { command: "openscience serve" })}
             </Show>
-            <Show when={server.failures() > 1}> · {server.failures()} failed checks</Show>
+            <Show when={server.failures() > 1}>
+              {" "}
+              · {language.t("pages.surface.failedChecks", { count: server.failures() })}
+            </Show>
           </div>
         </div>
         <Button
@@ -78,7 +83,7 @@ export function DisconnectedPanel(): JSX.Element {
             "flex-shrink": 0,
           }}
         >
-          {server.checking() ? "Checking…" : "Retry Now"}
+          {server.checking() ? language.t("dialog.server.add.checking") : language.t("pages.surface.retryNow")}
         </Button>
         <Button
           type="button"
@@ -89,7 +94,7 @@ export function DisconnectedPanel(): JSX.Element {
             "flex-shrink": 0,
           }}
         >
-          Switch Server
+          {language.t("pages.surface.switchServer")}
         </Button>
       </div>
     </Show>

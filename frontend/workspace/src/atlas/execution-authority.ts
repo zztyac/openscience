@@ -1,3 +1,4 @@
+import type { useLanguage } from "@/context/language"
 import type { ProjectRequest } from "@/utils/openscience-fetch"
 
 export type ExecutionCapability =
@@ -114,15 +115,36 @@ export function createExecutionAuthorityAPI(request: ProjectRequest) {
   }
 }
 
-export function executionAuthorityMessage(decision: ExecutionDecision): string | undefined {
+export function executionAuthorityMessage(
+  decision: ExecutionDecision,
+  translate?: ReturnType<typeof useLanguage>["t"],
+): string | undefined {
   if (decision.allowed) return
   if (decision.message) return decision.message
-  const action = labels[decision.capability]
-  if (decision.reason === "project_untrusted") return `Trust this project to ${action} in this session.`
-  return `A verified OS sandbox is required to ${action}. OpenScience could not enforce one on this computer.`
+  const keys = {
+    shell: "pages.surface.capability.shell",
+    terminal: "pages.surface.capability.terminal",
+    kernel: "pages.surface.capability.kernel",
+    local_job: "pages.surface.capability.local_job",
+    remote_job: "pages.surface.capability.remote_job",
+    package_install: "pages.surface.capability.package_install",
+    project_plugin: "pages.surface.capability.project_plugin",
+    project_mcp: "pages.surface.capability.project_mcp",
+    project_formatter: "pages.surface.capability.project_formatter",
+    project_lsp: "pages.surface.capability.project_lsp",
+    provider_token_command: "pages.surface.capability.provider_token_command",
+  } as const
+  const label = translate ? translate(keys[decision.capability]) : labels[decision.capability]
+  const action = label.charAt(0).toLocaleLowerCase() + label.slice(1)
+  if (decision.reason === "project_untrusted")
+    return translate?.("pages.surface.executionTrust", { action }) ?? `Trust this project to ${action} in this session.`
+  return (
+    translate?.("pages.surface.executionSandbox", { action }) ??
+    `A verified OS sandbox is required to ${action}. OpenScience could not enforce one on this computer.`
+  )
 }
 
-export function executionAuthorityError(error: unknown): string {
+export function executionAuthorityError(error: unknown, translate?: ReturnType<typeof useLanguage>["t"]): string {
   const detail = error instanceof Error ? error.message : String(error)
-  return `Execution access could not be verified. ${detail}`
+  return translate?.("pages.surface.executionError", { detail }) ?? `Execution access could not be verified. ${detail}`
 }

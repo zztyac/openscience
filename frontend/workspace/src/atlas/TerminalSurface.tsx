@@ -77,7 +77,7 @@ export function TerminalSurface(props: { active?: boolean } = {}): JSX.Element {
   const launch = (program?: "claude") => {
     if (!available() || state.starting) return
     if (!authority.allowed()) {
-      setState("error", authority.message() ?? "This session cannot start a terminal.")
+      setState("error", authority.message() ?? language.t("pages.surface.terminalDenied"))
       return
     }
     setState({ starting: true, connecting: true, error: "" })
@@ -87,7 +87,7 @@ export function TerminalSurface(props: { active?: boolean } = {}): JSX.Element {
       .catch((cause: unknown) => {
         setState({
           connecting: false,
-          error: cause instanceof Error ? cause.message : "OpenScience could not start the terminal.",
+          error: cause instanceof Error ? cause.message : language.t("pages.surface.terminalStartFailed"),
         })
       })
       .finally(() => setState("starting", false))
@@ -104,12 +104,12 @@ export function TerminalSurface(props: { active?: boolean } = {}): JSX.Element {
     void terminal
       .clone(id)
       .then((replacement) => {
-        if (!replacement) throw new Error("The terminal tab is no longer available.")
+        if (!replacement) throw new Error(language.t("pages.surface.terminalGone"))
       })
       .catch((cause: unknown) => {
         setState({
           connecting: false,
-          error: cause instanceof Error ? cause.message : "OpenScience could not reconnect the terminal.",
+          error: cause instanceof Error ? cause.message : language.t("pages.surface.terminalReconnectFailed"),
         })
       })
       .finally(() => setState("starting", false))
@@ -124,7 +124,7 @@ export function TerminalSurface(props: { active?: boolean } = {}): JSX.Element {
   })
 
   return (
-    <section class="terminal-surface" aria-label="Session terminal">
+    <section class="terminal-surface" aria-label={language.t("pages.surface.sessionTerminal")}>
       <Show when={state.error}>
         {(message) => (
           <div class="terminal-surface__error" role="alert">
@@ -132,7 +132,7 @@ export function TerminalSurface(props: { active?: boolean } = {}): JSX.Element {
             <span>{message()}</span>
             <button type="button" onClick={recover} disabled={state.starting || !authority.allowed()}>
               <IconRefresh size={12} strokeWidth={1.5} />
-              {state.starting ? "Retrying…" : "Try again"}
+              {state.starting ? language.t("pages.surface.retrying") : language.t("settings.copy.tryAgain")}
             </button>
           </div>
         )}
@@ -153,8 +153,8 @@ export function TerminalSurface(props: { active?: boolean } = {}): JSX.Element {
             <span class="terminal-surface__empty-mark" aria-hidden="true">
               <IconTerminal size={16} strokeWidth={1.5} />
             </span>
-            <strong>Local terminal unavailable</strong>
-            <p>Connect to the local OpenScience server to run commands inside this project.</p>
+            <strong>{language.t("pages.surface.localTerminalUnavailable")}</strong>
+            <p>{language.t("pages.surface.localTerminalUnavailableHint")}</p>
           </div>
         }
       >
@@ -162,7 +162,7 @@ export function TerminalSurface(props: { active?: boolean } = {}): JSX.Element {
           when={terminal.ready()}
           fallback={
             <div class="terminal-surface__empty" aria-live="polite">
-              <span class="terminal-surface__eyebrow">Preparing terminal…</span>
+              <span class="terminal-surface__eyebrow">{language.t("pages.surface.preparingTerminal")}</span>
             </div>
           }
         >
@@ -173,8 +173,8 @@ export function TerminalSurface(props: { active?: boolean } = {}): JSX.Element {
                 <span class="terminal-surface__empty-mark" aria-hidden="true">
                   <IconTerminal size={16} strokeWidth={1.5} />
                 </span>
-                <strong>Project terminal</strong>
-                <p>Start a clean shell in this session. Open another tab only when you need parallel work.</p>
+                <strong>{language.t("pages.surface.projectTerminal")}</strong>
+                <p>{language.t("pages.surface.startTerminalHint")}</p>
                 <button
                   type="button"
                   onClick={() => launch()}
@@ -182,13 +182,13 @@ export function TerminalSurface(props: { active?: boolean } = {}): JSX.Element {
                   title={authority.message()}
                   data-modal-initial-focus
                 >
-                  {state.starting ? "Starting…" : "Start terminal"}
+                  {state.starting ? language.t("settings.copy.starting") : language.t("pages.surface.startTerminal")}
                 </button>
               </div>
             }
           >
             <div class="terminal-surface__tabs-row">
-              <nav class="terminal-surface__tabs" role="tablist" aria-label="Open terminals">
+              <nav class="terminal-surface__tabs" role="tablist" aria-label={language.t("pages.surface.openTerminals")}>
                 <For each={terminal.all()}>
                   {(pty) => (
                     <div class="terminal-surface__tab-shell" data-active={active()?.id === pty.id ? "true" : undefined}>
@@ -205,7 +205,7 @@ export function TerminalSurface(props: { active?: boolean } = {}): JSX.Element {
                       <button
                         type="button"
                         class="terminal-surface__close"
-                        aria-label={`Close ${pty.title}`}
+                        aria-label={language.t("pages.copy.closeNamed", { name: pty.title })}
                         onClick={() => void terminal.close(pty.id)}
                       >
                         <IconX size={10} strokeWidth={1.5} />
@@ -230,11 +230,13 @@ export function TerminalSurface(props: { active?: boolean } = {}): JSX.Element {
                 class="terminal-surface__new"
                 onClick={() => launch()}
                 disabled={!available() || state.starting || !authority.allowed()}
-                title={authority.message() ?? "New terminal"}
-                aria-label={state.starting ? "Starting terminal" : "New terminal"}
+                title={authority.message() ?? language.t("command.terminal.new")}
+                aria-label={
+                  state.starting ? language.t("pages.surface.startingTerminal") : language.t("command.terminal.new")
+                }
               >
                 <IconPlus size={12} strokeWidth={1.5} />
-                <span>{state.starting ? "Starting…" : "New"}</span>
+                <span>{state.starting ? language.t("settings.copy.starting") : language.t("pages.copy.new")}</span>
               </button>
             </div>
 
@@ -252,8 +254,8 @@ export function TerminalSurface(props: { active?: boolean } = {}): JSX.Element {
                   ref={(node) => (search.input = node)}
                   type="search"
                   value={state.query}
-                  placeholder="Find in output"
-                  aria-label="Find in terminal output"
+                  placeholder={language.t("pages.surface.findOutput")}
+                  aria-label={language.t("pages.surface.findTerminalOutput")}
                   autocomplete="off"
                   onInput={(event) => {
                     setState("query", event.currentTarget.value)
@@ -271,15 +273,25 @@ export function TerminalSurface(props: { active?: boolean } = {}): JSX.Element {
                 <button
                   type="button"
                   onClick={() => find("previous")}
-                  aria-label="Previous match"
-                  title="Previous match"
+                  aria-label={language.t("pages.surface.previousMatch")}
+                  title={language.t("pages.surface.previousMatch")}
                 >
                   <IconChevronLeft size={12} strokeWidth={1.5} />
                 </button>
-                <button type="button" onClick={() => find("next")} aria-label="Next match" title="Next match">
+                <button
+                  type="button"
+                  onClick={() => find("next")}
+                  aria-label={language.t("pages.surface.nextMatch")}
+                  title={language.t("pages.surface.nextMatch")}
+                >
                   <IconChevronRight size={12} strokeWidth={1.5} />
                 </button>
-                <button type="button" onClick={closeSearch} aria-label="Close search" title="Close search (Esc)">
+                <button
+                  type="button"
+                  onClick={closeSearch}
+                  aria-label={language.t("pages.surface.closeSearch")}
+                  title={language.t("pages.surface.closeSearchEsc")}
+                >
                   <IconX size={12} strokeWidth={1.5} />
                 </button>
               </form>
@@ -291,7 +303,7 @@ export function TerminalSurface(props: { active?: boolean } = {}): JSX.Element {
                   <span class="terminal-surface__connecting-mark" aria-hidden="true">
                     <IconTerminal size={14} strokeWidth={1.5} />
                   </span>
-                  <span>Starting terminal…</span>
+                  <span>{language.t("pages.surface.startingTerminalEllipsis")}</span>
                 </div>
               </Show>
               <For each={terminal.all()}>

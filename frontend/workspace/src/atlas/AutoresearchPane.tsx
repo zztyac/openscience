@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { StudyFraming } from "./StudyFraming"
 import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show, type JSX } from "solid-js"
 import type { ExperimentRun, ExperimentSeries, LocalGpu, Study, StudyOverview } from "@synsci/sdk/v2/client"
@@ -43,28 +44,22 @@ function signed(value: number) {
   return `${value > 0 ? "+" : value < 0 ? "−" : ""}${formatValue(Math.abs(value))}`
 }
 
-function targetLabel(target: Study["target"]) {
-  if (target.kind === "modal") return target.gpu ? `modal ${target.gpu}` : "modal"
-  if (target.kind === "ssh") return `ssh ${target.host_id}`
-  return "local"
-}
+const VERDICT_LABEL = {
+  baseline: "research.state.baseline",
+  kept: "research.state.kept",
+  reverted: "research.state.reverted",
+  running: "research.state.running",
+  killed: "research.state.killed",
+  failed: "research.state.failed",
+  pending: "research.state.pending",
+} as const satisfies Record<ClimbPoint["verdict"], string>
 
-const VERDICT_LABEL: Record<ClimbPoint["verdict"], string> = {
-  baseline: "Baseline",
-  kept: "Kept",
-  reverted: "Reverted",
-  running: "Running",
-  killed: "Killed",
-  failed: "Failed",
-  pending: "Unrecorded",
-}
-
-const STATUS_LABEL: Record<Study["status"], string> = {
-  running: "Running",
-  paused: "Paused",
-  halted: "Halted",
-  concluded: "Concluded",
-}
+const STATUS_LABEL = {
+  running: "research.state.running",
+  paused: "research.state.paused",
+  halted: "research.state.halted",
+  concluded: "research.state.concluded",
+} as const satisfies Record<Study["status"], string>
 
 function clock(at: number) {
   return new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -78,6 +73,12 @@ function clock(at: number) {
  * the operator's controls; the science stays in the session.
  */
 export function AutoresearchPane(): JSX.Element {
+  const language = useLanguage()
+  function targetLabel(target: Study["target"]) {
+    if (target.kind === "modal") return target.gpu ? `modal ${target.gpu}` : "modal"
+    if (target.kind === "ssh") return `ssh ${target.host_id}`
+    return language.t("research.study.local")
+  }
   const sdk = useSDK()
   const [now, setNow] = createSignal(Date.now())
   const tick = setInterval(() => setNow(Date.now()), 1000)
@@ -254,8 +255,8 @@ export function AutoresearchPane(): JSX.Element {
   const statusTitle = (current: Study) =>
     [
       targetLabel(current.target),
-      `${current.concurrency} at a time`,
-      current.killCriteria ? `kill: ${current.killCriteria}` : undefined,
+      language.t("research.study.concurrentCount", { count: current.concurrency }),
+      current.killCriteria ? language.t("research.study.killCriteria", { criteria: current.killCriteria }) : undefined,
     ]
       .filter(Boolean)
       .join(" · ")
@@ -289,15 +290,12 @@ export function AutoresearchPane(): JSX.Element {
   })
 
   const control = async (current: Study, action: "pause" | "resume" | "halt") => {
-    if (action === "halt" && !window.confirm(`Halt "${current.name}"? Live runs are cancelled and the loop stops.`))
-      return
+    if (action === "halt" && !window.confirm(language.t("research.study.haltConfirm", { name: current.name }))) return
     await sdk.request(`/experiments/studies/${current.id}/${action}`, { method: "POST" })
     bump()
   }
   const writeUp = (current: Study) => {
-    uiStore.setPrefill(
-      `Write up the study "${current.name}" (${current.id}): read its ledger (study.md, ideas.md, results.tsv, lessons.md) and the tracked runs, then draft the results with the baseline, the best configuration, the ablations that mattered, and the figures the data supports.`,
-    )
+    uiStore.setPrefill(language.t("research.study.writeUpPrompt", { name: current.name, id: current.id }))
   }
 
   const RunRow = (props: { run: ExperimentRun }) => {
@@ -325,7 +323,11 @@ export function AutoresearchPane(): JSX.Element {
               type="button"
               class="ar-run__swatch"
               aria-pressed={selected().has(run().id)}
-              aria-label={`${selected().has(run().id) ? "Hide" : "Show"} ${run().name} on the chart`}
+              aria-label={
+                selected().has(run().id)
+                  ? language.t("research.study.hideRun", { name: run().name })
+                  : language.t("research.study.showRun", { name: run().name })
+              }
               style={{ "--run-color": color(run()) }}
               onClick={(event) => {
                 event.stopPropagation()
@@ -336,7 +338,7 @@ export function AutoresearchPane(): JSX.Element {
           <span class="ar-run__copy">
             <strong>{run().name}</strong>
             <span>
-              {VERDICT_LABEL[state()]}
+              {language.t(VERDICT_LABEL[state()])}
               {delta() === null ? "" : ` · ${signed(delta() as number)}`}
               {elapsed(run(), now()) ? ` · ${elapsed(run(), now())}` : ""}
             </span>
@@ -348,14 +350,11 @@ export function AutoresearchPane(): JSX.Element {
             <Show when={run().killReason}>
               <p class="ar-run__reason">{run().killReason}</p>
             </Show>
-            <Show when={run().provenance} fallback={<p>Execution provenance was not captured for this run.</p>}>
+            <Show when={run().provenance} fallback={<p>{language.t("research.study.noProvenance")}</p>}>
               {(provenance) => (
                 <details>
-                  <summary>Recorded execution provenance</summary>
-                  <p>
-                    Compute-job evidence retained with this run. Unavailable fields are explicit; this is not a complete
-                    replay bundle.
-                  </p>
+                  <summary>{language.t("research.study.provenance")}</summary>
+                  <p>{language.t("research.study.provenanceHint")}</p>
                   <pre style={{ "white-space": "pre-wrap", "overflow-wrap": "anywhere" }}>
                     {JSON.stringify(provenance(), null, 2)}
                   </pre>
@@ -378,17 +377,17 @@ export function AutoresearchPane(): JSX.Element {
                 )}
               </For>
               <div>
-                <dt>points</dt>
+                <dt>{language.t("research.study.points")}</dt>
                 <dd>{run().points}</dd>
               </div>
               <Show when={run().jobID}>
                 <div>
-                  <dt>job</dt>
+                  <dt>{language.t("research.study.job")}</dt>
                   <dd>{run().jobID}</dd>
                 </div>
               </Show>
               <div>
-                <dt>run</dt>
+                <dt>{language.t("research.study.run")}</dt>
                 <dd>{run().id}</dd>
               </div>
             </dl>
@@ -414,9 +413,9 @@ export function AutoresearchPane(): JSX.Element {
   }
 
   return (
-    <section class="autoresearch" aria-label="Autoresearch">
+    <section class="autoresearch" aria-label={language.t("research.study.title")}>
       <header class="autoresearch__bar">
-        <div class="ar-tabs" role="tablist" aria-label="Studies">
+        <div class="ar-tabs" role="tablist" aria-label={language.t("research.study.studies")}>
           <For each={studies.latest ?? []}>
             {(item) => (
               <button
@@ -424,7 +423,7 @@ export function AutoresearchPane(): JSX.Element {
                 role="tab"
                 aria-selected={study()?.id === item.id}
                 data-status={item.status}
-                title={`${item.name}: ${STATUS_LABEL[item.status]}`}
+                title={`${item.name}: ${language.t(STATUS_LABEL[item.status])}`}
                 onClick={() => pick(item.id)}
               >
                 <i aria-hidden="true" />
@@ -434,11 +433,16 @@ export function AutoresearchPane(): JSX.Element {
           </For>
         </div>
         <Show when={(gpus.latest ?? []).length}>
-          <ul class="ar-gpus" aria-label="Local GPUs">
+          <ul class="ar-gpus" aria-label={language.t("research.study.gpus")}>
             <For each={gpus.latest ?? []}>
               {(gpu) => (
                 <li
-                  title={`${gpu.name}: ${gpu.utilization}% busy, ${Math.round(gpu.memoryUsedMB / 1024)} of ${Math.round(gpu.memoryTotalMB / 1024)} GB`}
+                  title={language.t("research.study.gpuUsage", {
+                    name: gpu.name,
+                    busy: gpu.utilization,
+                    used: Math.round(gpu.memoryUsedMB / 1024),
+                    total: Math.round(gpu.memoryTotalMB / 1024),
+                  })}
                 >
                   <span>GPU {gpu.index}</span>
                   <i>
@@ -461,14 +465,11 @@ export function AutoresearchPane(): JSX.Element {
                 <IconActivity size={18} strokeWidth={1.5} />
               </span>
               <div class="ar-empty__copy">
-                <strong>No studies yet</strong>
-                <span>
-                  Ask in the session for an autoresearch study: the metric to improve, the budget, and the script to
-                  run. Each study appears here with its score, its runs and its queue.
-                </span>
+                <strong>{language.t("research.study.empty")}</strong>
+                <span>{language.t("research.study.emptyHint")}</span>
                 <Show when={loose().length}>
                   <span>
-                    {loose().length} tracked run{loose().length === 1 ? "" : "s"} outside a study:{" "}
+                    {language.t("research.study.unassignedRuns", { count: loose().length })}{" "}
                     {loose()
                       .slice(0, 5)
                       .map((run) => run.name)
@@ -482,11 +483,14 @@ export function AutoresearchPane(): JSX.Element {
         >
           {(current) => (
             <>
-              <section class="ar-score" aria-label="Score">
+              <section class="ar-score" aria-label={language.t("research.study.score")}>
                 <div class="ar-score__row">
                   <div class="ar-score__value">
                     <span class="ar-score__metric">
-                      {current().direction === "maximize" ? "Maximize" : "Minimize"} {current().metric}
+                      {current().direction === "maximize"
+                        ? language.t("research.study.maximize")
+                        : language.t("research.study.minimize")}{" "}
+                      {current().metric}
                     </span>
                     <strong>
                       {overview.latest?.best?.headline !== null && overview.latest?.best?.headline !== undefined
@@ -497,12 +501,21 @@ export function AutoresearchPane(): JSX.Element {
                           : "—"}
                     </strong>
                     <span class="ar-score__gain" data-sign={gainSign()}>
-                      <Show when={improvement()} fallback={overview.latest?.baseline ? "Baseline" : "No runs yet"}>
+                      <Show
+                        when={improvement()}
+                        fallback={
+                          overview.latest?.baseline
+                            ? language.t("research.state.baseline")
+                            : language.t("research.study.noRuns")
+                        }
+                      >
                         {(gain) => (
                           <>
                             {gain().percent >= 0 ? "▲" : "▼"}{" "}
-                            {Math.abs(gain().percent).toFixed(Math.abs(gain().percent) >= 100 ? 0 : 1)}% from{" "}
-                            {formatValue(gain().base.headline as number)}
+                            {language.t("research.study.gain", {
+                              percent: Math.abs(gain().percent).toFixed(Math.abs(gain().percent) >= 100 ? 0 : 1),
+                              baseline: formatValue(gain().base.headline as number),
+                            })}
                           </>
                         )}
                       </Show>
@@ -510,7 +523,7 @@ export function AutoresearchPane(): JSX.Element {
                   </div>
                   <div class="ar-score__controls">
                     <em class="ar-status" data-status={current().status} title={statusTitle(current())}>
-                      {STATUS_LABEL[current().status]}
+                      {language.t(STATUS_LABEL[current().status])}
                     </em>
                     <Show when={current().status === "running"}>
                       <Button
@@ -519,7 +532,7 @@ export function AutoresearchPane(): JSX.Element {
                         size="small"
                         onClick={() => void control(current(), "pause")}
                       >
-                        Pause
+                        {language.t("research.study.pause")}
                       </Button>
                     </Show>
                     <Show when={current().status === "paused"}>
@@ -529,7 +542,7 @@ export function AutoresearchPane(): JSX.Element {
                         size="small"
                         onClick={() => void control(current(), "resume")}
                       >
-                        Resume
+                        {language.t("research.study.resume")}
                       </Button>
                     </Show>
                     <Show when={current().status === "running" || current().status === "paused"}>
@@ -540,11 +553,11 @@ export function AutoresearchPane(): JSX.Element {
                         data-danger
                         onClick={() => void control(current(), "halt")}
                       >
-                        Halt
+                        {language.t("research.study.halt")}
                       </Button>
                     </Show>
                     <Button type="button" variant="secondary" size="small" onClick={() => writeUp(current())}>
-                      Write up
+                      {language.t("research.study.writeUp")}
                     </Button>
                   </div>
                 </div>
@@ -557,11 +570,16 @@ export function AutoresearchPane(): JSX.Element {
                 <div class="ar-score__meta">
                   <span class="ar-score__facts">
                     <span>
-                      {runs().filter((run) => run.status !== "running").length}
-                      {current().budget.maxRuns ? `/${current().budget.maxRuns}` : ""} runs
+                      {language.t("research.study.runCount", {
+                        count: `${runs().filter((run) => run.status !== "running").length}${current().budget.maxRuns ? `/${current().budget.maxRuns}` : ""}`,
+                      })}
                     </span>
                     <Show when={runs().some((run) => run.status === "running")}>
-                      <span>{runs().filter((run) => run.status === "running").length} live</span>
+                      <span>
+                        {language.t("research.study.liveRuns", {
+                          count: runs().filter((run) => run.status === "running").length,
+                        })}
+                      </span>
                     </Show>
                     <Show when={computeTime(runs(), now())}>{(time) => <span>{time()}</span>}</Show>
                   </span>
@@ -573,7 +591,7 @@ export function AutoresearchPane(): JSX.Element {
                       aria-expanded={panel() === "about"}
                       onClick={() => flip("about")}
                     >
-                      About
+                      {language.t("research.study.about")}
                     </Button>
                     <Show when={current().status === "running" || current().status === "paused"}>
                       <Button
@@ -583,7 +601,7 @@ export function AutoresearchPane(): JSX.Element {
                         aria-expanded={steering()}
                         onClick={() => setSteering(!steering())}
                       >
-                        Steer
+                        {language.t("research.study.steer")}
                       </Button>
                     </Show>
                   </span>
@@ -598,25 +616,25 @@ export function AutoresearchPane(): JSX.Element {
                   >
                     <TextField
                       hideLabel
-                      label="Directive"
+                      label={language.t("research.study.directive")}
                       value={directive()}
-                      placeholder="A standing rule for the rest of the study, e.g. only vary the optimizer"
+                      placeholder={language.t("research.study.directivePlaceholder")}
                       onChange={setDirective}
                     />
                     <Button type="submit" variant="secondary" size="small" disabled={!directive().trim()}>
-                      Send
+                      {language.t("research.study.send")}
                     </Button>
                   </form>
                 </Show>
                 <Show when={current().directives.some((item) => item.active)}>
-                  <ul class="ar-directives" aria-label="Standing directives">
+                  <ul class="ar-directives" aria-label={language.t("research.study.standingDirectives")}>
                     <For each={current().directives.filter((item) => item.active)}>
                       {(item) => (
                         <li>
                           <span>{item.text}</span>
                           <button
                             type="button"
-                            aria-label="Retire directive"
+                            aria-label={language.t("research.study.retireDirective")}
                             onClick={() => void retire(current(), item.id)}
                           >
                             ×
@@ -637,28 +655,28 @@ export function AutoresearchPane(): JSX.Element {
                           headers: { "content-type": "application/json" },
                           body: JSON.stringify(body),
                         })
-                        if (!response.ok) throw new Error("Study update failed")
+                        if (!response.ok) throw new Error(language.t("research.study.updateError"))
                         bump()
                       }}
                     />
                     <dl class="ar-facts">
                       <div>
-                        <dt>Target</dt>
+                        <dt>{language.t("research.study.target")}</dt>
                         <dd>{targetLabel(current().target)}</dd>
                       </div>
                       <div>
-                        <dt>Concurrency</dt>
+                        <dt>{language.t("research.study.concurrency")}</dt>
                         <dd>{current().concurrency}</dd>
                       </div>
                       <Show when={current().killCriteria}>
                         <div>
-                          <dt>Kill</dt>
+                          <dt>{language.t("research.study.kill")}</dt>
                           <dd>{current().killCriteria}</dd>
                         </div>
                       </Show>
                       <Show when={Object.keys(current().budget).length}>
                         <div>
-                          <dt>Budget</dt>
+                          <dt>{language.t("research.study.budget")}</dt>
                           <dd>
                             {Object.entries(current().budget)
                               .filter(([, value]) => value !== undefined)
@@ -668,11 +686,11 @@ export function AutoresearchPane(): JSX.Element {
                         </div>
                       </Show>
                       <div>
-                        <dt>Wake-ups</dt>
+                        <dt>{language.t("research.study.wakeUps")}</dt>
                         <dd>{current().turns}</dd>
                       </div>
                       <div>
-                        <dt>Folder</dt>
+                        <dt>{language.t("research.study.folder")}</dt>
                         <dd title={current().root}>{current().root.split("/").slice(-2).join("/")}</dd>
                       </div>
                     </dl>
@@ -680,10 +698,10 @@ export function AutoresearchPane(): JSX.Element {
                 </Show>
               </section>
 
-              <section class="ar-block" aria-label="Runs">
+              <section class="ar-block" aria-label={language.t("research.study.runs")}>
                 <header class="ar-block__head">
                   <div class="ar-block__identity">
-                    <strong>Runs</strong>
+                    <strong>{language.t("research.study.runs")}</strong>
                     <em>{runs().length}</em>
                   </div>
                   <Button
@@ -694,21 +712,21 @@ export function AutoresearchPane(): JSX.Element {
                     onClick={() => setCurves(!curves())}
                     disabled={!runs().length}
                   >
-                    {curves() ? "Hide curves" : "Curves"}
+                    {curves() ? language.t("research.study.hideCurves") : language.t("research.study.curves")}
                   </Button>
                 </header>
                 <Show when={curves()}>
                   <div class="ar-curves">
                     <div class="ar-chart-controls">
                       <select
-                        aria-label="Metric"
+                        aria-label={language.t("research.study.metric")}
                         value={metric() ?? ""}
                         onChange={(event) => setKey(event.currentTarget.value)}
                       >
                         <For each={keys.latest ?? []}>{(name) => <option value={name}>{name}</option>}</For>
                       </select>
                       <label>
-                        <span>Smooth</span>
+                        <span>{language.t("research.study.smooth")}</span>
                         <input
                           type="range"
                           min="0"
@@ -725,7 +743,7 @@ export function AutoresearchPane(): JSX.Element {
                         aria-pressed={log()}
                         onClick={() => setLog(!log())}
                       >
-                        Log scale
+                        {language.t("research.study.logScale")}
                       </Button>
                     </div>
                     <MetricChart
@@ -737,15 +755,18 @@ export function AutoresearchPane(): JSX.Element {
                     />
                   </div>
                 </Show>
-                <Show when={runs().length} fallback={<p class="ar-none">The first run is the baseline.</p>}>
+                <Show
+                  when={runs().length}
+                  fallback={<p class="ar-none">{language.t("research.study.firstBaseline")}</p>}
+                >
                   <ul class="ar-runs">
                     <For each={runs()}>{(run) => <RunRow run={run} />}</For>
                   </ul>
                 </Show>
               </section>
 
-              <section class="ar-block" aria-label="More">
-                <div class="ar-more" role="group" aria-label="More about this study">
+              <section class="ar-block" aria-label={language.t("research.study.more")}>
+                <div class="ar-more" role="group" aria-label={language.t("research.study.moreAbout")}>
                   <Button
                     type="button"
                     variant="ghost"
@@ -753,7 +774,7 @@ export function AutoresearchPane(): JSX.Element {
                     aria-expanded={panel() === "queue"}
                     onClick={() => flip("queue")}
                   >
-                    Queue
+                    {language.t("research.study.queue")}
                     <em>{queued().length}</em>
                   </Button>
                   <Button
@@ -764,7 +785,9 @@ export function AutoresearchPane(): JSX.Element {
                     onClick={() => flip("lessons")}
                     disabled={!current().lessons && !current().conclusion}
                   >
-                    {current().conclusion ? "Conclusion" : "Lessons"}
+                    {current().conclusion
+                      ? language.t("research.study.conclusion")
+                      : language.t("research.study.lessons")}
                   </Button>
                   <Button
                     type="button"
@@ -774,13 +797,16 @@ export function AutoresearchPane(): JSX.Element {
                     onClick={() => flip("activity")}
                     disabled={!(overview.latest?.events ?? []).length}
                   >
-                    Activity
+                    {language.t("research.study.activity")}
                   </Button>
                 </div>
 
                 <Show when={panel() === "queue"}>
-                  <div class="ar-panel" aria-label="Queue">
-                    <Show when={queued().length} fallback={<p class="ar-none">Nothing queued.</p>}>
+                  <div class="ar-panel" aria-label={language.t("research.study.queue")}>
+                    <Show
+                      when={queued().length}
+                      fallback={<p class="ar-none">{language.t("research.study.emptyQueue")}</p>}
+                    >
                       <ol class="ar-queue">
                         <For each={queued()}>
                           {(idea) => (
@@ -797,7 +823,7 @@ export function AutoresearchPane(): JSX.Element {
                     </Show>
                     <Show when={dropped().length}>
                       <p class="ar-none">
-                        Dropped:{" "}
+                        {language.t("research.study.dropped")}{" "}
                         {dropped()
                           .map((idea) => idea.title)
                           .join(", ")}
@@ -807,7 +833,7 @@ export function AutoresearchPane(): JSX.Element {
                 </Show>
 
                 <Show when={panel() === "lessons"}>
-                  <div class="ar-panel" aria-label="Lessons">
+                  <div class="ar-panel" aria-label={language.t("research.study.lessons")}>
                     <Show when={current().conclusion}>
                       <p class="ar-prose">{current().conclusion}</p>
                     </Show>
@@ -822,7 +848,7 @@ export function AutoresearchPane(): JSX.Element {
                 </Show>
 
                 <Show when={panel() === "activity"}>
-                  <div class="ar-panel" aria-label="Activity">
+                  <div class="ar-panel" aria-label={language.t("research.study.activity")}>
                     <ol class="ar-activity">
                       <For each={(overview.latest?.events ?? []).slice(0, 12)}>
                         {(event) => (

@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { AppearanceSections } from "../settings-general"
 import { PanelBody, PanelHeader, PanelScroll } from "./_shared"
 import "./preference-panels.css"
@@ -8,10 +9,14 @@ import "./preference-panels.css"
  * Permissions.
  */
 export default function General() {
+  const language = useLanguage()
   return (
     <PanelScroll>
       <div class="settings-preferences-panel settings-preferences-panel--general">
-        <PanelHeader title="General" description="How OpenScience looks and behaves on this device." />
+        <PanelHeader
+          title={language.t("settings.shell.panel.general")}
+          description={language.t("settings.copy.howOpenscienceLooksAndBehavesOnThisDevice")}
+        />
         <PanelBody>
           <AppearanceSections />
         </PanelBody>

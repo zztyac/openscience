@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 // Skills — the catalog of playbooks agents load on demand, in the tiers the
 // agent itself uses: the Core toolkit first, the user's own skills, then the
 // library by subject with each shelf folded until it is wanted. Data,
@@ -127,22 +128,6 @@ export function displayLabel(value: string) {
   return words ? words[0]!.toUpperCase() + words.slice(1) : value
 }
 
-const SOURCE_LABEL: Record<SkillSource, string> = {
-  default: "Default",
-  installed: "Installed",
-  user: "Personal",
-  project: "Project",
-}
-
-const ROOT_LABEL: Record<SkillRoot["kind"], string> = {
-  bundled: "Bundled",
-  project: "Project",
-  user: "Personal",
-  installed: "Installed",
-  config: "Configured",
-  runtime: "Registered",
-}
-
 /** One line under a title: the summary when the author wrote one, otherwise
  * the first sentence of the description. */
 export function blurb(skill: Pick<Skill, "summary" | "description">) {
@@ -168,6 +153,16 @@ export type SkillsPageServices = {
 }
 
 export default function SkillsPage(props: { embedded?: boolean; services?: SkillsPageServices }): JSX.Element {
+  const language = useLanguage()
+  const rootLabels = (): Record<SkillRoot["kind"], string> => ({
+    bundled: language.t("atlas.skills.source.bundled"),
+    project: language.t("atlas.skills.source.project"),
+    user: language.t("atlas.skills.personal"),
+    installed: language.t("atlas.skills.source.installed"),
+    config: language.t("atlas.skills.source.configured"),
+    runtime: language.t("atlas.skills.source.registered"),
+  })
+
   const service =
     props.services ??
     (() => {
@@ -190,7 +185,7 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
             !saved?.skills?.disabled ||
             JSON.stringify([...saved.skills.disabled].sort()) !== JSON.stringify([...disabled].sort())
           ) {
-            throw new Error("This server did not confirm the selection. Update the OpenScience server and try again.")
+            throw new Error(language.t("atlas.skills.serverSelectionError"))
           }
           sync.set("config", "skills", { ...sync.data.config.skills, disabled } as SelectionConfig["skills"])
           return disabled
@@ -198,21 +193,21 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
         create: (name: string, content: string) => sdk.client.app.skill.write({ name, content }),
         read: async (name: string) => {
           const result = await sdk.client.app.skill.content({ name })
-          if (!result.data) throw new Error("This skill could not be read.")
+          if (!result.data) throw new Error(language.t("atlas.skills.readError"))
           return result.data.content
         },
         remove: (name: string) => sdk.client.app.skill.delete({ name }),
         install: (url: string) => installFromGit(platform.fetch ?? fetch, sdk.url, url),
         roots: async () => {
           const result = await sdk.client.settings.skills.roots()
-          if (!result.data) throw new Error("Skill sources could not be read.")
+          if (!result.data) throw new Error(language.t("atlas.skills.sourcesError"))
           return result.data
         },
         addRoot: async (path: string, persist?: "global" | "project") => {
           const result = await sdk.client.settings.skills.addRoot({ path, persist })
           if (!result.data) {
             const error = result.error as { error?: string } | undefined
-            throw new Error(error?.error ?? "This folder could not be added.")
+            throw new Error(error?.error ?? language.t("atlas.skills.folderError"))
           }
           return result.data
         },
@@ -306,7 +301,7 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
       markPermissionPending(name, 1)
       return [name, version] as const
     })
-    setPreferences("feedback", "Saving selection…")
+    setPreferences("feedback", language.t("atlas.skills.saveSelection"))
 
     const persist = async () => {
       try {
@@ -321,11 +316,17 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
         )
         setPreferences(
           "feedback",
-          `${names.length === 1 ? "Skill" : `${names.length} skills`} ${next ? "activated" : "turned off"}.`,
+          next
+            ? language.t("atlas.skills.activatedCount", { count: names.length })
+            : language.t("atlas.skills.deactivatedCount", { count: names.length }),
         )
       } catch (error) {
-        setPreferences("feedback", "Selection could not be saved. Your previous settings are unchanged.")
-        showToast({ variant: "error", title: "Could not save skill selection", description: message(error) })
+        setPreferences("feedback", language.t("atlas.skills.selectionError"))
+        showToast({
+          variant: "error",
+          title: language.t("atlas.skills.selectionErrorTitle"),
+          description: message(error),
+        })
       } finally {
         for (const [name, version] of versions) {
           if (permissionVersions.get(name) === version) setPreferences("changes", name, undefined!)
@@ -439,33 +440,33 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
       <div class="skills-workspace__header">
         <div class="skills-workspace__heading">
           <div class="skills-workspace__heading-copy">
-            <Show when={!props.embedded} fallback={<h2>Skills</h2>}>
-              <h1>Skills</h1>
+            <Show when={!props.embedded} fallback={<h2>{language.t("atlas.skills.title")}</h2>}>
+              <h1>{language.t("atlas.skills.title")}</h1>
             </Show>
-            <p>Playbooks the agent loads on demand. Core is always in the / menu; the library is one search away.</p>
+            <p>{language.t("atlas.skills.description")}</p>
           </div>
           <div class="skills-workspace__summary" aria-live="polite">
-            <span>{enabledCount()} active</span>
+            <span>{language.t("atlas.skills.activeCount", { count: enabledCount() })}</span>
             <span aria-hidden="true">·</span>
-            <span>{all().length} in library</span>
+            <span>{language.t("atlas.skills.libraryCount", { count: all().length })}</span>
             <Show when={asksEverywhere()}>
               <span aria-hidden="true">·</span>
-              <span title="The agent asks before loading any skill. Change this under Permissions.">Ask first</span>
+              <span title={language.t("atlas.skills.askDescription")}>{language.t("atlas.skills.askFirst")}</span>
             </Show>
           </div>
         </div>
 
         <Show when={form().kind === "list"}>
           <div class="skills-workspace__toolbar">
-            <div class="skills-workspace__views" role="group" aria-label="Skill library views">
+            <div class="skills-workspace__views" role="group" aria-label={language.t("atlas.skills.views")}>
               <For
                 each={
                   [
-                    { id: "all", label: "All", count: all().length },
-                    { id: "core", label: "Core", count: counts().core },
-                    { id: "library", label: "Library", count: counts().library },
-                    { id: "personal", label: "Personal", count: counts().personal },
-                    { id: "off", label: "Off", count: counts().off },
+                    { id: "all", label: language.t("atlas.skills.all"), count: all().length },
+                    { id: "core", label: language.t("atlas.skills.core"), count: counts().core },
+                    { id: "library", label: language.t("atlas.skills.library"), count: counts().library },
+                    { id: "personal", label: language.t("atlas.skills.personal"), count: counts().personal },
+                    { id: "off", label: language.t("atlas.skills.off"), count: counts().off },
                   ] as const
                 }
               >
@@ -482,32 +483,37 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
               </For>
             </div>
             <div class="settings-toolbar skills-workspace__toolbar-controls">
-              <SearchInput value={search()} onInput={setSearch} placeholder="Search skills" ariaLabel="Search skills" />
+              <SearchInput
+                value={search()}
+                onInput={setSearch}
+                placeholder={language.t("atlas.skills.search")}
+                ariaLabel={language.t("atlas.skills.search")}
+              />
               <AddMenu
-                label="Add skill"
+                label={language.t("atlas.skills.add")}
                 items={[
                   {
                     icon: "pencil-line",
-                    label: "Write from scratch",
-                    description: "Author a new SKILL.md in the editor",
+                    label: language.t("atlas.skills.scratch"),
+                    description: language.t("atlas.skills.scratchHint"),
                     onSelect: () => setForm({ kind: "scratch" }),
                   },
                   {
                     icon: "cloud-upload",
-                    label: "Upload a skill",
-                    description: "Import a SKILL.md file from disk",
+                    label: language.t("atlas.skills.upload"),
+                    description: language.t("atlas.skills.uploadHint"),
                     onSelect: () => fileInput?.click(),
                   },
                   {
                     icon: "folder",
-                    label: "Add a local folder",
-                    description: "Register a directory of skills, no restart",
+                    label: language.t("atlas.skills.folder"),
+                    description: language.t("atlas.skills.folderHint"),
                     onSelect: () => setForm({ kind: "folder" }),
                   },
                   {
                     icon: "github",
-                    label: "Import from GitHub",
-                    description: "Install from a public git repo URL",
+                    label: language.t("atlas.skills.github"),
+                    description: language.t("atlas.skills.githubHint"),
                     onSelect: () => setForm({ kind: "github" }),
                   },
                 ]}
@@ -570,12 +576,19 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
                     const r = res.rejected.length
                     showToast({
                       variant: n > 0 ? "success" : "error",
-                      title: n > 0 ? `Installed ${n} skill${n === 1 ? "" : "s"}` : "No skills installed",
-                      description: r > 0 ? `${r} rejected by security review` : undefined,
+                      title:
+                        n > 0
+                          ? language.t("atlas.skills.installedCount", { count: n })
+                          : language.t("atlas.skills.installEmpty"),
+                      description: r > 0 ? language.t("atlas.skills.rejectedCount", { count: r }) : undefined,
                     })
                     if (n > 0) setForm({ kind: "list" })
                   } catch (err) {
-                    showToast({ variant: "error", title: "Install failed", description: message(err) })
+                    showToast({
+                      variant: "error",
+                      title: language.t("atlas.skills.installError"),
+                      description: message(err),
+                    })
                   } finally {
                     setBusy(false)
                   }
@@ -593,11 +606,15 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
                     refresh()
                     showToast({
                       variant: "success",
-                      title: `Added ${root.skills} skill${root.skills === 1 ? "" : "s"} from ${shortPath(root.path)}`,
+                      title: language.t("atlas.skills.addedCount", { count: root.skills, path: shortPath(root.path) }),
                     })
                     setForm({ kind: "list" })
                   } catch (err) {
-                    showToast({ variant: "error", title: "Could not add folder", description: message(err) })
+                    showToast({
+                      variant: "error",
+                      title: language.t("atlas.skills.addFolderError"),
+                      description: message(err),
+                    })
                   } finally {
                     setBusy(false)
                   }
@@ -607,9 +624,9 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
             <Match when={form().kind === "list"}>
               <Show when={skills.error && all().length > 0}>
                 <div class="skills-workspace__catalog-warning" role="alert">
-                  <span>The saved catalog is shown. Reconnect before changing active skills.</span>
+                  <span>{language.t("atlas.skills.cached")}</span>
                   <button type="button" onClick={refresh}>
-                    Retry
+                    {language.t("atlas.common.retry")}
                   </button>
                 </div>
               </Show>
@@ -617,7 +634,7 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
                 when={!skills.loading || all().length > 0}
                 fallback={
                   <div class="skills-workspace__loading" role="status" aria-live="polite">
-                    <AtomLoader size={144} caption="Loading skills" />
+                    <AtomLoader size={144} caption={language.t("atlas.skills.loading")} />
                   </div>
                 }
               >
@@ -626,9 +643,9 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
                   fallback={
                     <CatalogState
                       icon="alert-circle"
-                      title="Skills could not be loaded"
+                      title={language.t("atlas.skills.loadError")}
                       hint={message(skills.error)}
-                      action="Try again"
+                      action={language.t("atlas.common.tryAgain")}
                       onAction={refresh}
                     />
                   }
@@ -641,16 +658,16 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
                         fallback={
                           <EmptyState
                             icon="brain"
-                            title="No skills yet"
-                            hint="Write one from scratch, upload a SKILL.md, add a local folder, or import from GitHub."
+                            title={language.t("atlas.skills.empty")}
+                            hint={language.t("atlas.skills.emptyHint")}
                           />
                         }
                       >
                         <CatalogState
                           icon="magnifying-glass"
-                          title="No matching skills"
-                          hint="Try another search or view."
-                          action="Clear search"
+                          title={language.t("atlas.skills.noMatches")}
+                          hint={language.t("atlas.skills.noMatchesHint")}
+                          action={language.t("atlas.skills.clearSearch")}
                           onAction={() => {
                             setSearch("")
                             setPreferences("view", "all")
@@ -662,7 +679,7 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
                     <Show
                       when={!flat()}
                       fallback={
-                        <section class="skills-workspace__group" aria-label="Matching skills">
+                        <section class="skills-workspace__group" aria-label={language.t("atlas.skills.matches")}>
                           <ul class="skills-workspace__rows">
                             <For each={visibleFlat()}>{(skill) => row(skill, true)}</For>
                           </ul>
@@ -672,7 +689,7 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
                               class="skills-workspace__more"
                               onClick={() => setFlatRows((current) => current + FLAT_ROWS)}
                             >
-                              Show more skills
+                              {language.t("atlas.skills.more")}
                             </button>
                           </Show>
                         </section>
@@ -682,8 +699,8 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
                         <Show when={core().length > 0}>
                           <section class="skills-workspace__group" aria-labelledby="skills-group-core">
                             <div class="skills-workspace__group-heading">
-                              <h3 id="skills-group-core">Core</h3>
-                              <p>The research toolkit, always in the / menu and the agent's index.</p>
+                              <h3 id="skills-group-core">{language.t("atlas.skills.core")}</h3>
+                              <p>{language.t("atlas.skills.coreHint")}</p>
                             </div>
                             <ul class="skills-workspace__rows">
                               <For each={core()}>{(skill) => row(skill)}</For>
@@ -694,8 +711,8 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
                         <Show when={personal().length > 0}>
                           <section class="skills-workspace__group" aria-labelledby="skills-group-personal">
                             <div class="skills-workspace__group-heading">
-                              <h3 id="skills-group-personal">Personal</h3>
-                              <p>Skills you wrote, installed, or keep in this project.</p>
+                              <h3 id="skills-group-personal">{language.t("atlas.skills.personal")}</h3>
+                              <p>{language.t("atlas.skills.personalHint")}</p>
                             </div>
                             <ul class="skills-workspace__rows">
                               <For each={personal()}>{(skill) => row(skill)}</For>
@@ -706,10 +723,8 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
                         <Show when={shelves().length > 0}>
                           <section class="skills-workspace__group" aria-labelledby="skills-group-library">
                             <div class="skills-workspace__group-heading">
-                              <h3 id="skills-group-library">Library</h3>
-                              <p>
-                                By subject. The agent finds these by search or exact name; open a shelf to curate it.
-                              </p>
+                              <h3 id="skills-group-library">{language.t("atlas.skills.library")}</h3>
+                              <p>{language.t("atlas.skills.libraryHint")}</p>
                             </div>
                             <div class="skills-workspace__shelves">
                               <For each={shelves()}>
@@ -734,8 +749,10 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
                                           </span>
                                           <strong>{displayLabel(category)}</strong>
                                           <span>
-                                            {items.length} skill{items.length === 1 ? "" : "s"}
-                                            <Show when={on() < items.length}>{` · ${items.length - on()} off`}</Show>
+                                            {language.t("atlas.skills.count", { count: items.length })}
+                                            <Show
+                                              when={on() < items.length}
+                                            >{` · ${language.t("atlas.skills.offCount", { count: items.length - on() })}`}</Show>
                                           </span>
                                         </button>
                                         <div class="skills-workspace__shelf-actions">
@@ -749,7 +766,7 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
                                                 }
                                                 onClick={() => toggle(deactivatable(items), false)}
                                               >
-                                                Turn off all
+                                                {language.t("atlas.skills.offAll")}
                                               </button>
                                             }
                                           >
@@ -758,7 +775,7 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
                                               disabled={!activatable(items).length || skills.loading || !!skills.error}
                                               onClick={() => toggle(activatable(items), true)}
                                             >
-                                              Activate all
+                                              {language.t("atlas.skills.activateAll")}
                                             </button>
                                           </Show>
                                         </div>
@@ -788,10 +805,8 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
                     aria-labelledby="skills-group-sources"
                   >
                     <div class="skills-workspace__group-heading">
-                      <h3 id="skills-group-sources">Sources</h3>
-                      <p>
-                        Where the catalog comes from. A later source wins a name collision; the loser is listed here.
-                      </p>
+                      <h3 id="skills-group-sources">{language.t("atlas.skills.sources")}</h3>
+                      <p>{language.t("atlas.skills.sourcesHint")}</p>
                     </div>
                     <ul class="skills-workspace__rows">
                       <For each={sources().roots}>
@@ -801,19 +816,21 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
                               <Icon name={root.kind === "bundled" ? "archive" : "folder"} size="small" />
                             </span>
                             <div class="skills-workspace__source-copy">
-                              <strong>{ROOT_LABEL[root.kind]}</strong>
+                              <strong>{rootLabels()[root.kind]}</strong>
                               <code title={root.path}>{shortPath(root.path)}</code>
                             </div>
                             <span class="skills-workspace__source-count">
-                              {root.skills} skill{root.skills === 1 ? "" : "s"}
-                              <Show when={root.shadowed > 0}>{` · ${root.shadowed} shadowed`}</Show>
+                              {language.t("atlas.skills.count", { count: root.skills })}
+                              <Show
+                                when={root.shadowed > 0}
+                              >{` · ${language.t("atlas.skills.shadowedCount", { count: root.shadowed })}`}</Show>
                             </span>
                             <Show when={root.kind === "runtime" || root.kind === "config"}>
                               <button
                                 type="button"
                                 class="skills-workspace__source-remove"
-                                aria-label={`Remove ${root.path}`}
-                                title="Remove this folder from the catalog"
+                                aria-label={language.t("atlas.skills.removeNamed", { name: root.path })}
+                                title={language.t("atlas.skills.removeSource")}
                                 onClick={() => void removeRoot(root)}
                               >
                                 <Icon name="trash" size="small" />
@@ -824,13 +841,15 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
                       </For>
                     </ul>
                     <Show when={sources().shadowed.length > 0}>
-                      <ul class="skills-workspace__shadowed" aria-label="Shadowed skills">
+                      <ul class="skills-workspace__shadowed" aria-label={language.t("atlas.skills.shadowed")}>
                         <For each={sources().shadowed}>
                           {(entry) => (
                             <li>
-                              <code>/{entry.name}</code> at{" "}
-                              <code title={entry.location}>{shortPath(entry.location)}</code> loses to{" "}
-                              <code title={entry.by}>{shortPath(entry.by)}</code>
+                              {language.t("atlas.skills.shadowedBy", {
+                                name: entry.name,
+                                location: shortPath(entry.location),
+                                source: shortPath(entry.by),
+                              })}
                             </li>
                           )}
                         </For>
@@ -851,23 +870,29 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
     try {
       await service.create(name, content)
       refresh()
-      showToast({ variant: "success", title: `Skill "${name}" ${verb}` })
+      showToast({
+        variant: "success",
+        title:
+          verb === "created"
+            ? language.t("atlas.skills.created", { name })
+            : language.t("atlas.skills.saved", { name }),
+      })
       setForm({ kind: "list" })
     } catch (err) {
-      showToast({ variant: "error", title: `Could not save skill`, description: message(err) })
+      showToast({ variant: "error", title: language.t("atlas.skills.saveError"), description: message(err) })
     } finally {
       setBusy(false)
     }
   }
 
   async function removeSkill(name: string) {
-    if (typeof confirm === "function" && !confirm(`Delete the skill "${name}"? This removes its SKILL.md.`)) return
+    if (typeof confirm === "function" && !confirm(language.t("atlas.skills.confirmDelete", { name }))) return
     try {
       await service.remove(name)
       refresh()
-      showToast({ variant: "success", title: `Skill "${name}" deleted` })
+      showToast({ variant: "success", title: language.t("atlas.skills.deleted", { name }) })
     } catch (err) {
-      showToast({ variant: "error", title: "Could not delete skill", description: message(err) })
+      showToast({ variant: "error", title: language.t("atlas.skills.deleteError"), description: message(err) })
     }
   }
 
@@ -875,9 +900,9 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
     try {
       await service.removeRoot(root.path, root.kind === "config" ? "global" : undefined)
       refresh()
-      showToast({ variant: "success", title: `Removed ${shortPath(root.path)}` })
+      showToast({ variant: "success", title: language.t("atlas.skills.removed", { path: shortPath(root.path) }) })
     } catch (err) {
-      showToast({ variant: "error", title: "Could not remove folder", description: message(err) })
+      showToast({ variant: "error", title: language.t("atlas.skills.removeFolderError"), description: message(err) })
     }
   }
 
@@ -887,13 +912,13 @@ export default function SkillsPage(props: { embedded?: boolean; services?: Skill
       const content = await file.text()
       const name = frontmatterName(content)
       if (!name) {
-        throw new Error("The SKILL.md must start with a frontmatter block containing `name:` and `description:`.")
+        throw new Error(language.t("atlas.skills.frontmatterError"))
       }
       await service.create(name, content)
       refresh()
-      showToast({ variant: "success", title: `Skill "${name}" uploaded` })
+      showToast({ variant: "success", title: language.t("atlas.skills.uploaded", { name }) })
     } catch (err) {
-      showToast({ variant: "error", title: "Upload failed", description: message(err) })
+      showToast({ variant: "error", title: language.t("atlas.skills.uploadError"), description: message(err) })
     } finally {
       setBusy(false)
     }
@@ -914,12 +939,20 @@ function SkillRow(props: {
   onEdit?: () => void
   onDelete?: () => void
 }): JSX.Element {
+  const language = useLanguage()
+  const sourceLabels = (): Record<SkillSource, string> => ({
+    default: language.t("atlas.skills.source.default"),
+    installed: language.t("atlas.skills.source.installed"),
+    user: language.t("atlas.skills.personal"),
+    project: language.t("atlas.skills.source.project"),
+  })
+
   const source = () => skillSource(props.skill)
   const blocked = () => props.skill.catalog_status === "blocked" || props.action === "deny"
   const state = () => {
-    if (props.skill.disabled_by === "project") return "Off in this project"
-    if (blocked()) return "Blocked by policy"
-    if (props.on && props.action === "ask" && !props.quietAsk) return "Ask first"
+    if (props.skill.disabled_by === "project") return language.t("atlas.skills.offProject")
+    if (blocked()) return language.t("atlas.skills.blocked")
+    if (props.on && props.action === "ask" && !props.quietAsk) return language.t("atlas.skills.askFirst")
     return undefined
   }
   return (
@@ -939,7 +972,7 @@ function SkillRow(props: {
           <code>/{props.skill.name}</code>
           <Show when={source() !== "default"}>
             <span aria-hidden="true">·</span>
-            {SOURCE_LABEL[source()]}
+            {sourceLabels()[source()]}
           </Show>
           <Show when={props.subject}>
             <span aria-hidden="true">·</span>
@@ -949,7 +982,7 @@ function SkillRow(props: {
       </div>
       <div class="skills-workspace__details" title={props.skill.description}>
         <span class="skills-workspace__details-slug">/{props.skill.name}</span>
-        {blurb(props.skill) || "No description provided."}
+        {blurb(props.skill) || language.t("atlas.skills.noDescription")}
       </div>
       <Show when={state()}>
         {(value) => (
@@ -958,9 +991,9 @@ function SkillRow(props: {
             data-state={blocked() || props.skill.disabled_by === "project" ? "blocked" : "ask"}
             title={
               props.action === "ask"
-                ? "The agent asks before loading this skill."
+                ? language.t("atlas.skills.askSkill")
                 : props.action === "deny"
-                  ? "Disabled by a permission rule. Selection does not override policy."
+                  ? language.t("atlas.skills.denied")
                   : undefined
             }
           >
@@ -970,12 +1003,22 @@ function SkillRow(props: {
       </Show>
       <div class="skills-workspace__actions">
         <Show when={props.onEdit}>
-          <button type="button" aria-label={`Edit ${props.skill.name}`} title="Edit" onClick={props.onEdit}>
+          <button
+            type="button"
+            aria-label={language.t("atlas.skills.editNamed", { name: props.skill.name })}
+            title={language.t("common.edit")}
+            onClick={props.onEdit}
+          >
             <Icon name="pencil-line" size="small" />
           </button>
         </Show>
         <Show when={props.onDelete}>
-          <button type="button" aria-label={`Delete ${props.skill.name}`} title="Delete" onClick={props.onDelete}>
+          <button
+            type="button"
+            aria-label={language.t("atlas.skills.deleteNamed", { name: props.skill.name })}
+            title={language.t("common.delete")}
+            onClick={props.onDelete}
+          >
             <Icon name="trash" size="small" />
           </button>
         </Show>
@@ -984,8 +1027,12 @@ function SkillRow(props: {
           class="skills-workspace__pin"
           data-pinned={props.pinned ? "true" : "false"}
           aria-pressed={props.pinned}
-          aria-label={`${props.pinned ? "Unpin" : "Pin"} ${props.skill.name}`}
-          title={props.pinned ? "Unpin from the / menu" : "Pin near the top of the / menu"}
+          aria-label={
+            props.pinned
+              ? language.t("atlas.skills.unpinNamed", { name: props.skill.name })
+              : language.t("atlas.skills.pinNamed", { name: props.skill.name })
+          }
+          title={props.pinned ? language.t("atlas.skills.unpinHint") : language.t("atlas.skills.pinHint")}
           onClick={() => props.onPin(!props.pinned)}
         >
           <Icon name={props.pinned ? "pin-filled" : "pin"} size="small" />
@@ -997,7 +1044,9 @@ function SkillRow(props: {
           disabled={props.disabled || blocked() || props.skill.disabled_by === "project"}
           hideLabel
         >
-          {props.on ? `Turn off ${props.skill.name}` : `Activate ${props.skill.name}`}
+          {props.on
+            ? language.t("atlas.skills.offNamed", { name: props.skill.name })
+            : language.t("atlas.skills.activateNamed", { name: props.skill.name })}
         </Switch>
       </div>
     </li>
@@ -1031,38 +1080,45 @@ function ScratchForm(props: {
   onCancel: () => void
   onCreate: (name: string, description: string, body: string) => void
 }): JSX.Element {
+  const language = useLanguage()
   const [name, setName] = createSignal("")
   const [description, setDescription] = createSignal("")
   const [body, setBody] = createSignal("")
   const valid = () => /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(name().trim()) && description().trim().length > 0
   return (
-    <FormShell
-      icon="pencil-line"
-      title="Write a new skill"
-      hint="A focused playbook the agent loads when it is relevant."
-    >
-      <FormField label="Name" value={name()} onInput={setName} placeholder="my-skill (letters, digits, - and _)" />
+    <FormShell icon="pencil-line" title={language.t("atlas.skills.new")} hint={language.t("atlas.skills.newHint")}>
       <FormField
-        label="Description"
-        value={description()}
-        onInput={setDescription}
-        placeholder="When should the agent load this skill?"
+        label={language.t("atlas.common.name")}
+        value={name()}
+        onInput={setName}
+        placeholder={language.t("atlas.skills.namePlaceholder")}
       />
       <FormField
-        label="Instructions (Markdown)"
+        label={language.t("atlas.common.description")}
+        value={description()}
+        onInput={setDescription}
+        placeholder={language.t("atlas.skills.descriptionPlaceholder")}
+      />
+      <FormField
+        label={language.t("atlas.skills.instructions")}
         value={body()}
         onInput={setBody}
         multiline
         mono
-        placeholder="Step-by-step guidance, code examples, pitfalls…"
+        placeholder={language.t("atlas.skills.instructionsPlaceholder")}
       />
       <div class="skills-workspace__form-actions">
         <FormButton
-          label={props.busy ? "Creating…" : "Create skill"}
+          label={props.busy ? language.t("atlas.skills.creating") : language.t("atlas.skills.create")}
           disabled={props.busy || !valid()}
           onClick={() => props.onCreate(name().trim(), description().trim(), body())}
         />
-        <FormButton label="Cancel" variant="ghost" onClick={props.onCancel} disabled={props.busy} />
+        <FormButton
+          label={language.t("common.cancel")}
+          variant="ghost"
+          onClick={props.onCancel}
+          disabled={props.busy}
+        />
       </div>
     </FormShell>
   )
@@ -1075,44 +1131,68 @@ function EditForm(props: {
   onCancel: () => void
   onSave: (content: string) => void
 }): JSX.Element {
+  const language = useLanguage()
   const [content] = createResource(() => props.load())
   const [draft, setDraft] = createSignal<string>()
   const text = () => draft() ?? content() ?? ""
   return (
-    <FormShell icon="pencil-line" title={`Edit /${props.name}`} hint="The whole SKILL.md, frontmatter included.">
-      <Show when={!content.loading} fallback={<p class="skills-workspace__form-note">Loading…</p>}>
+    <FormShell
+      icon="pencil-line"
+      title={language.t("atlas.skills.editCommand", { name: props.name })}
+      hint={language.t("atlas.skills.editHint")}
+    >
+      <Show
+        when={!content.loading}
+        fallback={<p class="skills-workspace__form-note">{language.t("atlas.common.loading")}</p>}
+      >
         <Show when={!content.error} fallback={<p class="skills-workspace__form-note">{message(content.error)}</p>}>
           <FormField label="SKILL.md" value={text()} onInput={setDraft} multiline mono />
         </Show>
       </Show>
       <div class="skills-workspace__form-actions">
         <FormButton
-          label={props.busy ? "Saving…" : "Save skill"}
+          label={props.busy ? language.t("atlas.common.saving") : language.t("atlas.skills.save")}
           disabled={props.busy || content.loading || !!content.error || !text().trim()}
           onClick={() => props.onSave(text())}
         />
-        <FormButton label="Cancel" variant="ghost" onClick={props.onCancel} disabled={props.busy} />
+        <FormButton
+          label={language.t("common.cancel")}
+          variant="ghost"
+          onClick={props.onCancel}
+          disabled={props.busy}
+        />
       </div>
     </FormShell>
   )
 }
 
 function GithubForm(props: { busy: boolean; onCancel: () => void; onInstall: (url: string) => void }): JSX.Element {
+  const language = useLanguage()
   const [url, setUrl] = createSignal("")
   return (
-    <FormShell icon="github" title="Import from GitHub" hint="Install one or more skills from a public repository.">
-      <FormField label="Repository URL" value={url()} onInput={setUrl} placeholder="https://github.com/owner/repo" />
+    <FormShell icon="github" title={language.t("atlas.skills.github")} hint={language.t("atlas.skills.importHint")}>
+      <FormField
+        label={language.t("atlas.skills.repository")}
+        value={url()}
+        onInput={setUrl}
+        placeholder="https://github.com/owner/repo"
+      />
       <p class="skills-workspace__form-note">
         <Icon name="shield" size="small" />
-        Skills are fetched, screened by a multi-layer security review, and only installed if they pass.
+        {language.t("atlas.skills.securityReview")}
       </p>
       <div class="skills-workspace__form-actions">
         <FormButton
-          label={props.busy ? "Installing…" : "Install"}
+          label={props.busy ? language.t("atlas.skills.installing") : language.t("atlas.common.install")}
           disabled={props.busy || !url().trim()}
           onClick={() => props.onInstall(url().trim())}
         />
-        <FormButton label="Cancel" variant="ghost" onClick={props.onCancel} disabled={props.busy} />
+        <FormButton
+          label={language.t("common.cancel")}
+          variant="ghost"
+          onClick={props.onCancel}
+          disabled={props.busy}
+        />
       </div>
     </FormShell>
   )
@@ -1123,46 +1203,49 @@ function FolderForm(props: {
   onCancel: () => void
   onAdd: (path: string, persist?: "global" | "project") => void
 }): JSX.Element {
+  const language = useLanguage()
   const [path, setPath] = createSignal("")
   const [persist, setPersist] = createSignal<"session" | "global" | "project">("global")
   return (
-    <FormShell
-      icon="folder"
-      title="Add a local folder"
-      hint="A directory of <name>/SKILL.md folders, nested however you like. Its skills join the catalog at once."
-    >
+    <FormShell icon="folder" title={language.t("atlas.skills.folder")} hint={language.t("atlas.skills.localHint")}>
       <FormField
-        label="Folder path"
+        label={language.t("atlas.files.folderPath")}
         value={path()}
         onInput={setPath}
-        placeholder="/data/team-skills or ~/skills"
+        placeholder={language.t("atlas.skills.folderPlaceholder")}
         mono
       />
       <label class="skills-workspace__form-choice">
-        <span>Keep it</span>
+        <span>{language.t("atlas.skills.keep")}</span>
         <select
-          aria-label="How long to keep this folder"
+          aria-label={language.t("atlas.skills.keepDuration")}
           value={persist()}
           onChange={(event) => setPersist(event.currentTarget.value as "session" | "global" | "project")}
         >
-          <option value="global">Always (saved to your config)</option>
-          <option value="project">For this project (saved to the project config)</option>
-          <option value="session">Until the server restarts</option>
+          <option value="global">{language.t("atlas.skills.keepGlobal")}</option>
+          <option value="project">{language.t("atlas.skills.keepProject")}</option>
+          <option value="session">{language.t("atlas.skills.keepSession")}</option>
         </select>
       </label>
       <p class="skills-workspace__form-note">
-        <Icon name="shield" size="small" />A same-named skill in this folder wins over the bundled and personal copies.
+        <Icon name="shield" size="small" />
+        {language.t("atlas.skills.folderPriority")}
       </p>
       <div class="skills-workspace__form-actions">
         <FormButton
-          label={props.busy ? "Adding…" : "Add folder"}
+          label={props.busy ? language.t("atlas.skills.adding") : language.t("atlas.skills.addFolder")}
           disabled={props.busy || !path().trim()}
           onClick={() => {
             const scope = persist()
             props.onAdd(path().trim(), scope === "session" ? undefined : scope)
           }}
         />
-        <FormButton label="Cancel" variant="ghost" onClick={props.onCancel} disabled={props.busy} />
+        <FormButton
+          label={language.t("common.cancel")}
+          variant="ghost"
+          onClick={props.onCancel}
+          disabled={props.busy}
+        />
       </div>
     </FormShell>
   )

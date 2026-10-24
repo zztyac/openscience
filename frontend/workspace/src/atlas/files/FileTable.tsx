@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { For, Show, createMemo, type JSX } from "solid-js"
 import { FileIcon } from "@synsci/ui/file-icon"
 import { IconArrowUp, IconEdit, IconTrash } from "@/atlas/shared/Icon"
@@ -41,6 +42,7 @@ export function FileTable(props: {
    */
   busy?: boolean
 }): JSX.Element {
+  const language = useLanguage()
   const sorted = createMemo(() =>
     [...props.rows].sort((a, b) =>
       a.type === b.type ? a.name.localeCompare(b.name) : a.type === "directory" ? -1 : 1,
@@ -52,8 +54,8 @@ export function FileTable(props: {
       <Show when={sorted().length > 0}>
         <div class="files-table__header" aria-hidden="true">
           <span />
-          <span>Name</span>
-          <span>Size</span>
+          <span>{language.t("atlas.common.name")}</span>
+          <span>{language.t("atlas.files.size")}</span>
         </div>
       </Show>
 
@@ -62,14 +64,14 @@ export function FileTable(props: {
           type="button"
           class="files-row files-row--up"
           data-file-up
-          aria-label="Go to parent folder"
+          aria-label={language.t("atlas.files.goParent")}
           disabled={props.busy}
           onClick={() => props.onUp()}
         >
           <span class="files-row__glyph" aria-hidden="true">
             <IconArrowUp size={14} strokeWidth={1.5} />
           </span>
-          <span class="files-row__name">Parent folder</span>
+          <span class="files-row__name">{language.t("atlas.files.parent")}</span>
           <span class="files-row__size" />
         </button>
       </Show>
@@ -79,9 +81,11 @@ export function FileTable(props: {
         fallback={
           <Show when={!props.loading && !props.unavailable}>
             <div class="files-empty files-empty--folder" data-folder-empty>
-              <strong>{props.filtered ? "No matching files" : "This folder is empty"}</strong>
+              <strong>
+                {props.filtered ? language.t("atlas.files.noMatches") : language.t("atlas.files.emptyFolder")}
+              </strong>
               <span>
-                {props.filtered ? "Try a different name or clear the search." : "This location contains no files."}
+                {props.filtered ? language.t("atlas.files.searchHint") : language.t("atlas.files.emptyLocation")}
               </span>
             </div>
           </Show>
@@ -99,8 +103,12 @@ export function FileTable(props: {
                 class="files-row__open"
                 data-file-row={row.name}
                 data-file-kind={row.type}
-                aria-label={`${row.type === "directory" ? "Open folder" : "Open file"} ${row.name}`}
-                title={row.ignored ? `${row.name} is ignored by the project` : row.name}
+                aria-label={
+                  row.type === "directory"
+                    ? language.t("atlas.files.openFolderNamed", { name: row.name })
+                    : language.t("atlas.files.openFileNamed", { name: row.name })
+                }
+                title={row.ignored ? language.t("atlas.files.ignored", { name: row.name }) : row.name}
                 disabled={props.busy}
                 onClick={() => props.onOpen(row)}
               >
@@ -119,8 +127,8 @@ export function FileTable(props: {
                   <button
                     type="button"
                     data-file-rename={row.name}
-                    aria-label={`Rename ${row.name}`}
-                    title="Rename"
+                    aria-label={language.t("atlas.files.renameNamed", { name: row.name })}
+                    title={language.t("common.rename")}
                     disabled={props.busy}
                     onClick={() => props.onRename?.(row)}
                   >
@@ -130,8 +138,8 @@ export function FileTable(props: {
                     type="button"
                     class="files-row__trash"
                     data-file-trash={row.name}
-                    aria-label={`Move ${row.name} to Trash`}
-                    title="Move to Trash"
+                    aria-label={language.t("atlas.files.trashNamed", { name: row.name })}
+                    title={language.t("atlas.files.moveToTrash")}
                     disabled={props.busy}
                     onClick={() => props.onTrash?.(row)}
                   >

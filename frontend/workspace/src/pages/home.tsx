@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { createMemo, createSignal, Show, type JSX } from "solid-js"
 import { useNavigate } from "@solidjs/router"
 import { useDialog } from "@synsci/ui/context/dialog"
@@ -36,6 +37,7 @@ import { projectHref } from "@/utils/project-route"
 import { NativeDirectoryPickerUnavailable } from "@/utils/native-picker"
 
 export default function Home(): JSX.Element {
+  const language = useLanguage()
   const sync = useGlobalSync()
   const layout = useLayout()
   const platform = usePlatform()
@@ -83,9 +85,9 @@ export default function Home(): JSX.Element {
   async function archiveProject(project: ProjectRecord) {
     const name = projectName(project)
     const ok = await confirmDialog(dialog, {
-      title: `Archive ${name}?`,
-      message: "This hides the project from Home until you restore it. Its files and sessions stay on disk.",
-      confirmLabel: "Archive",
+      title: language.t("pages.copy.archiveNamedQuestion", { name }),
+      message: language.t("pages.copy.archiveProjectHint"),
+      confirmLabel: language.t("common.archive"),
     })
     if (!ok) return
     try {
@@ -95,11 +97,11 @@ export default function Home(): JSX.Element {
       })
       projectPrefs.hide(project.id, project.worktree)
       layout.projects.close(project.worktree)
-      showToast({ variant: "success", title: "Project archived" })
+      showToast({ variant: "success", title: language.t("pages.copy.projectArchived") })
     } catch (error) {
       showToast({
         variant: "error",
-        title: "Could not archive project",
+        title: language.t("pages.copy.archiveProjectFailed"),
         description: error instanceof Error ? error.message : String(error),
       })
     }
@@ -112,11 +114,11 @@ export default function Home(): JSX.Element {
         body: JSON.stringify({ archived: false }),
       })
       projectPrefs.unhide(project.id, project.worktree)
-      showToast({ variant: "success", title: `${projectName(project)} restored` })
+      showToast({ variant: "success", title: language.t("pages.copy.restoredNamed", { name: projectName(project) }) })
     } catch (error) {
       showToast({
         variant: "error",
-        title: "Could not restore project",
+        title: language.t("pages.copy.restoreProjectFailed"),
         description: error instanceof Error ? error.message : String(error),
       })
     }
@@ -143,11 +145,15 @@ export default function Home(): JSX.Element {
   async function chooseProjectSources() {
     if (platform.openDirectoryPickerDialog && server.isLocal()) {
       const result = await platform
-        .openDirectoryPickerDialog({ title: "Add source folders", multiple: true, serverUrl: sdk.url })
+        .openDirectoryPickerDialog({
+          title: language.t("pages.copy.addSourceFolders"),
+          multiple: true,
+          serverUrl: sdk.url,
+        })
         .catch((error) => {
           if (!(error instanceof NativeDirectoryPickerUnavailable)) {
             showToast({
-              title: "The system folder picker could not open",
+              title: language.t("pages.copy.folderPickerFailed"),
               description: error instanceof Error ? error.message : String(error),
             })
           }
@@ -161,7 +167,13 @@ export default function Home(): JSX.Element {
 
     const selection = { result: null as string | string[] | null }
     dialog.show(
-      () => <FolderPicker multiple title="Add source folder" onSelect={(value) => (selection.result = value)} />,
+      () => (
+        <FolderPicker
+          multiple
+          title={language.t("pages.copy.addSourceFolder")}
+          onSelect={(value) => (selection.result = value)}
+        />
+      ),
       {
         onClose: () => {
           mergeSources(selection.result)
@@ -200,23 +212,23 @@ export default function Home(): JSX.Element {
   commands.register(() => [
     {
       id: "project.create",
-      title: "Create project",
-      description: "Start a new research workspace",
-      category: "Projects",
+      title: language.t("pages.copy.createProject"),
+      description: language.t("pages.copy.createProjectHint"),
+      category: language.t("pages.copy.projects"),
       onSelect: showCreateProject,
     },
     {
       id: "settings.open",
-      title: "Open settings",
-      description: "Configure models, capabilities, runtime, and the app",
-      category: "Application",
+      title: language.t("command.settings.open"),
+      description: language.t("pages.copy.openSettingsHint"),
+      category: language.t("pages.copy.application"),
       onSelect: () => dialog.show(() => <DialogSettings />),
     },
     {
       id: "server.switch",
-      title: "Switch server",
-      description: "Choose or add an OpenScience server",
-      category: "Application",
+      title: language.t("command.server.switch"),
+      description: language.t("pages.copy.switchServerHint"),
+      category: language.t("pages.copy.application"),
       onSelect: () => dialog.show(() => <DialogSelectServer />),
     },
   ])
@@ -242,7 +254,7 @@ export default function Home(): JSX.Element {
             <DisconnectedPanel />
           </Show>
         }
-        serverName={server.name || "Local server"}
+        serverName={server.name || language.t("pages.copy.localServer")}
         serverStatus={status()}
         onQuery={setQuery}
         onOpen={openProject}

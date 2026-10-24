@@ -1,9 +1,9 @@
+import { useLanguage } from "@/context/language"
 import { For, Show, createEffect, createMemo, onCleanup, onMount } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Button } from "@synsci/ui/button"
 import {
   usageCostTotals,
-  usageCostLabels,
   type UsageCost,
   usageCsv,
   usageDate,
@@ -27,13 +27,13 @@ type Services = {
   sdk: Pick<ReturnType<typeof useGlobalSDK>, "url">
   platform: Pick<ReturnType<typeof usePlatform>, "fetch">
 }
-const sources: { id: Source; label: string }[] = [
-  { id: "managed", label: "Managed" },
-  { id: "byok", label: "API keys" },
-  { id: "local", label: "Local models" },
-  { id: "subscription", label: "Subscriptions" },
-  { id: "unknown", label: "Unclassified" },
-]
+const sources = [
+  { id: "managed", label: "settings.copy.usage.managed" },
+  { id: "byok", label: "settings.copy.usage.keys" },
+  { id: "local", label: "settings.shell.panel.local-models" },
+  { id: "subscription", label: "settings.copy.usage.subscriptions" },
+  { id: "unknown", label: "settings.copy.usage.unclassified" },
+] as const
 const number = (value: number) =>
   Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(value)
 const money = (value: number) =>
@@ -41,10 +41,28 @@ const money = (value: number) =>
     ? "<$0.0001"
     : `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: value < 1 ? 4 : 2 })}`
 const modelName = (value: string) => value.split("/").pop() ?? value
-const dateName = (value: string) =>
-  new Date(`${value}T00:00:00Z`).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" })
 
 export default function Usage(props: { services?: Services } = {}) {
+  const language = useLanguage()
+  const dateName = (value: string) =>
+    new Date(`${value}T00:00:00Z`).toLocaleDateString(language.locale() === "zht" ? "zh-Hant" : language.locale(), {
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    })
+  const costKeys = {
+    wallet_receipt: "settings.copy.usage.wallet_receipt",
+    provider_response: "settings.copy.usage.provider_response",
+    catalog_estimate: "settings.copy.usage.catalog_estimate",
+    imported_billing: "settings.copy.usage.imported_billing",
+    imported_credit: "settings.copy.usage.imported_credit",
+    wallet_calculated: "settings.copy.usage.wallet_calculated",
+    recorded_unclassified: "settings.copy.usage.recorded_unclassified",
+    subscription: "settings.copy.usage.subscription",
+    no_provider_charge: "settings.copy.usage.no_provider_charge",
+    unknown: "settings.copy.usage.unknown",
+  } as const
+  const costLabel = (source: UsageCost["source"]) => language.t(costKeys[source])
   const sdk = props.services?.sdk ?? useGlobalSDK()
   const platform = props.services?.platform ?? usePlatform()
   const [state, setState] = createStore({
@@ -94,7 +112,11 @@ export default function Usage(props: { services?: Services } = {}) {
         })
         .catch((cause) => {
           if (!controller.signal.aborted)
-            setState("error", source, cause instanceof Error ? cause.message : "Usage could not be loaded.")
+            setState(
+              "error",
+              source,
+              cause instanceof Error ? cause.message : language.t("settings.copy.usageCouldNotBeLoaded"),
+            )
         })
         .finally(() => {
           if (!controller.signal.aborted) setState("loading", source, false)
@@ -119,7 +141,7 @@ export default function Usage(props: { services?: Services } = {}) {
   const costs = createMemo(() => usageCostTotals(rows()))
   const costBasis = () => (state.source === "managed" ? "wallet_receipt" : state.basis)
   const exact = (value: string | null) => {
-    if (value === null) return "Unknown"
+    if (value === null) return language.t("settings.copy.unknown")
     const [whole, fraction = ""] = value.split(".")
     return `$${whole}.${fraction.padEnd(2, "0")}`
   }
@@ -154,8 +176,8 @@ export default function Usage(props: { services?: Services } = {}) {
     <PanelScroll>
       <div class="settings-preferences-panel settings-usage">
         <PanelHeader
-          title="Usage"
-          description="Track model activity, costs, and tokens."
+          title={language.t("settings.shell.panel.usage")}
+          description={language.t("settings.copy.trackModelActivityCostsAndTokens")}
           toolbar={
             <Button
               size="small"
@@ -163,12 +185,12 @@ export default function Usage(props: { services?: Services } = {}) {
               disabled={loading() || !valid()}
               onClick={() => setState("refresh", (value) => value + 1)}
             >
-              Refresh
+              {language.t("settings.copy.refresh")}
             </Button>
           }
         />
         <PanelBody>
-          <div class="usage-source-tabs" role="group" aria-label="Usage source">
+          <div class="usage-source-tabs" role="group" aria-label={language.t("settings.copy.usageSource")}>
             <For each={sources}>
               {(source) => (
                 <button
@@ -176,14 +198,14 @@ export default function Usage(props: { services?: Services } = {}) {
                   aria-pressed={state.source === source.id}
                   onClick={() => setState({ source: source.id, model: "all", active: "" })}
                 >
-                  {source.label}
+                  {language.t(source.label)}
                 </button>
               )}
             </For>
           </div>
           <div class="usage-controls">
             <label>
-              Period
+              {language.t("settings.copy.period")}
               <select
                 value={state.period}
                 onChange={(event) => {
@@ -192,63 +214,62 @@ export default function Usage(props: { services?: Services } = {}) {
                   if (period !== "custom") setState(usageRange(Number(period)))
                 }}
               >
-                <option value="7">Last 7 days</option>
-                <option value="30">Last 30 days</option>
-                <option value="90">Last 90 days</option>
-                <option value="custom">Custom dates</option>
+                <option value="7">{language.t("settings.copy.last7Days")}</option>
+                <option value="30">{language.t("settings.copy.last30Days")}</option>
+                <option value="90">{language.t("settings.copy.last90Days")}</option>
+                <option value="custom">{language.t("settings.copy.customDates")}</option>
               </select>
             </label>
             <label>
-              From
+              {language.t("settings.copy.from")}
               <input
                 type="date"
-                aria-label="From date"
+                aria-label={language.t("settings.copy.fromDate")}
                 value={state.start}
                 max={state.end}
                 onInput={(event) => setState({ start: event.currentTarget.value, period: "custom" })}
               />
             </label>
             <label>
-              To
+              {language.t("settings.copy.to")}
               <input
                 type="date"
-                aria-label="To date"
+                aria-label={language.t("settings.copy.toDate")}
                 value={state.end}
                 min={state.start}
                 onInput={(event) => setState({ end: event.currentTarget.value, period: "custom" })}
               />
             </label>
             <label>
-              Model
+              {language.t("command.category.model")}
               <select value={state.model} onChange={(event) => setState("model", event.currentTarget.value)}>
-                <option value="all">All models</option>
+                <option value="all">{language.t("settings.copy.allModels")}</option>
                 <For each={options()}>{(model) => <option value={model}>{modelName(model)}</option>}</For>
               </select>
             </label>
           </div>
           <Show when={!valid()}>
             <p class="settings-alert" data-tone="critical" role="alert">
-              Choose valid dates in order, spanning no more than 366 days.
+              {language.t("settings.copy.chooseValidDatesInOrderSpanningNoMore")}
             </p>
           </Show>
           <p class="usage-scope">
             {state.source === "managed"
-              ? "Your confirmed Wallet charges in the selected funding workspace, across devices."
+              ? language.t("settings.copy.yourConfirmedWalletChargesInTheSelectedFunding")
               : state.source === "unknown"
-                ? "Older activity on this device without a recorded access route. It may include managed calls and is kept separate to avoid double-counting."
+                ? language.t("settings.copy.olderActivityOnThisDeviceWithoutARecorded")
                 : state.source === "local"
-                  ? "Saved conversation activity on this device, across projects. Local inference has no provider charge."
+                  ? language.t("settings.copy.savedConversationActivityOnThisDeviceAcrossProjects")
                   : state.source === "subscription"
-                    ? "ChatGPT and subscription activity on this device. Subscription fees are not included."
-                    : "API-key activity recorded on this device, including internal calls, across projects. Your provider bills you directly; provider-reported amounts, catalog estimates and imported billing are separate."}{" "}
-            Dates use UTC. Imported billing includes unmatched records and may cover activity outside OpenScience.
-            Subscriptions are not allocated per call. Cost categories are never added together.
+                    ? language.t("settings.copy.chatgptAndSubscriptionActivityOnThisDeviceSubscription")
+                    : language.t("settings.copy.apiKeyActivityRecordedOnThisDeviceIncluding")}{" "}
+            {language.t("settings.copy.datesUseUtcImportedBillingIncludesUnmatchedRecords")}
           </p>
           <Show when={state.error[dataset()]}>
             <div class="settings-alert" data-tone="critical" role="alert">
               {state.error[dataset()]}{" "}
               <button type="button" onClick={() => setState("refresh", (value) => value + 1)}>
-                Retry
+                {language.t("settings.connectors.retry")}
               </button>
             </div>
           </Show>
@@ -257,7 +278,7 @@ export default function Usage(props: { services?: Services } = {}) {
               when={!loading()}
               fallback={
                 <div class="usage-empty" role="status">
-                  Loading usage…
+                  {language.t("settings.copy.loadingUsage")}
                 </div>
               }
             >
@@ -265,8 +286,7 @@ export default function Usage(props: { services?: Services } = {}) {
                 when={available()?.connected !== false}
                 fallback={
                   <div class="usage-empty">
-                    Connect your Synthetic Sciences account in Ace to see managed usage. API-key and local activity are
-                    available without signing in.
+                    {language.t("settings.copy.connectYourSyntheticSciencesAccountInAceTo")}
                   </div>
                 }
               >
@@ -274,55 +294,59 @@ export default function Usage(props: { services?: Services } = {}) {
                   <For each={costs()}>
                     {(cost) => (
                       <div>
-                        <dt>{usageCostLabels[cost.source]}</dt>
+                        <dt>{costLabel(cost.source)}</dt>
                         <dd>
-                          {cost.source === "subscription" ? "Not allocated" : exact(cost.amountUSD)}
+                          {cost.source === "subscription"
+                            ? language.t("settings.copy.notAllocated")
+                            : exact(cost.amountUSD)}
                           {cost.unknown > 0 && cost.known > 0 ? " (partial)" : ""}
                         </dd>
                         <Show when={cost.unknown > 0 && cost.source !== "subscription"}>
-                          <small>{cost.unknown} unknown cost observations</small>
+                          <small>
+                            {cost.unknown} {language.t("settings.copy.unknownCostObservations")}
+                          </small>
                         </Show>
                       </div>
                     )}
                   </For>
                   <div>
-                    <dt>Recorded tokens</dt>
+                    <dt>{language.t("settings.copy.recordedTokens")}</dt>
                     <dd>{number(totals().tokens)}</dd>
                   </div>
                   <div>
-                    <dt>Requests</dt>
+                    <dt>{language.t("settings.copy.requests")}</dt>
                     <dd>{totals().calls.toLocaleString()}</dd>
                   </div>
                   <div>
-                    <dt>Recorded cached input</dt>
+                    <dt>{language.t("settings.copy.recordedCachedInput")}</dt>
                     <dd>{number(totals().cacheRead)}</dd>
                   </div>
                 </dl>
-                <section class="usage-chart" aria-label="Daily usage">
+                <section class="usage-chart" aria-label={language.t("settings.copy.dailyUsage")}>
                   <header>
-                    <h3>Daily activity</h3>
+                    <h3>{language.t("settings.copy.dailyActivity")}</h3>
                     <Show when={state.source !== "managed"}>
                       <label>
-                        Cost category{" "}
+                        {language.t("settings.copy.costCategory")}{" "}
                         <select
-                          aria-label="Cost category"
+                          aria-label={language.t("settings.copy.costCategory")}
                           value={state.basis}
                           onChange={(event) => setState("basis", event.currentTarget.value as UsageCost["source"])}
                         >
-                          <For each={Object.entries(usageCostLabels)}>
-                            {([source, label]) => <option value={source}>{label}</option>}
+                          <For each={Object.entries(costKeys)}>
+                            {([source, label]) => <option value={source}>{language.t(label)}</option>}
                           </For>
                         </select>
                       </label>
                     </Show>
                     <select
-                      aria-label="Chart metric"
+                      aria-label={language.t("settings.copy.chartMetric")}
                       value={state.metric}
                       onChange={(event) => setState("metric", event.currentTarget.value as typeof state.metric)}
                     >
-                      <option value="tokens">Tokens</option>
-                      <option value="cost">Cost (known amounts)</option>
-                      <option value="calls">Requests</option>
+                      <option value="tokens">{language.t("context.usage.tokens")}</option>
+                      <option value="cost">{language.t("settings.copy.costKnownAmounts")}</option>
+                      <option value="calls">{language.t("settings.copy.requests")}</option>
                     </select>
                   </header>
                   <div class="usage-chart-scroll">
@@ -337,7 +361,14 @@ export default function Usage(props: { services?: Services } = {}) {
                         {(day) => (
                           <button
                             type="button"
-                            aria-label={`${day.date}: ${day.tokens.toLocaleString()} recorded tokens, ${day.calls} requests, ${usageCostLabels[costBasis()]} ${day.costKnown ? money(day.cost) : "Unknown"}${day.costUnknown > 0 ? " (partial or unknown)" : ""}`}
+                            aria-label={language.t("settings.copy.usage.dayLabel", {
+                              date: day.date,
+                              tokens: day.tokens.toLocaleString(),
+                              calls: day.calls,
+                              basis: costLabel(costBasis()),
+                              cost: day.costKnown ? money(day.cost) : language.t("settings.copy.unknown"),
+                              partial: day.costUnknown > 0 ? language.t("settings.copy.usage.partial") : "",
+                            })}
                             aria-pressed={state.active === day.date}
                             onFocus={() => setState("active", day.date)}
                             onClick={() => setState("active", day.date)}
@@ -359,26 +390,41 @@ export default function Usage(props: { services?: Services } = {}) {
                   </div>
                   <p class="usage-chart-detail" aria-live="polite">
                     {active()
-                      ? `${dateName(active()!.date)} · ${number(active()!.tokens)} tokens · ${active()!.calls} requests · ${usageCostLabels[costBasis()]} ${active()!.costKnown ? money(active()!.cost) : "Unknown"}${active()!.costUnknown > 0 ? " (partial or unknown)" : ""} (known amounts only)`
-                      : "Select a day to see its activity."}
+                      ? language.t("settings.copy.usage.dayDetail", {
+                          date: dateName(active()!.date),
+                          tokens: number(active()!.tokens),
+                          calls: active()!.calls,
+                          basis: costLabel(costBasis()),
+                          cost: active()!.costKnown ? money(active()!.cost) : language.t("settings.copy.unknown"),
+                          partial: active()!.costUnknown > 0 ? language.t("settings.copy.usage.partial") : "",
+                        })
+                      : language.t("settings.copy.selectADayToSeeItsActivity")}
                   </p>
                 </section>
                 <section class="usage-models">
                   <h3>
-                    By model <span>{models().length}</span>
+                    {language.t("settings.copy.byModel")}
+                    <span>{models().length}</span>
                   </h3>
                   <Show
                     when={models().length}
-                    fallback={<div class="usage-empty">No activity for these dates and filters.</div>}
+                    fallback={
+                      <div class="usage-empty">{language.t("settings.copy.noActivityForTheseDatesAndFilters")}</div>
+                    }
                   >
-                    <div class="usage-table-scroll" role="region" aria-label="Model usage" tabIndex={0}>
+                    <div
+                      class="usage-table-scroll"
+                      role="region"
+                      aria-label={language.t("settings.copy.modelUsage")}
+                      tabIndex={0}
+                    >
                       <table>
                         <thead>
                           <tr>
-                            <th scope="col">Model</th>
-                            <th scope="col">Requests</th>
-                            <th scope="col">Recorded tokens</th>
-                            <th scope="col">Cost</th>
+                            <th scope="col">{language.t("command.category.model")}</th>
+                            <th scope="col">{language.t("settings.copy.requests")}</th>
+                            <th scope="col">{language.t("settings.copy.recordedTokens")}</th>
+                            <th scope="col">{language.t("context.usage.cost")}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -397,8 +443,10 @@ export default function Usage(props: { services?: Services } = {}) {
                                   <For each={usageCostTotals([row])}>
                                     {(cost) => (
                                       <div>
-                                        {usageCostLabels[cost.source]}:{" "}
-                                        {cost.source === "subscription" ? "Not allocated" : exact(cost.amountUSD)}
+                                        {costLabel(cost.source)}:{" "}
+                                        {cost.source === "subscription"
+                                          ? language.t("settings.copy.notAllocated")
+                                          : exact(cost.amountUSD)}
                                         {cost.unknown > 0 && cost.known > 0 ? " (partial)" : ""}
                                       </div>
                                     )}
@@ -426,11 +474,8 @@ export default function Usage(props: { services?: Services } = {}) {
           </Show>
           <footer class="usage-export">
             <div>
-              <strong>Export usage</strong>
-              <p>
-                Daily totals by model for the selected source, dates, and model. Includes token details and costs in
-                USD.
-              </p>
+              <strong>{language.t("settings.copy.exportUsage")}</strong>
+              <p>{language.t("settings.copy.dailyTotalsByModelForTheSelectedSource")}</p>
             </div>
             <Button
               size="small"
@@ -438,7 +483,7 @@ export default function Usage(props: { services?: Services } = {}) {
               disabled={loading() || !valid() || !!state.error[dataset()] || !rows().length}
               onClick={exportCsv}
             >
-              Export CSV
+              {language.t("settings.copy.exportCsv")}
             </Button>
           </footer>
         </PanelBody>

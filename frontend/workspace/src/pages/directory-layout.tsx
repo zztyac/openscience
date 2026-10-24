@@ -163,7 +163,7 @@ export default function Layout(props: ParentProps) {
     showToast({
       variant: "error",
       title: language.t("common.requestFailed"),
-      description: "Unknown project in URL.",
+      description: language.t("pages.copy.unknownProject"),
     })
     navigate("/")
   })
@@ -174,7 +174,7 @@ export default function Layout(props: ParentProps) {
     if (current) {
       projectPrefs.hide(current.projectID, current.project.worktree)
       layout.projects.close(current.project.worktree)
-      showToast({ variant: "success", title: "Project removed from home" })
+      showToast({ variant: "success", title: language.t("pages.copy.projectRemoved") })
     }
     home()
   }
@@ -238,8 +238,12 @@ export default function Layout(props: ParentProps) {
                 const saveArtifact = (path: string) => {
                   const session = params.id && params.id !== "new" ? params.id : undefined
                   if (!session) {
-                    const error = new Error("No active session.")
-                    showToast({ variant: "error", title: "artifact save failed", description: error.message })
+                    const error = new Error(language.t("pages.copy.noActiveSession"))
+                    showToast({
+                      variant: "error",
+                      title: language.t("pages.copy.artifactSaveFailed"),
+                      description: error.message,
+                    })
                     return Promise.reject(error)
                   }
                   return sdk
@@ -249,18 +253,19 @@ export default function Layout(props: ParentProps) {
                       body: JSON.stringify({ path, sessionID: session }),
                     })
                     .then(async (response) => {
-                      if (!response.ok) throw new Error(`artifact save failed (${response.status})`)
-                      const name = path.split("/").filter(Boolean).at(-1) || "Result"
+                      if (!response.ok)
+                        throw new Error(`${language.t("pages.copy.artifactSaveFailed")} (${response.status})`)
+                      const name = path.split("/").filter(Boolean).at(-1) || language.t("pages.copy.result")
                       const saved = normalizeStoredArtifact(await response.json().catch(() => undefined))
                       window.dispatchEvent(new CustomEvent("openscience:artifacts-changed"))
                       showToast({
                         variant: "success",
-                        title: "Saved to Results",
+                        title: language.t("pages.copy.savedResults"),
                         description: saved ? savedResultLabel(saved) : name,
                         actions: saved
                           ? [
                               {
-                                label: "Open",
+                                label: language.t("pages.copy.open"),
                                 onClick: () => uiStore.openSaved(saved),
                               },
                             ]
@@ -270,7 +275,7 @@ export default function Layout(props: ParentProps) {
                     .catch((error: unknown) => {
                       showToast({
                         variant: "error",
-                        title: "artifact save failed",
+                        title: language.t("pages.copy.artifactSaveFailed"),
                         description: error instanceof Error ? error.message : String(error),
                       })
                       throw error
@@ -310,15 +315,18 @@ export default function Layout(props: ParentProps) {
                     .trim()
                   if (!text) {
                     showToast({
-                      title: "Nothing to send again",
-                      description: "This turn has no message text to resend.",
+                      title: language.t("pages.copy.resendEmpty"),
+                      description: language.t("pages.copy.resendEmptyHint"),
                     })
                     return
                   }
                   const attachments = parts.some((part) => part.type === "file")
                   uiStore.setPrefill(text, !attachments)
                   if (attachments) {
-                    showToast({ title: "Message restored", description: "Re-attach the files, then send." })
+                    showToast({
+                      title: language.t("pages.copy.messageRestored"),
+                      description: language.t("pages.copy.reattachFiles"),
+                    })
                   }
                 }
 
@@ -379,7 +387,9 @@ export default function Layout(props: ParentProps) {
   return (
     <>
       <Show when={opening()}>
-        <LoadingScreen caption={params.id ? "Opening session" : "Opening project"} />
+        <LoadingScreen
+          caption={params.id ? language.t("pages.copy.openingSession") : language.t("pages.copy.openingProject")}
+        />
       </Show>
       {project}
     </>

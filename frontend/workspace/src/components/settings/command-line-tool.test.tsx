@@ -23,6 +23,8 @@ const toast = (await vite.ssrLoadModule("/src/atlas/Toast.tsx")) as typeof impor
 const uiToast = (await vite.ssrLoadModule("@synsci/ui/toast")) as typeof import("@synsci/ui/toast")
 const web = (await vite.ssrLoadModule("solid-js/web")) as typeof import("solid-js/web")
 
+const languageFixture = (await vite.ssrLoadModule("/test/language.tsx")) as typeof import("../../../test/language")
+
 afterAll(() => vite.close())
 afterEach(() => {
   cleanups
@@ -75,9 +77,29 @@ function serve(handlers: { get: () => CommandLineStatus; post: () => globalThis.
   const notifications = document.createElement("div")
   const host = document.createElement("div")
   document.body.append(notifications, host)
-  cleanups.push(web.render(() => web.createComponent(toast.ToastContainer, {}), notifications))
+  cleanups.push(
+    web.render(
+      () =>
+        web.createComponent(languageFixture.TestLanguage, {
+          get children() {
+            return (() => web.createComponent(toast.ToastContainer, {}))()
+          },
+        }),
+      notifications,
+    ),
+  )
   const client = subject.createCommandLineClient(server.url.origin, Bun.fetch as unknown as typeof fetch)
-  cleanups.push(web.render(() => subject.CommandLineToolRow({ client }), host))
+  cleanups.push(
+    web.render(
+      () =>
+        web.createComponent(languageFixture.TestLanguage, {
+          get children() {
+            return (() => subject.CommandLineToolRow({ client }))()
+          },
+        }),
+      host,
+    ),
+  )
   return {
     description: () => host.querySelector(".text-12-regular")?.textContent ?? "",
     button: () => host.querySelector("button"),

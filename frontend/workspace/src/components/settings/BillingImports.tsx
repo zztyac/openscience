@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import type { SettingsUsageImportsResponses, SettingsUsageBillingResponses } from "@synsci/sdk/v2/client"
 import { createEffect, createSignal, For, Show, onCleanup } from "solid-js"
 import { Button } from "@synsci/ui/button"
@@ -14,6 +15,7 @@ export function BillingImports(props: {
   end: string
   changed: () => void
 }) {
+  const language = useLanguage()
   const [open, setOpen] = createSignal(false)
   const [refresh, setRefresh] = createSignal(0)
   const [batches, setBatches] = createSignal<Batch[]>([])
@@ -36,7 +38,7 @@ export function BillingImports(props: {
         setRecords(records)
       })
       .catch(() => {
-        if (!controller.signal.aborted) setError("Could not read billing imports. Please retry.")
+        if (!controller.signal.aborted) setError(language.t("settings.copy.couldNotReadBillingImportsPleaseRetry"))
       })
     onCleanup(() => controller.abort())
   })
@@ -49,17 +51,13 @@ export function BillingImports(props: {
         setRefresh((value) => value + 1)
         props.changed()
       })
-      .catch(() =>
-        setError(
-          "Import could not be saved or removed. Check the JSON format and conflicting billing IDs, then retry.",
-        ),
-      )
+      .catch(() => setError(language.t("settings.copy.importCouldNotBeSavedOrRemovedCheck")))
       .finally(() => setBusy(false))
   }
   const importFile = async (file?: File) => {
     if (!file) return
     if (file.size > 2 * 1024 * 1024) {
-      setError("Choose a JSON file no larger than 2 MiB.")
+      setError(language.t("settings.copy.chooseAJsonFileNoLargerThan2"))
       return
     }
     const document: unknown = await file
@@ -67,7 +65,7 @@ export function BillingImports(props: {
       .then((text) => JSON.parse(text))
       .catch(() => undefined)
     if (!document) {
-      setError("Choose a valid JSON billing document.")
+      setError(language.t("settings.copy.chooseAValidJsonBillingDocument"))
       return
     }
     await mutate({ method: "POST", body: JSON.stringify(document) })
@@ -102,31 +100,22 @@ export function BillingImports(props: {
       ),
     )
   return (
-    <section class="usage-export" aria-label="Provider billing imports">
+    <section class="usage-export" aria-label={language.t("settings.copy.providerBillingImports")}>
       <div>
-        <strong>Provider billing imports</strong>
-        <p>
-          Import normalized JSON billing evidence. Files stay on this device and never change provider bills or Wallet
-          charges.
-        </p>
+        <strong>{language.t("settings.copy.providerBillingImports")}</strong>
+        <p>{language.t("settings.copy.importNormalizedJsonBillingEvidenceFilesStayOn")}</p>
         <Button size="small" variant="secondary" onClick={() => setOpen(!open())}>
-          {open() ? "Hide billing imports" : "Manage billing imports"}
+          {open() ? language.t("settings.copy.hideBillingImports") : language.t("settings.copy.manageBillingImports")}
         </Button>
         <Show when={open()}>
-          <p>
-            Use the template to convert provider exports: stable billing ID, provider ID, account label, UTC timestamp,
-            exact nonnegative USD amount, charge/credit kind and optional provider request ID/model. When a billed model
-            differs from the requested alias, retain it as model and add the original alias as requested_model. Only USD
-            is supported; no exchange rate is inferred. Credits remain separate from charges. Maximum 2 MiB and 10,000
-            records per file.
-          </p>
+          <p>{language.t("settings.copy.useTheTemplateToConvertProviderExportsStable")}</p>
           <Button size="small" variant="secondary" onClick={template}>
-            Download billing template
+            {language.t("settings.copy.downloadBillingTemplate")}
           </Button>
           <label>
-            Import billing JSON{" "}
+            {language.t("settings.copy.importBillingJson")}{" "}
             <input
-              aria-label="Import billing JSON"
+              aria-label={language.t("settings.copy.importBillingJson")}
               type="file"
               accept=".json,application/json"
               disabled={busy()}
@@ -136,16 +125,13 @@ export function BillingImports(props: {
               }}
             />
           </label>
+          <p>{language.t("settings.copy.matchingUsesExactProviderRequestIdsAndUnique")}</p>
           <p>
-            Matching uses exact provider/request IDs and unique local calls. The optional requested_model must match the
-            saved request model; without it, model is checked instead. Account labels and alias annotations are user
-            supplied and are not verified. Amounts without a unique match remain imported evidence rather than an
-            assigned task charge.
-          </p>
-          <p>
-            Selected dates: {records().filter((record) => record.match === "matched").length} matched ·{" "}
-            {records().filter((record) => record.match === "unmatched").length} unmatched ·{" "}
-            {records().filter((record) => record.match === "ambiguous").length} ambiguous billing records.
+            {language.t("settings.copy.selectedDates")}
+            {records().filter((record) => record.match === "matched").length} {language.t("settings.copy.matched")}{" "}
+            {records().filter((record) => record.match === "unmatched").length} {language.t("settings.copy.unmatched")}{" "}
+            {records().filter((record) => record.match === "ambiguous").length}{" "}
+            {language.t("settings.copy.ambiguousBillingRecords")}
           </p>
           <Button
             size="small"
@@ -158,12 +144,12 @@ export function BillingImports(props: {
               )
             }
           >
-            Export billing reconciliation
+            {language.t("settings.copy.exportBillingReconciliation")}
           </Button>
           <For each={batches()}>
             {(batch) => (
               <p>
-                {batch.provider} · {batch.accountLabel} · {batch.records} records{" "}
+                {batch.provider} · {batch.accountLabel} · {batch.records} {language.t("settings.copy.records")}{" "}
                 <Button
                   size="small"
                   variant="secondary"
@@ -171,7 +157,7 @@ export function BillingImports(props: {
                   aria-label={`Remove import ${batch.id}`}
                   onClick={() => mutate({ method: "DELETE" }, `/${batch.id}`)}
                 >
-                  Remove import
+                  {language.t("settings.copy.removeImport")}
                 </Button>
               </p>
             )}

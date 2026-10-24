@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 // Local models settings panel — add an Ollama / LM Studio / OpenAI-compatible
 // endpoint running on this machine. The server (routes/settings/local.ts) does
 // the localhost probing/listing the browser can't do cross-origin, and writes
@@ -45,6 +46,7 @@ type Source = Pick<Detected, "id" | "name" | "baseURL" | "models">
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
 const LocalModels: Component = () => {
+  const language = useLanguage()
   const sdk = useGlobalSDK()
   const sync = useGlobalSync()
   const platform = usePlatform()
@@ -52,11 +54,14 @@ const LocalModels: Component = () => {
 
   const copyCommand = (command: string) => {
     if (!navigator.clipboard) {
-      showToast({ title: "Couldn't copy command", description: "Clipboard access is unavailable." })
+      showToast({
+        title: "Couldn't copy command",
+        description: language.t("settings.copy.clipboardAccessIsUnavailable"),
+      })
       return
     }
     return navigator.clipboard.writeText(command).then(
-      () => showToast({ title: "Command copied", description: command }),
+      () => showToast({ title: language.t("settings.copy.commandCopied"), description: command }),
       (error) => showToast({ title: "Couldn't copy command", description: message(error) }),
     )
   }
@@ -108,7 +113,7 @@ const LocalModels: Component = () => {
   const contextTokens = () => {
     const tokens = Number(context())
     if (!Number.isInteger(tokens) || tokens < 1_024 || tokens > 2_097_152) {
-      throw new Error("Context must be an integer between 1,024 and 2,097,152 tokens.")
+      throw new Error(language.t("settings.copy.contextMustBeAnIntegerBetween1024"))
     }
     return tokens
   }
@@ -176,7 +181,7 @@ const LocalModels: Component = () => {
       const source = choice()
       if (!source) return
       const models = source.models.filter((model) => chosen().has(model))
-      if (!models.length) throw new Error("Select at least one model.")
+      if (!models.length) throw new Error(language.t("settings.copy.selectAtLeastOneModel"))
       const result = await register({
         url: source.baseURL,
         id: source.id,
@@ -187,7 +192,7 @@ const LocalModels: Component = () => {
       reveal(result.id, models)
       showToast({
         variant: "success",
-        title: models.length === 1 ? "Model added" : "Models added",
+        title: models.length === 1 ? language.t("settings.copy.modelAdded") : language.t("settings.copy.modelsAdded"),
         description: result.tuned
           ? `${models.length} model(s) are now available in the model picker.`
           : `${models.length} model(s) are now available in the model picker. Restart the local server to enable custom Ollama context tuning.`,
@@ -241,9 +246,12 @@ const LocalModels: Component = () => {
         window.open(r.install ?? rt.install, "_blank", "noopener")
       } else if (r.running && r.models?.length) {
         choose({ ...rt, models: r.models })
-        showToast({ title: `${rt.name} is running`, description: "Choose which models to add." })
+        showToast({ title: `${rt.name} is running`, description: language.t("settings.copy.chooseWhichModelsToAdd") })
       } else if (r.running) {
-        showToast({ title: `${rt.name} is running`, description: "No models yet — pull one below, then rescan." })
+        showToast({
+          title: `${rt.name} is running`,
+          description: language.t("settings.copy.noModelsYetPullOneBelowThenRescan"),
+        })
       } else {
         setError(`Couldn't start ${rt.name}. The server didn't come up in time.`)
       }
@@ -280,10 +288,10 @@ const LocalModels: Component = () => {
       const remotePort = Number(sshRemotePort())
       const localPort = Number(sshLocalPort())
       if (!Number.isInteger(remotePort) || remotePort < 1 || remotePort > 65_535) {
-        throw new Error("Remote port must be between 1 and 65,535.")
+        throw new Error(language.t("settings.copy.remotePortMustBeBetween1And65"))
       }
       if (!Number.isInteger(localPort) || localPort < 1_024 || localPort > 65_535) {
-        throw new Error("Local port must be between 1,024 and 65,535.")
+        throw new Error(language.t("settings.copy.localPortMustBeBetween1024And"))
       }
       const contextLimit = contextTokens()
       const result = await call<{ id: string; models: string[] }>("/ssh", {
@@ -300,7 +308,7 @@ const LocalModels: Component = () => {
       reveal(result.id, result.models)
       showToast({
         variant: "success",
-        title: "SSH models connected",
+        title: language.t("settings.copy.sshModelsConnected"),
         description: `${result.models.length} model(s) are now available in the model picker through the encrypted tunnel.`,
       })
     }, "Couldn't connect the SSH model host")
@@ -312,7 +320,10 @@ const LocalModels: Component = () => {
         body: JSON.stringify({ url: url().trim(), key: key().trim() || undefined }),
       })
       if (r.error || !r.models.length) {
-        showToast({ title: "No models found", description: r.error ?? "The endpoint returned no models." })
+        showToast({
+          title: language.t("settings.copy.noModelsFound"),
+          description: r.error ?? language.t("settings.copy.theEndpointReturnedNoModels"),
+        })
       }
       setFound(r.models)
       setSelected(new Set(r.models))
@@ -328,13 +339,13 @@ const LocalModels: Component = () => {
   const addCustom = () =>
     guard(async () => {
       const models = [...selected()]
-      if (!models.length) throw new Error("Select at least one model.")
+      if (!models.length) throw new Error(language.t("settings.copy.selectAtLeastOneModel"))
       const result = await register({ url: url().trim(), key: key().trim() || undefined, models })
       await sync.refreshProviders()
       reveal(result.id, models)
       showToast({
         variant: "success",
-        title: models.length === 1 ? "Model added" : "Models added",
+        title: models.length === 1 ? language.t("settings.copy.modelAdded") : language.t("settings.copy.modelsAdded"),
         description: `${models.length} model(s) are now available in the model picker.`,
       })
       setUrl("")
@@ -347,14 +358,14 @@ const LocalModels: Component = () => {
   const runtimeDetail = (rt: Runtime) => {
     if (!rt.installed) return `Not installed · ${rt.serveHint}`
     if (rt.running) return `Running · ${rt.models.length} model(s)`
-    return "Installed · not running"
+    return language.t("settings.copy.installedNotRunning")
   }
 
   return (
     <PanelScroll>
       <PanelHeader
-        title="Local models"
-        description="Run models on this machine or connect a self-hosted OpenAI-compatible server on your own GPU."
+        title={language.t("settings.shell.panel.local-models")}
+        description={language.t("settings.copy.runModelsOnThisMachineOrConnectA")}
       />
       <PanelBody>
         <Show when={problem()}>
@@ -368,21 +379,21 @@ const LocalModels: Component = () => {
                 disabled={busy()}
                 onClick={recover}
               >
-                Retry
+                {language.t("settings.connectors.retry")}
               </Button>
             </div>
           )}
         </Show>
 
         <Section
-          title="Catalog"
-          description="Models you add here appear in the model picker alongside your connected providers."
+          title={language.t("settings.copy.catalog")}
+          description={language.t("settings.copy.modelsYouAddHereAppearInTheModel")}
         >
           <Card>
             <div class="settings-row">
               <RowCopy
-                title="Show local models in Models"
-                description="Hide locally hosted models from the catalog without removing them."
+                title={language.t("settings.copy.showLocalModelsInModels")}
+                description={language.t("settings.copy.hideLocallyHostedModelsFromTheCatalogWithout")}
               />
               <Switch
                 hideLabel
@@ -390,19 +401,26 @@ const LocalModels: Component = () => {
                 disabled={visibilityBusy() || preferences.loading}
                 onChange={setVisibility}
               >
-                Show local models in Models
+                {language.t("settings.copy.showLocalModelsInModels")}
               </Switch>
             </div>
           </Card>
         </Section>
 
         {/* ── Run locally (host it for the user) ── */}
-        <Section title="Run a model locally" description="OpenScience starts and hosts a runtime for you.">
+        <Section
+          title={language.t("settings.copy.runAModelLocally")}
+          description={language.t("settings.copy.openscienceStartsAndHostsARuntimeForYou")}
+        >
           <Card>
             <Show
               when={!status.loading}
               fallback={
-                <div class="settings-panel-loading__rows" role="status" aria-label="Loading local runtimes">
+                <div
+                  class="settings-panel-loading__rows"
+                  role="status"
+                  aria-label={language.t("settings.copy.loadingLocalRuntimes")}
+                >
                   <span />
                   <span />
                 </div>
@@ -412,7 +430,7 @@ const LocalModels: Component = () => {
                 each={status()}
                 fallback={
                   <p class="settings-card-empty" role="status">
-                    No supported local runtime was found on this machine.
+                    {language.t("settings.copy.noSupportedLocalRuntimeWasFoundOnThis")}
                   </p>
                 }
               >
@@ -421,7 +439,7 @@ const LocalModels: Component = () => {
                     <RowCopy title={rt.name} description={runtimeDetail(rt)} />
                     <div class="ml-auto flex max-w-full shrink-0 items-center gap-2">
                       <Show when={rt.running}>
-                        <span class="settings-row-status">Running</span>
+                        <span class="settings-row-status">{language.t("settings.copy.running")}</span>
                       </Show>
                       <Show
                         when={rt.installed}
@@ -432,7 +450,7 @@ const LocalModels: Component = () => {
                             class="settings-panel-action"
                             onClick={() => window.open(rt.install, "_blank", "noopener")}
                           >
-                            Install
+                            {language.t("settings.copy.install")}
                           </Button>
                         }
                       >
@@ -446,7 +464,9 @@ const LocalModels: Component = () => {
                               disabled={busy() || !!starting()}
                               onClick={() => startRuntime(rt)}
                             >
-                              {starting() === rt.id ? "Starting…" : "Start"}
+                              {starting() === rt.id
+                                ? language.t("settings.copy.starting")
+                                : language.t("settings.copy.start")}
                             </Button>
                           }
                         >
@@ -457,7 +477,7 @@ const LocalModels: Component = () => {
                             disabled={busy() || rt.models.length === 0}
                             onClick={() => choose(rt)}
                           >
-                            Choose models
+                            {language.t("settings.copy.chooseModels")}
                           </Button>
                         </Show>
                       </Show>
@@ -470,17 +490,20 @@ const LocalModels: Component = () => {
         </Section>
 
         {/* ── Pull a model (Ollama) ── */}
-        <Section title="Pull a model" description="Copy an ollama pull command, then run it in your terminal.">
+        <Section
+          title={language.t("settings.copy.pullAModel")}
+          description={language.t("settings.copy.copyAnOllamaPullCommandThenRunIt")}
+        >
           <Card>
             <div class="settings-row">
               <RowCopy
-                title="Pull a model"
-                description="Type a name from the Ollama library, such as llama3.1, qwen2.5-coder or phi3."
+                title={language.t("settings.copy.pullAModel")}
+                description={language.t("settings.copy.typeANameFromTheOllamaLibrarySuch")}
               />
               <div class="ml-auto flex max-w-full shrink-0 items-center gap-2">
                 <input
                   class="settings-field w-44 min-w-0"
-                  aria-label="Model to pull with Ollama"
+                  aria-label={language.t("settings.copy.modelToPullWithOllama")}
                   placeholder="llama3.1"
                   value={pullName()}
                   onInput={(e) => setPullName(e.currentTarget.value)}
@@ -493,35 +516,38 @@ const LocalModels: Component = () => {
                   disabled={!pullName().trim()}
                   onClick={pull}
                 >
-                  Copy command
+                  {language.t("settings.copy.copyCommand")}
                 </Button>
               </div>
             </div>
             <div class="settings-row">
               <RowCopy
-                title="Start Ollama"
-                description="Copies ollama serve. Run it first if the server isn't up yet."
+                title={language.t("settings.copy.startOllama")}
+                description={language.t("settings.copy.copiesOllamaServeRunItFirstIfThe")}
               />
               <Button
                 size="small"
                 variant="secondary"
                 class="settings-panel-action ml-auto shrink-0"
-                aria-label="Copy ollama serve command"
+                aria-label={language.t("settings.copy.copyOllamaServeCommand")}
                 onClick={() => void copyCommand("ollama serve")}
               >
-                Copy command
+                {language.t("settings.copy.copyCommand")}
               </Button>
             </div>
           </Card>
         </Section>
 
         {/* ── Detected runtimes ── */}
-        <Section title="Detected on this machine" description="Servers already running here that OpenScience can use.">
+        <Section
+          title={language.t("settings.copy.detectedOnThisMachine")}
+          description={language.t("settings.copy.serversAlreadyRunningHereThatOpenscienceCanUse")}
+        >
           <Card>
             <div class="settings-row">
               <RowCopy
-                title="Scan for servers"
-                description="Looks for Ollama, LM Studio and other OpenAI-compatible servers on this machine."
+                title={language.t("settings.copy.scanForServers")}
+                description={language.t("settings.copy.looksForOllamaLmStudioAndOtherOpenai")}
               />
               <Button
                 size="small"
@@ -530,13 +556,17 @@ const LocalModels: Component = () => {
                 disabled={busy()}
                 onClick={refetch}
               >
-                Rescan
+                {language.t("settings.copy.rescan")}
               </Button>
             </div>
             <Show
               when={!detected.loading && !status.loading}
               fallback={
-                <div class="settings-panel-loading__rows" role="status" aria-label="Scanning for local servers">
+                <div
+                  class="settings-panel-loading__rows"
+                  role="status"
+                  aria-label={language.t("settings.copy.scanningForLocalServers")}
+                >
                   <span />
                   <span />
                 </div>
@@ -546,7 +576,7 @@ const LocalModels: Component = () => {
                 each={discoveries()}
                 fallback={
                   <p class="settings-card-empty" role="status">
-                    Nothing running yet. Start a server such as ollama serve, then rescan or add an endpoint below.
+                    {language.t("settings.copy.nothingRunningYetStartAServerSuchAs")}
                   </p>
                 }
               >
@@ -560,7 +590,7 @@ const LocalModels: Component = () => {
                       disabled={busy()}
                       onClick={() => choose(d)}
                     >
-                      Choose models
+                      {language.t("settings.copy.chooseModels")}
                     </Button>
                   </div>
                 )}
@@ -573,12 +603,13 @@ const LocalModels: Component = () => {
           {(source) => (
             <Section
               title={`Choose ${source().name} models`}
-              description="Only the models you select appear in Models."
+              description={language.t("settings.copy.onlyTheModelsYouSelectAppearInModels")}
             >
               <div class="settings-card settings-form-card" aria-label={`Choose ${source().name} models`}>
                 <div class="flex items-center justify-between gap-2">
                   <span class="text-12-regular text-text-weak">
-                    {chosen().size} of {source().models.length} selected
+                    {chosen().size} {language.t("settings.copy.of")}
+                    {source().models.length} {language.t("settings.copy.selected")}
                   </span>
                   <div class="flex items-center gap-2">
                     <Button
@@ -588,7 +619,7 @@ const LocalModels: Component = () => {
                       disabled={chosen().size === source().models.length}
                       onClick={() => setChosen(new Set(source().models))}
                     >
-                      Select all
+                      {language.t("settings.copy.selectAll")}
                     </Button>
                     <Button
                       size="small"
@@ -597,7 +628,7 @@ const LocalModels: Component = () => {
                       disabled={chosen().size === 0}
                       onClick={() => setChosen(new Set<string>())}
                     >
-                      Clear
+                      {language.t("dialog.server.default.clear")}
                     </Button>
                   </div>
                 </div>
@@ -615,8 +646,8 @@ const LocalModels: Component = () => {
                   onInput={setContext}
                   description={
                     isOllama(source().id, source().baseURL)
-                      ? "Applied to the selected models as a tuned Ollama alias. Larger windows use more memory; the alias stays out of the catalog."
-                      : "How much context OpenScience may send to these models. Match the server's configured window; this does not change the server itself."
+                      ? language.t("settings.copy.appliedToTheSelectedModelsAsATuned")
+                      : language.t("settings.copy.howMuchContextOpenscienceMaySendToThese")
                   }
                 />
                 <div class="flex justify-end gap-2">
@@ -627,7 +658,7 @@ const LocalModels: Component = () => {
                     disabled={busy()}
                     onClick={() => setChoice(undefined)}
                   >
-                    Cancel
+                    {language.t("common.cancel")}
                   </Button>
                   <Button
                     size="small"
@@ -636,7 +667,8 @@ const LocalModels: Component = () => {
                     disabled={busy() || chosen().size === 0}
                     onClick={addChoice}
                   >
-                    Add {chosen().size} selected
+                    {language.t("settings.copy.add")}
+                    {chosen().size} {language.t("settings.copy.selected")}
                   </Button>
                 </div>
               </div>
@@ -645,14 +677,14 @@ const LocalModels: Component = () => {
         </Show>
 
         <Section
-          title="Connect over SSH"
-          description="Open an encrypted local-forward to a model server on a remote GPU. The host must already work with your SSH config and keys."
+          title={language.t("settings.copy.connectOverSsh")}
+          description={language.t("settings.copy.openAnEncryptedLocalForwardToAModel")}
         >
           <Card>
             <div class="settings-row">
               <RowCopy
-                title="Remote GPU over SSH"
-                description="Tunnel a model server on a host from your SSH config into this machine."
+                title={language.t("settings.copy.remoteGpuOverSsh")}
+                description={language.t("settings.copy.tunnelAModelServerOnAHostFrom")}
               />
               <Button
                 size="small"
@@ -661,7 +693,7 @@ const LocalModels: Component = () => {
                 aria-expanded={sshOpen()}
                 onClick={() => setSshOpen((value) => !value)}
               >
-                {sshOpen() ? "Cancel" : "Connect"}
+                {sshOpen() ? language.t("common.cancel") : language.t("settings.copy.connect")}
               </Button>
             </div>
           </Card>
@@ -669,14 +701,14 @@ const LocalModels: Component = () => {
             <div class="settings-card settings-form-card">
               <div class="settings-form-grid">
                 <Field
-                  label="SSH host"
+                  label={language.t("settings.copy.sshHost")}
                   span="full"
                   placeholder="research-gpu or user@gpu.example.org"
                   value={sshHost()}
                   onInput={setSshHost}
                 />
                 <Field
-                  label="Remote model port"
+                  label={language.t("settings.copy.remoteModelPort")}
                   type="number"
                   min="1"
                   max="65535"
@@ -685,7 +717,7 @@ const LocalModels: Component = () => {
                   onInput={setSshRemotePort}
                 />
                 <Field
-                  label="Local tunnel port"
+                  label={language.t("settings.copy.localTunnelPort")}
                   type="number"
                   min="1024"
                   max="65535"
@@ -694,10 +726,10 @@ const LocalModels: Component = () => {
                   onInput={setSshLocalPort}
                 />
                 <Field
-                  label="Endpoint key (optional)"
+                  label={language.t("settings.copy.endpointKeyOptional")}
                   span="full"
                   type="password"
-                  placeholder="Only if the remote model server requires one"
+                  placeholder={language.t("settings.copy.onlyIfTheRemoteModelServerRequiresOne")}
                   value={sshKey()}
                   onInput={setSshKey}
                 />
@@ -705,7 +737,7 @@ const LocalModels: Component = () => {
               <ContextField
                 value={context()}
                 onInput={setContext}
-                description="How much context OpenScience may send to the remote models. Match the server's configured window."
+                description={language.t("settings.copy.howMuchContextOpenscienceMaySendToThe")}
               />
               <div class="flex justify-end">
                 <Button
@@ -715,7 +747,7 @@ const LocalModels: Component = () => {
                   disabled={busy() || !sshHost().trim()}
                   onClick={connectSSH}
                 >
-                  Connect models
+                  {language.t("settings.copy.connectModels")}
                 </Button>
               </div>
             </div>
@@ -724,14 +756,14 @@ const LocalModels: Component = () => {
 
         {/* ── Custom endpoint ── */}
         <Section
-          title="Direct endpoint"
-          description="Connect a local, LAN, VPN, or HTTPS OpenAI-compatible endpoint directly."
+          title={language.t("settings.copy.directEndpoint")}
+          description={language.t("settings.copy.connectALocalLanVpnOrHttpsOpenai")}
         >
           <Card>
             <div class="settings-row">
               <RowCopy
-                title="OpenAI-compatible endpoint"
-                description="A URL on this machine, your LAN or VPN, or over HTTPS."
+                title={language.t("settings.copy.openaiCompatibleEndpoint")}
+                description={language.t("settings.copy.aUrlOnThisMachineYourLanOr")}
               />
               <Button
                 size="small"
@@ -740,7 +772,7 @@ const LocalModels: Component = () => {
                 aria-expanded={directOpen()}
                 onClick={() => setDirectOpen((value) => !value)}
               >
-                {directOpen() ? "Cancel" : "Connect"}
+                {directOpen() ? language.t("common.cancel") : language.t("settings.copy.connect")}
               </Button>
             </div>
           </Card>
@@ -748,7 +780,7 @@ const LocalModels: Component = () => {
             <div class="settings-card settings-form-card">
               <div class="settings-form-grid">
                 <Field
-                  label="Endpoint URL"
+                  label={language.t("settings.copy.endpointUrl")}
                   span="full"
                   inputMode="url"
                   placeholder="http://localhost:11434/v1"
@@ -756,10 +788,10 @@ const LocalModels: Component = () => {
                   onInput={setUrl}
                 />
                 <Field
-                  label="API key (optional)"
+                  label={language.t("settings.copy.apiKeyOptional")}
                   span="full"
                   type="password"
-                  placeholder="Most local servers need none"
+                  placeholder={language.t("settings.copy.mostLocalServersNeedNone")}
                   value={key()}
                   onInput={setKey}
                 />
@@ -772,7 +804,7 @@ const LocalModels: Component = () => {
                   disabled={busy() || !url().trim()}
                   onClick={listCustom}
                 >
-                  List models
+                  {language.t("settings.copy.listModels")}
                 </Button>
                 <Show when={found().length > 0}>
                   <Button
@@ -782,7 +814,8 @@ const LocalModels: Component = () => {
                     disabled={busy() || selected().size === 0}
                     onClick={addCustom}
                   >
-                    Add {selected().size} selected
+                    {language.t("settings.copy.add")}
+                    {selected().size} {language.t("settings.copy.selected")}
                   </Button>
                 </Show>
               </div>
@@ -802,8 +835,8 @@ const LocalModels: Component = () => {
                   onInput={setContext}
                   description={
                     isOllama(undefined, listedUrl())
-                      ? "Applied to the selected models as a tuned Ollama alias. Larger windows use more memory."
-                      : "How much context OpenScience may send to these models. Match the server's configured window; this does not change the server itself."
+                      ? language.t("settings.copy.appliedToTheSelectedModelsAsATuned2")
+                      : language.t("settings.copy.howMuchContextOpenscienceMaySendToThese")
                   }
                 />
               </Show>
@@ -813,18 +846,22 @@ const LocalModels: Component = () => {
 
         {/* ── Configured ── */}
         <Section
-          title="Configured"
+          title={language.t("settings.copy.configured")}
           description={
             configured()?.length
               ? `${configured()?.length} local or self-hosted provider${configured()?.length === 1 ? "" : "s"} in the catalog.`
-              : "Local and self-hosted providers you have added."
+              : language.t("settings.copy.localAndSelfHostedProvidersYouHaveAdded")
           }
         >
           <Card>
             <Show
               when={!configured.loading}
               fallback={
-                <div class="settings-panel-loading__rows" role="status" aria-label="Loading configured providers">
+                <div
+                  class="settings-panel-loading__rows"
+                  role="status"
+                  aria-label={language.t("settings.copy.loadingConfiguredProviders")}
+                >
                   <span />
                 </div>
               }
@@ -833,7 +870,7 @@ const LocalModels: Component = () => {
                 each={configured()}
                 fallback={
                   <p class="settings-card-empty" role="status">
-                    No local or self-hosted providers yet.
+                    {language.t("settings.copy.noLocalOrSelfHostedProvidersYet")}
                   </p>
                 }
               >
@@ -851,7 +888,7 @@ const LocalModels: Component = () => {
                       disabled={busy()}
                       onClick={() => removeProvider(p.id)}
                     >
-                      Remove
+                      {language.t("settings.providerKeys.remove")}
                     </Button>
                   </div>
                 )}
@@ -896,21 +933,24 @@ const Field: Component<{
 // Every local endpoint records a context window; without one, OpenScience
 // assumes 32k and compacts long research sessions far too early on servers
 // that allow much more.
-const ContextField: Component<{ value: string; description: string; onInput: (value: string) => void }> = (props) => (
-  <div class="settings-row">
-    <RowCopy title="Context window" description={props.description} />
-    <div class="ml-auto flex shrink-0 items-center gap-2">
-      <input
-        class="settings-field w-32 text-right"
-        type="number"
-        min="1024"
-        max="2097152"
-        step="1024"
-        aria-label="Context window in tokens"
-        value={props.value}
-        onInput={(event) => props.onInput(event.currentTarget.value)}
-      />
-      <span class="text-12-regular text-text-weak">tokens</span>
+const ContextField: Component<{ value: string; description: string; onInput: (value: string) => void }> = (props) => {
+  const language = useLanguage()
+  return (
+    <div class="settings-row">
+      <RowCopy title={language.t("settings.copy.contextWindow")} description={props.description} />
+      <div class="ml-auto flex shrink-0 items-center gap-2">
+        <input
+          class="settings-field w-32 text-right"
+          type="number"
+          min="1024"
+          max="2097152"
+          step="1024"
+          aria-label={language.t("settings.copy.contextWindowInTokens")}
+          value={props.value}
+          onInput={(event) => props.onInput(event.currentTarget.value)}
+        />
+        <span class="text-12-regular text-text-weak">{language.t("settings.copy.tokens")}</span>
+      </div>
     </div>
-  </div>
-)
+  )
+}

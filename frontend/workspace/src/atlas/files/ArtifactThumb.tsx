@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { Match, Show, Switch, createEffect, createSignal, onCleanup, type JSX } from "solid-js"
 import { blobDataUrl } from "@/artifacts/bytes"
 import type { StoredArtifact } from "@/artifacts/store"
@@ -93,6 +94,7 @@ const remember = (version: string, preview: Preview) => {
 }
 
 export function ArtifactThumb(props: ThumbProps): JSX.Element {
+  const copy = useLanguage()
   const kind = () => thumbKind(props.artifact.current)
   const [preview, setPreview] = createSignal<Preview>()
   const [failed, setFailed] = createSignal(false)
@@ -180,7 +182,7 @@ export function ArtifactThumb(props: ThumbProps): JSX.Element {
       </Match>
       <Match when={kind() === "table" && !failed() && preview()?.table}>
         {(rows) => (
-          <span class="artifact-thumb artifact-thumb--table" aria-label="Table preview">
+          <span class="artifact-thumb artifact-thumb--table" aria-label={copy.t("interface.preview.table")}>
             {rows().map((row) => row.map((cell) => <span title={cell}>{cell}</span>))}
           </span>
         )}

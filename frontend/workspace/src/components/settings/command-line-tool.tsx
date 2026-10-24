@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { Component, Show, createResource, createSignal } from "solid-js"
 import { Button } from "@synsci/ui/button"
 import { showToast } from "@synsci/ui/toast"
@@ -73,6 +74,7 @@ function message(error: unknown) {
 }
 
 export const CommandLineToolRow: Component<{ client: CommandLineClient }> = (props) => {
+  const language = useLanguage()
   // `latest` keeps the row from suspending the whole panel while it loads.
   const [status, { mutate, refetch }] = createResource(() => props.client.status())
   const [busy, setBusy] = createSignal(false)
@@ -86,24 +88,28 @@ export const CommandLineToolRow: Component<{ client: CommandLineClient }> = (pro
         showToast({
           variant: "success",
           icon: "circle-check",
-          title: "Command line tool installed",
+          title: language.t("settings.copy.commandLineToolInstalled"),
           description: next.onPath
-            ? "Open a new terminal and run openscience."
+            ? language.t("settings.copy.openANewTerminalAndRunOpenscience")
             : `Add this line to your shell startup file: ${next.line}`,
         })
       })
       .catch((error: unknown) => {
-        showToast({ variant: "error", title: "The command line tool was not installed", description: message(error) })
+        showToast({
+          variant: "error",
+          title: language.t("settings.copy.theCommandLineToolWasNotInstalled"),
+          description: message(error),
+        })
         void refetch()
       })
       .finally(() => setBusy(false))
   }
   return (
-    <SettingsRow title="Command line tool" description={copy().description}>
+    <SettingsRow title={language.t("settings.copy.commandLineTool")} description={copy().description}>
       <Show when={copy().action}>
         {(action) => (
           <Button size="small" variant="secondary" disabled={busy()} onClick={run}>
-            {busy() ? "Installing…" : action()}
+            {busy() ? language.t("settings.copy.installing") : action()}
           </Button>
         )}
       </Show>

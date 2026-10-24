@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { createSignal, createMemo, createEffect, type JSX, Show, For, onCleanup } from "solid-js"
 import { useNavigate, useParams } from "@solidjs/router"
 import { Dialog as Kobalte } from "@kobalte/core/dialog"
@@ -38,7 +39,7 @@ const EMPTY: Hits = { sessions: [], messages: [], files: [], artifacts: [] }
 const DEBOUNCE = 250
 const REVEAL_TIMEOUT = 2000
 
-function sentenceCase(value: string | undefined, fallback = "Commands") {
+function sentenceCase(value: string | undefined, fallback = "") {
   const text = value?.trim() || fallback
   return `${text.charAt(0).toLocaleUpperCase()}${text.slice(1)}`
 }
@@ -57,6 +58,7 @@ function reveal(messageID: string) {
 }
 
 export function CommandPalette(props: CommandPaletteProps): JSX.Element {
+  const language = useLanguage()
   const [query, setQuery] = createSignal("")
   const [highlighted, setHighlighted] = createSignal(0)
   const [hits, setHits] = createSignal<Hits>()
@@ -148,13 +150,13 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
       seen.add(id)
       const keybind = command.keybind(option.id)
       const description = option.description ? sentenceCase(option.description) : undefined
-      const category = sentenceCase(option.category)
+      const category = sentenceCase(option.category, language.t("palette.group.commands"))
       return [
         {
           id: `command-${option.id}`,
           label: sentenceCase(option.title),
           hint: [category, description, keybind].filter(Boolean).join(" · ") || undefined,
-          category: "Actions",
+          category: language.t("pages.overlay.actions"),
           run: () => command.trigger(option.id, "palette"),
           highlight: option.onHighlight,
         },
@@ -167,9 +169,9 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
     return sync.data.project.map((project) => ({
       id: `project-${project.id}`,
       label: projectName(project),
-      hint: "Project workspace",
+      hint: language.t("settings.copy.projectWorkspace"),
       icon: IconFolder,
-      category: "Projects",
+      category: language.t("pages.copy.projects"),
       run: () => goTo(project),
     }))
   })
@@ -184,10 +186,10 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
       .slice(0, 5)
       .map((session) => ({
         id: `recent-${session.id}`,
-        label: session.title || "New session",
-        hint: "Recent project session",
+        label: session.title || language.t("command.session.new"),
+        hint: language.t("pages.overlay.recentProjectSession"),
         icon: IconMessageSquare,
-        category: "Recent sessions",
+        category: language.t("sidebar.project.recentSessions"),
         run: () => navigate(projectPathname(scope.segment, session.id)),
       }))
   })
@@ -203,10 +205,10 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
     data.sessions.forEach((s) => {
       list.push({
         id: `session-${s.id}`,
-        label: s.title || "Untitled session",
-        hint: "Project session",
+        label: s.title || language.t("pages.overlay.untitledSession"),
+        hint: language.t("pages.overlay.projectSession"),
         icon: IconMessageSquare,
-        category: "Sessions",
+        category: language.t("pages.copy.sessions"),
         run: () => navigate(projectPathname(scope.segment, s.id)),
       })
     })
@@ -214,9 +216,17 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
       list.push({
         id: `message-${m.messageID}`,
         label: m.snippet,
-        hint: `${sentenceCase(m.role)} message · ${titles.get(m.sessionID) ?? m.sessionID}`,
+        hint: language.t("pages.overlay.messageResult", {
+          role:
+            m.role === "user"
+              ? language.t("context.breakdown.user")
+              : m.role === "assistant"
+                ? language.t("context.breakdown.assistant")
+                : sentenceCase(m.role),
+          session: titles.get(m.sessionID) ?? m.sessionID,
+        }),
         icon: IconSearch,
-        category: "Messages",
+        category: language.t("context.stats.messages"),
         run: () => {
           navigate(projectPathname(scope.segment, m.sessionID))
           reveal(m.messageID)
@@ -229,7 +239,7 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
         label: f.name,
         hint: f.snippet ? `${f.path} · ${f.snippet}` : f.path,
         icon: IconFile,
-        category: "Files",
+        category: language.t("palette.group.files"),
         run: () => uiStore.openFile(scope.directory, f.path),
       })
     })
@@ -239,7 +249,7 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
         label: a.name,
         hint: `${sentenceCase(a.kind)} · ${a.path}`,
         icon: IconFile,
-        category: "Artifacts",
+        category: language.t("pages.overlay.artifacts"),
         run: () => uiStore.openFile(scope.directory, a.path),
       })
     })
@@ -266,13 +276,18 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
     return Array.from(map.entries()).map(([category, cmds]) => ({ category, cmds }))
   })
 
-  const scope = createMemo(() => scopeLabel(active(), sync.data.project))
+  const scope = createMemo(() =>
+    scopeLabel(active(), sync.data.project, {
+      all: language.t("pages.overlay.allProjects"),
+      current: language.t("pages.overlay.currentProject"),
+    }),
+  )
 
   const status = createMemo(() => {
-    if (searching()) return "Searching…"
-    if (searchError()) return "Search unavailable"
+    if (searching()) return language.t("prompt.popover.searching")
+    if (searchError()) return language.t("pages.overlay.searchUnavailable")
     const count = filtered().length
-    return `${count} ${count === 1 ? "result" : "results"}`
+    return language.t(count === 1 ? "pages.overlay.resultCount.one" : "atlas.results.count", { count })
   })
 
   const showStatus = createMemo(() => searching() || searchError() || query().trim().length > 0)
@@ -372,12 +387,10 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
         >
           <header class="command-palette__header">
             <Kobalte.Title id="command-palette-title" class="command-palette__sr-only">
-              Command palette
+              {language.t("command.palette")}
             </Kobalte.Title>
             <Kobalte.Description id="command-palette-description" class="command-palette__sr-only">
-              {active()
-                ? "Search sessions, transcript messages, workspace files, artifacts, and project actions."
-                : "Open a project or run an available action."}
+              {active() ? language.t("pages.overlay.paletteProjectHint") : language.t("pages.overlay.paletteHomeHint")}
             </Kobalte.Description>
 
             <div class="command-palette__search" data-focus-frame data-searching={searching() ? "true" : undefined}>
@@ -386,7 +399,9 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
               </span>
               <input
                 ref={inputRef}
-                aria-label={active() ? "Search this project" : "Search projects and actions"}
+                aria-label={
+                  active() ? language.t("pages.copy.searchProject") : language.t("pages.overlay.searchProjectsActions")
+                }
                 role="combobox"
                 aria-autocomplete="list"
                 aria-controls="command-palette-results"
@@ -398,7 +413,9 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
                   setHighlighted(0)
                 }}
                 placeholder={
-                  active() ? "Search sessions, messages, files, and actions…" : "Search projects and actions…"
+                  active()
+                    ? language.t("pages.overlay.searchProjectPlaceholder")
+                    : language.t("pages.overlay.searchHomePlaceholder")
                 }
                 autofocus
               />
@@ -419,7 +436,7 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
               id="command-palette-results"
               class="command-palette__results"
               role="listbox"
-              aria-label="Commands and search results"
+              aria-label={language.t("pages.overlay.commandsResults")}
               aria-busy={searching()}
             >
               <For each={grouped()}>
@@ -467,44 +484,46 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
             <Show when={searching()}>
               <div class="command-palette__state command-palette__state--loading" role="status" aria-live="polite">
                 <span class="command-palette__state-indicator" aria-hidden="true" />
-                <span>Searching…</span>
+                <span>{language.t("prompt.popover.searching")}</span>
               </div>
             </Show>
             <Show when={short() && filtered().length === 0}>
               <div class="command-palette__state" role="status" aria-live="polite">
                 <span class="command-palette__state-copy">
-                  <strong>Type one more character</strong>
-                  <span>Project search starts after two characters.</span>
+                  <strong>{language.t("pages.overlay.searchMore")}</strong>
+                  <span>{language.t("pages.overlay.searchMoreHint")}</span>
                 </span>
               </div>
             </Show>
             <Show when={searchError() && !searching()}>
               <div class="command-palette__state command-palette__state--error" role="alert">
                 <span class="command-palette__state-copy">
-                  <strong>Search unavailable</strong>
-                  <span>Project content could not be searched. Local actions are still available.</span>
+                  <strong>{language.t("pages.overlay.searchUnavailable")}</strong>
+                  <span>{language.t("pages.overlay.searchFailedHint")}</span>
                 </span>
                 <button type="button" onClick={() => setSearchRetry((value) => value + 1)}>
-                  Retry
+                  {language.t("settings.connectors.retry")}
                 </button>
               </div>
             </Show>
             <Show when={!searching() && !searchError() && !short() && filtered().length === 0}>
               <div class="command-palette__state" role="status" aria-live="polite">
                 <span class="command-palette__state-copy">
-                  <strong>No matches</strong>
-                  <span>Try a session, message, file, or action.</span>
+                  <strong>{language.t("pages.overlay.noMatches")}</strong>
+                  <span>{language.t("pages.overlay.noMatchesHint")}</span>
                 </span>
               </div>
             </Show>
           </div>
 
           <footer class="command-palette__footer" aria-hidden="true">
-            <span class="command-palette__footer-source">{active() ? "Local project search" : "OpenScience"}</span>
+            <span class="command-palette__footer-source">
+              {active() ? language.t("pages.overlay.localProjectSearch") : "OpenScience"}
+            </span>
             <span class="command-palette__footer-spacer" />
-            <Hint k="↑↓" l="Navigate" />
-            <Hint k="↵" l="Open" />
-            <Hint k="Esc" l="Close" />
+            <Hint k="↑↓" l={language.t("pages.overlay.navigate")} />
+            <Hint k="↵" l={language.t("pages.copy.open")} />
+            <Hint k="Esc" l={language.t("common.close")} />
           </footer>
         </Kobalte.Content>
       </Kobalte.Portal>

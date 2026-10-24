@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { For, Show, createMemo, createResource, onCleanup, type Component } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Icon } from "@synsci/ui/icon"
@@ -30,6 +31,7 @@ export const WorkingFolderChip: Component<{
   disabled?: boolean
   watch?: (refresh: () => void) => () => void
 }> = (props) => {
+  const language = useLanguage()
   const [choice, setChoice] = createStore({ open: false, busy: false, error: "" })
   let details: HTMLDetailsElement | undefined
 
@@ -78,7 +80,10 @@ export const WorkingFolderChip: Component<{
     if (value.scratch) return value.current === value.scratch
     return value.current === undefined
   })
-  const label = () => (inScratch() ? "Scratch" : basename(current() ?? "") || "Folder")
+  const label = () =>
+    inScratch()
+      ? language.t("interface.folder.scratch")
+      : basename(current() ?? "") || language.t("interface.folder.folder")
 
   const choose = async (value: WorkingRootChoice) => {
     if (props.disabled || choice.busy) return
@@ -89,7 +94,7 @@ export const WorkingFolderChip: Component<{
         sessionID: props.sessionID,
         workingRoot: value ?? null,
       })
-      if (result.error || !result.data) throw new Error("Could not change the working folder. Try again.")
+      if (result.error || !result.data) throw new Error(language.t("interface.folder.changeFailed"))
     })().then(
       () => true,
       (error) => {
@@ -114,13 +119,16 @@ export const WorkingFolderChip: Component<{
         class="working-folder"
         onToggle={(event) => setChoice("open", event.currentTarget.open)}
       >
-        <summary aria-label={`Working in ${label()}`} aria-disabled={props.disabled ? "true" : undefined}>
+        <summary
+          aria-label={language.t("interface.folder.current", { name: label() })}
+          aria-disabled={props.disabled ? "true" : undefined}
+        >
           <Icon name="folder" size="small" />
           <span class="working-folder__label">{label()}</span>
           <Icon name="chevron-down" size="small" />
         </summary>
-        <div class="working-folder__menu" role="group" aria-label="Working folder">
-          <p class="working-folder__hint">Where this conversation's files go.</p>
+        <div class="working-folder__menu" role="group" aria-label={language.t("interface.folder.working")}>
+          <p class="working-folder__hint">{language.t("interface.folder.description")}</p>
           <Show when={choice.error}>
             <p role="alert" class="working-folder__error">
               {choice.error}
@@ -156,8 +164,8 @@ export const WorkingFolderChip: Component<{
             onClick={() => void choose("scratch")}
           >
             <span class="working-folder__option-copy">
-              <strong>Scratch</strong>
-              <small>Temporary, only this conversation</small>
+              <strong>{language.t("interface.folder.scratch")}</strong>
+              <small>{language.t("interface.folder.temporary")}</small>
             </span>
             <Show when={inScratch()}>
               <Icon name="check" size="small" />

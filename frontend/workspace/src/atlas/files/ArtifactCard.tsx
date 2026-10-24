@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { Show, createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import type { StoredArtifact } from "@/artifacts/store"
 import { ArtifactThumb, type ThumbProps } from "./ArtifactThumb"
@@ -15,6 +16,7 @@ export interface CardProps extends ThumbProps {
 }
 
 export function ArtifactCard(props: CardProps): JSX.Element {
+  const language = useLanguage()
   const [open, setOpen] = createSignal(false)
   let trigger: HTMLButtonElement | undefined
 
@@ -55,8 +57,11 @@ export function ArtifactCard(props: CardProps): JSX.Element {
 
   const version = () =>
     props.artifact.versionCount > 1
-      ? `Version ${props.artifact.current.version} of ${props.artifact.versionCount}`
-      : `Version ${props.artifact.current.version}`
+      ? language.t("atlas.results.versionOf", {
+          version: props.artifact.current.version,
+          count: props.artifact.versionCount,
+        })
+      : language.t("atlas.results.version", { version: props.artifact.current.version })
 
   const act = (run: (artifact: StoredArtifact) => void) => {
     setOpen(false)
@@ -73,7 +78,10 @@ export function ArtifactCard(props: CardProps): JSX.Element {
         type="button"
         class="artifact-card__open"
         data-card-open
-        aria-label={`Open ${props.artifact.title}, ${version().toLowerCase()}`}
+        aria-label={language.t("atlas.results.openNamed", {
+          name: props.artifact.title,
+          version: version().toLowerCase(),
+        })}
         onClick={() => props.onOpen(props.artifact)}
       >
         <ArtifactThumb artifact={props.artifact} read={props.read} highlight={props.highlight} />
@@ -81,7 +89,7 @@ export function ArtifactCard(props: CardProps): JSX.Element {
           <span class="artifact-card__name">{props.artifact.title}</span>
           <span class="artifact-card__sub" data-card-meta>
             <span data-card-saved title={new Date(props.artifact.current.createdAt).toLocaleString()}>
-              Saved {ago(props.artifact.current.createdAt)}
+              {language.t("atlas.results.savedAt", { time: ago(props.artifact.current.createdAt, language.locale()) })}
             </span>
             <span class="artifact-card__meta-separator" aria-hidden="true">
               ·
@@ -104,7 +112,7 @@ export function ArtifactCard(props: CardProps): JSX.Element {
         ref={trigger}
         class="artifact-card__actions"
         data-card-menu
-        aria-label={`Actions for ${props.artifact.title}`}
+        aria-label={language.t("atlas.results.actions", { name: props.artifact.title })}
         aria-expanded={open()}
         onClick={() => setOpen(!open())}
       >
@@ -115,21 +123,21 @@ export function ArtifactCard(props: CardProps): JSX.Element {
         <button
           type="button"
           class="artifact-menu__scrim"
-          aria-label={`Dismiss actions for ${props.artifact.title}`}
+          aria-label={language.t("atlas.results.dismissActions", { name: props.artifact.title })}
           onClick={() => setOpen(false)}
         />
         <div class="artifact-menu" role="menu" ref={follow}>
           <button type="button" role="menuitem" data-action="open" onClick={() => act(props.onOpen)}>
             <IconExpand size={14} strokeWidth={1.5} />
-            Open in tab
+            {language.t("atlas.results.open")}
           </button>
           <button type="button" role="menuitem" data-action="download" onClick={() => act(props.onDownload)}>
             <IconDownload size={14} strokeWidth={1.5} />
-            Download
+            {language.t("atlas.files.download")}
           </button>
           <button type="button" role="menuitem" data-action="rename" onClick={() => act(props.onRename)}>
             <IconEdit size={14} strokeWidth={1.5} />
-            Rename…
+            {language.t("atlas.results.rename")}
           </button>
           <button
             type="button"
@@ -139,7 +147,7 @@ export function ArtifactCard(props: CardProps): JSX.Element {
             onClick={() => act(props.onTrash)}
           >
             <IconTrash size={14} strokeWidth={1.5} />
-            Move to trash
+            {language.t("atlas.results.trash")}
           </button>
         </div>
       </Show>

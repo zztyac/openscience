@@ -1,3 +1,4 @@
+import type { useLanguage } from "@/context/language"
 import { equalFilePath, fileSourceName, type FilesystemGrant, type FilesystemScope } from "@/atlas/file-sources"
 
 /**
@@ -31,6 +32,7 @@ export interface PaneSource {
 const ORDER: SourceGroup[] = ["Working files", "Results", "Remote", "Recovery"]
 
 export function buildSources(input: {
+  translate?: ReturnType<typeof useLanguage>["t"]
   projectRoot: string
   projectName: string
   grants: FilesystemGrant[]
@@ -42,8 +44,10 @@ export function buildSources(input: {
     {
       id: "project",
       group: "Working files",
-      name: "Project files",
-      detail: `Shared working files for ${input.projectName}`,
+      name: input.translate?.("atlas.files.source.project") ?? "Project files",
+      detail:
+        input.translate?.("atlas.files.source.projectHint", { name: input.projectName }) ??
+        `Shared working files for ${input.projectName}`,
       sub: input.projectRoot,
       root: input.projectRoot,
       kind: "project",
@@ -57,8 +61,8 @@ export function buildSources(input: {
     list.push({
       id: "session",
       group: "Working files",
-      name: "This session",
-      detail: "Temporary working files for this conversation",
+      name: input.translate?.("atlas.files.source.session") ?? "This session",
+      detail: input.translate?.("atlas.files.source.sessionHint") ?? "Temporary working files for this conversation",
       sub: input.sessionRoot,
       root: input.sessionRoot,
       kind: "session",
@@ -67,8 +71,9 @@ export function buildSources(input: {
   list.push({
     id: "artifacts",
     group: "Results",
-    name: "Results",
-    detail: "Saved deliverables from every session in this project",
+    name: input.translate?.("atlas.files.source.results") ?? "Results",
+    detail:
+      input.translate?.("atlas.files.source.resultsHint") ?? "Saved deliverables from every session in this project",
     root: "",
     kind: "artifacts",
   })
@@ -96,7 +101,7 @@ export function buildSources(input: {
       id: "modal",
       group: "Remote",
       name: "Modal Volumes",
-      detail: "Connected remote storage",
+      detail: input.translate?.("atlas.files.source.remoteHint") ?? "Connected remote storage",
       root: "",
       kind: "modal",
       readonly: true,
@@ -109,8 +114,8 @@ export function buildSources(input: {
   list.push({
     id: "trash",
     group: "Recovery",
-    name: "Trash",
-    detail: "Recoverable for 30 days",
+    name: input.translate?.("atlas.files.source.trash") ?? "Trash",
+    detail: input.translate?.("atlas.files.source.trashHint") ?? "Recoverable for 30 days",
     root: "",
     kind: "trash",
   })

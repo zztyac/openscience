@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { Popover as Kobalte } from "@kobalte/core/popover"
 import { createMediaQuery } from "@solid-primitives/media"
 import { Button } from "@synsci/ui/button"
@@ -22,7 +23,6 @@ import {
   modelContext,
   modelDisplayName,
   modelFunding,
-  modelSummary,
   parseModelRoute,
 } from "@/context/model-catalog"
 import { DialogSettings } from "./dialog-settings"
@@ -208,6 +208,7 @@ type ModelPopoverSurfaceProps = {
 }
 
 export const ModelPopoverSurface: Component<ModelPopoverSurfaceProps> = (props) => {
+  const language = useLanguage()
   let content: HTMLElement | undefined
 
   return (
@@ -243,7 +244,7 @@ export const ModelPopoverSurface: Component<ModelPopoverSurfaceProps> = (props) 
                 variant="ghost"
                 class="model-settings-popover__back"
                 data-model-menu-back={props.kind}
-                aria-label={props.backLabel ?? "Back"}
+                aria-label={props.backLabel ?? language.t("interface.model.back")}
                 onClick={onBack()}
               />
             )}
@@ -254,7 +255,9 @@ export const ModelPopoverSurface: Component<ModelPopoverSurfaceProps> = (props) 
             icon="close"
             variant="ghost"
             class="model-settings-popover__close"
-            aria-label={`Close ${props.kind === "model" ? "model selector" : "model options"}`}
+            aria-label={language.t(
+              props.kind === "model" ? "interface.model.closeSelector" : "interface.model.closeOptions",
+            )}
             onClick={props.close}
           />
         </header>
@@ -284,7 +287,26 @@ type ModelEffortPanelProps = {
   unavailable?: { loading: boolean; error: boolean; refresh: () => void }
 }
 
+const effortKeys = {
+  default: "interface.model.providerDefault",
+  standard: "interface.model.providerDefault",
+  none: "interface.model.none",
+  minimal: "interface.model.minimal",
+  low: "interface.model.low",
+  medium: "interface.model.medium",
+  high: "interface.model.high",
+  xhigh: "interface.model.xhigh",
+  max: "interface.model.max",
+  ultra: "interface.model.ultra",
+} as const
+
+function optionLabel(language: ReturnType<typeof useLanguage>, id: string, fallback: string) {
+  const key = effortKeys[id as keyof typeof effortKeys]
+  return key ? language.t(key) : fallback
+}
+
 export const ModelEffortPanel: Component<ModelEffortPanelProps> = (props) => {
+  const language = useLanguage()
   // The first pricing tier is the step a long prompt pays; a context cap at
   // or below its threshold means the step is never reached.
   const cap = () => {
@@ -304,15 +326,19 @@ export const ModelEffortPanel: Component<ModelEffortPanelProps> = (props) => {
         {(unavailable) => (
           <section
             class="model-settings-option-section model-settings-options-unavailable"
-            aria-label={props.options.length > 0 ? "Current rates unavailable" : "Model options unavailable"}
+            aria-label={
+              props.options.length > 0
+                ? language.t("interface.model.ratesUnavailable")
+                : language.t("interface.model.optionsUnavailable")
+            }
           >
             <p>
               {props.options.length > 0
-                ? "Current Ace rates have not loaded. Verified effort choices are still available."
-                : "Model options and current rates aren’t available yet for this Ace workspace."}
+                ? language.t("interface.model.ratesPending")
+                : language.t("interface.model.optionsPending")}
             </p>
             <Show when={unavailable().error}>
-              <p role="alert">Could not refresh model options. Try again.</p>
+              <p role="alert">{language.t("interface.model.refreshFailed")}</p>
             </Show>
             <Button
               type="button"
@@ -321,7 +347,7 @@ export const ModelEffortPanel: Component<ModelEffortPanelProps> = (props) => {
               disabled={unavailable().loading}
               onClick={() => unavailable().refresh()}
             >
-              {unavailable().loading ? "Refreshing…" : "Refresh options"}
+              {unavailable().loading ? language.t("interface.model.refreshing") : language.t("interface.model.refresh")}
             </Button>
           </section>
         )}
@@ -330,20 +356,29 @@ export const ModelEffortPanel: Component<ModelEffortPanelProps> = (props) => {
         <section
           class="model-settings-option-section"
           aria-label={
-            props.options.some((option) => option.id.endsWith("-tokens")) ? "Thinking budget" : "Reasoning effort"
+            props.options.some((option) => option.id.endsWith("-tokens"))
+              ? language.t("interface.model.budget")
+              : language.t("interface.model.reasoning")
           }
         >
           <div class="model-settings-heading">
-            {props.options.some((option) => option.id.endsWith("-tokens")) ? "Thinking budget" : "Effort"}
+            {props.options.some((option) => option.id.endsWith("-tokens"))
+              ? language.t("interface.model.budget")
+              : language.t("interface.model.effort")}
           </div>
           <ModelOptionList
             id="model-effort-options"
             kind="effort"
             title={
-              props.options.some((option) => option.id.endsWith("-tokens")) ? "Thinking budget" : "Reasoning effort"
+              props.options.some((option) => option.id.endsWith("-tokens"))
+                ? language.t("interface.model.budget")
+                : language.t("interface.model.reasoning")
             }
             current={props.current}
-            options={props.options}
+            options={props.options.map((option) => ({
+              ...option,
+              label: optionLabel(language, option.id, option.label),
+            }))}
             compact
             onSelect={props.onEffortSelect}
           />
@@ -351,15 +386,18 @@ export const ModelEffortPanel: Component<ModelEffortPanelProps> = (props) => {
       </Show>
       <Show when={props.fast}>
         {(fast) => (
-          <section class="model-settings-option-section model-settings-speed-section" aria-label="Fast mode">
-            <div class="model-settings-heading">Speed</div>
+          <section
+            class="model-settings-option-section model-settings-speed-section"
+            aria-label={language.t("interface.model.fastMode")}
+          >
+            <div class="model-settings-heading">{language.t("interface.model.speed")}</div>
             <div data-model-fast-toggle data-disabled={fast().offered ? undefined : "true"}>
               <Switch
                 checked={fast().active}
                 disabled={!fast().offered}
                 onChange={(checked) => props.onTierSelect(checked ? "fast" : "standard")}
               >
-                <span class="model-settings-fast-label">Fast mode</span>
+                <span class="model-settings-fast-label">{language.t("interface.model.fastMode")}</span>
               </Switch>
             </div>
             <Show when={fast().note}>
@@ -374,12 +412,12 @@ export const ModelEffortPanel: Component<ModelEffortPanelProps> = (props) => {
       </Show>
       <Show when={props.context && props.context.options.length > 1 ? props.context : undefined}>
         {(context) => (
-          <section class="model-settings-option-section" aria-label="Context window">
-            <div class="model-settings-heading">Context window</div>
+          <section class="model-settings-option-section" aria-label={language.t("interface.model.contextWindow")}>
+            <div class="model-settings-heading">{language.t("interface.model.contextWindow")}</div>
             <ModelOptionList
               id="model-context-options"
               kind="context"
-              title="Context window"
+              title={language.t("interface.model.contextWindow")}
               current={context().current}
               options={context().options}
               compact
@@ -396,7 +434,7 @@ export const ModelEffortPanel: Component<ModelEffortPanelProps> = (props) => {
           return (
             <section
               class="model-settings-option-section model-settings-rate-section"
-              aria-label="Rate"
+              aria-label={language.t("interface.model.rate")}
               data-maximum={maximum() ? "true" : undefined}
             >
               <div
@@ -404,19 +442,21 @@ export const ModelEffortPanel: Component<ModelEffortPanelProps> = (props) => {
                 data-model-rate
                 title={rateBasis(rates(), Boolean(props.fast?.active && rates().fast))}
               >
-                <span class="model-settings-heading">Rate</span>
+                <span class="model-settings-heading">{language.t("interface.model.rate")}</span>
                 <span class="model-settings-rate-value">
                   {rateLine(effective(), maximum())}
-                  <span class="model-settings-unit"> /1M tokens</span>
+                  <span class="model-settings-unit">{language.t("interface.model.tokenUnit")}</span>
                 </span>
               </div>
               <Show when={step()}>
                 {(tier) => (
                   <div class="model-settings-rate model-settings-rate--step" data-model-rate-step>
-                    <span class="model-settings-heading">Past {modelContext(tier().threshold)}</span>
+                    <span class="model-settings-heading">
+                      {language.t("interface.model.past", { limit: modelContext(tier().threshold) })}
+                    </span>
                     <span class="model-settings-rate-value">
                       {rateLine(props.fast?.active && tier().fast ? tier().fast! : tier().standard, maximum())}
-                      <span class="model-settings-unit"> /1M tokens</span>
+                      <span class="model-settings-unit">{language.t("interface.model.tokenUnit")}</span>
                     </span>
                   </div>
                 )}
@@ -437,6 +477,7 @@ type ModelEffortPopoverProps = ModelEffortPanelProps & {
 }
 
 export const ModelEffortPopover: Component<ModelEffortPopoverProps> = (props) => {
+  const language = useLanguage()
   const [internalOpen, setInternalOpen] = createSignal(false)
   let trigger: HTMLButtonElement | undefined
   let content: HTMLElement | undefined
@@ -460,20 +501,36 @@ export const ModelEffortPopover: Component<ModelEffortPopoverProps> = (props) =>
         data-model-effort-chip
         aria-label={
           props.options.length > 0
-            ? `Reasoning effort: ${props.value}.${props.fast?.active ? " Fast mode on." : ""}${props.unavailable ? " Current rates unavailable." : ""} Reasoning options`
+            ? language.t("interface.model.effortAnnouncement", {
+                value: optionLabel(language, props.current, props.value),
+                fast: props.fast?.active ? language.t("interface.model.fastOn") : "",
+                rates: props.unavailable ? language.t("interface.model.ratesMissing") : "",
+              })
             : props.unavailable
-              ? "Model options unavailable. Refresh model options"
+              ? language.t("interface.model.refreshUnavailable")
               : props.fast
-                ? `Fast mode: ${props.fast.active ? "on" : "off"}. Model options`
-                : `Context window: ${props.context?.options.find((option) => option.id === props.context?.current)?.label ?? "Default"}. Model options`
+                ? language.t("interface.model.fastLabel", {
+                    value: language.t(props.fast.active ? "interface.model.on" : "interface.model.off"),
+                  })
+                : language.t("interface.model.contextLabel", {
+                    value:
+                      props.context?.options.find((option) => option.id === props.context?.current)?.label ??
+                      language.t("interface.model.default"),
+                  })
         }
       >
         <strong>
-          {props.options.length > 0 ? props.value : props.unavailable ? "Options" : props.fast ? "Fast" : "Context"}
+          {props.options.length > 0
+            ? optionLabel(language, props.current, props.value)
+            : props.unavailable
+              ? language.t("interface.model.options")
+              : props.fast
+                ? language.t("interface.model.fast")
+                : language.t("interface.model.context")}
         </strong>
         <Show when={props.fast?.active && props.options.length > 0}>
           <span data-model-fast-indicator aria-hidden="true">
-            Fast
+            {language.t("interface.model.fast")}
           </span>
         </Show>
         <Icon name="chevron-down" size="small" aria-hidden="true" />
@@ -481,7 +538,7 @@ export const ModelEffortPopover: Component<ModelEffortPopoverProps> = (props) =>
       <ModelPopoverSurface
         kind="effort"
         view="effort"
-        title="Model options"
+        title={language.t("interface.model.modelOptions")}
         close={() => setOpen(false)}
         initialFocus={
           props.options.length > 0
@@ -511,6 +568,7 @@ export const ModelEffortPopover: Component<ModelEffortPopoverProps> = (props) =>
 }
 
 export const ModelSettingsPopover: Component<{ trigger?: "label" | "icon" }> = (props) => {
+  const language = useLanguage()
   const local = useLocal()
   const sync = useSync()
   const globalSync = useGlobalSync()
@@ -704,7 +762,9 @@ export const ModelSettingsPopover: Component<{ trigger?: "label" | "icon" }> = (
 
   const control = createMemo(() =>
     modelControl({
-      name: current() ? modelDisplayName(current()!.name, current()!.provider.id, current()!.id) : "Select model",
+      name: current()
+        ? modelDisplayName(current()!.name, current()!.provider.id, current()!.id)
+        : language.t("interface.model.select"),
       variants: local.model.variant.list(),
       modes: local.model.tier.list(),
       currentEffort: local.model.variant.current(),
@@ -757,8 +817,20 @@ export const ModelSettingsPopover: Component<{ trigger?: "label" | "icon" }> = (
   createEffect(() => {
     const value = control()
     const updates = [
-      value.reset.effort ? `Effort reset to ${value.effort?.value ?? "Standard"}.` : undefined,
-      value.reset.speed ? `Speed reset to ${value.speed?.value ?? "Standard"}.` : undefined,
+      value.reset.effort
+        ? language.t("interface.model.effortReset", {
+            value: optionLabel(
+              language,
+              value.effort?.current.id ?? "standard",
+              value.effort?.value ?? language.t("interface.model.standard"),
+            ),
+          })
+        : undefined,
+      value.reset.speed
+        ? language.t("interface.model.speedReset", {
+            value: value.speed?.value ?? language.t("interface.model.standard"),
+          })
+        : undefined,
     ].filter((message): message is string => Boolean(message))
     if (updates.length > 0) setNotice(updates.join(" "))
     if (value.reset.effort) local.model.variant.set(value.reset.effort)
@@ -789,8 +861,24 @@ export const ModelSettingsPopover: Component<{ trigger?: "label" | "icon" }> = (
       billing: sync.data.config.billing?.llm,
     })
   }
+  const fundingLabel = (choice: ReturnType<typeof choices>[number]) => {
+    const value = funding(choice)
+    const keys = {
+      Wallet: "interface.model.wallet",
+      "Your key": "interface.model.yourKey",
+      Subscription: "interface.model.subscription",
+      Local: "interface.model.local",
+    } as const
+    return value ? language.t(keys[value]) : undefined
+  }
+  const summary = (input: { reasoning: boolean; context: number; provider: string }) =>
+    [
+      language.t(input.reasoning ? "interface.model.reasoningType" : "interface.model.generalType"),
+      language.t("interface.model.contextSize", { size: modelContext(input.context) }),
+      input.provider,
+    ].join(" · ")
   const byline = (choice: ReturnType<typeof choices>[number], facts: string) =>
-    [funding(choice), facts].filter(Boolean).join(" · ")
+    [fundingLabel(choice), facts].filter(Boolean).join(" · ")
 
   const selectChoice = (choice: ReturnType<typeof choices>[number]) => {
     const model = chosenRoute(choice)
@@ -864,7 +952,7 @@ export const ModelSettingsPopover: Component<{ trigger?: "label" | "icon" }> = (
               ? "model-settings-trigger--icon size-9 shrink-0"
               : "model-settings-trigger--label min-w-0"
           }
-          aria-label={`Model: ${control().trigger}`}
+          aria-label={language.t("interface.model.current", { name: control().trigger })}
         >
           <Show
             when={props.trigger === "icon"}
@@ -887,7 +975,7 @@ export const ModelSettingsPopover: Component<{ trigger?: "label" | "icon" }> = (
         <ModelPopoverSurface
           kind="model"
           view={view()}
-          title={view() === "models" ? "All models" : "Models"}
+          title={view() === "models" ? language.t("interface.model.all") : language.t("interface.model.models")}
           close={close}
           onBack={
             view() === "models"
@@ -897,7 +985,7 @@ export const ModelSettingsPopover: Component<{ trigger?: "label" | "icon" }> = (
                 }
               : undefined
           }
-          backLabel="Back to model shortcuts"
+          backLabel={language.t("interface.model.backShortcuts")}
           initialFocus='[data-model-quick][role="radio"][aria-checked="true"], [data-model-menu-row="model"]'
           contentRef={(element) => (refs.content = element)}
           onKeyDown={onMenuKeyDown}
@@ -909,7 +997,7 @@ export const ModelSettingsPopover: Component<{ trigger?: "label" | "icon" }> = (
                 <div
                   class="model-settings-models"
                   role="radiogroup"
-                  aria-label="Model"
+                  aria-label={language.t("interface.model.model")}
                   aria-orientation="vertical"
                   onKeyDown={focusModelRadio}
                 >
@@ -930,13 +1018,16 @@ export const ModelSettingsPopover: Component<{ trigger?: "label" | "icon" }> = (
                             data-model-quick
                             data-model-unavailable
                             class={`${row} model-settings-unavailable`}
-                            aria-label={`${model.label}, ${provider().name} not connected. Connect a provider`}
+                            aria-label={language.t("interface.model.disconnected", {
+                              model: model.label,
+                              provider: provider().name,
+                            })}
                             onClick={manage}
                           >
                             <ModelMark id={provider().id} name={provider().name} />
                             <span class="model-settings-model">
                               <strong>{model.label}</strong>
-                              <small>{`${provider().name} · Connect to use`}</small>
+                              <small>{language.t("interface.model.connect", { provider: provider().name })}</small>
                             </span>
                             <span aria-hidden="true" data-model-menu-value>
                               ›
@@ -961,7 +1052,9 @@ export const ModelSettingsPopover: Component<{ trigger?: "label" | "icon" }> = (
                           aria-checked={selected()}
                           tabindex={quickTab() === choice.key ? 0 : -1}
                           data-model-funding={funding(choice)}
-                          aria-label={[choiceName(choice), provider().name, funding(choice)].filter(Boolean).join(", ")}
+                          aria-label={[choiceName(choice), provider().name, fundingLabel(choice)]
+                            .filter(Boolean)
+                            .join(", ")}
                           class={row}
                           onFocus={() => setQuickFocus(choice.key)}
                           onClick={() => selectChoice(choice)}
@@ -970,7 +1063,10 @@ export const ModelSettingsPopover: Component<{ trigger?: "label" | "icon" }> = (
                           <span class="model-settings-model">
                             <strong>{choiceName(choice)}</strong>
                             <small>
-                              {byline(choice, `${provider().name} · ${modelContext(model.limit.context)} context`)}
+                              {byline(
+                                choice,
+                                `${provider().name} · ${language.t("interface.model.contextSize", { size: modelContext(model.limit.context) })}`,
+                              )}
                             </small>
                           </span>
                           <Show when={selected()}>
@@ -990,8 +1086,8 @@ export const ModelSettingsPopover: Component<{ trigger?: "label" | "icon" }> = (
                   onClick={choose}
                 >
                   <span class="model-settings-setting">
-                    <span data-model-menu-label>More models</span>
-                    <small>Browse models from your connected providers.</small>
+                    <span data-model-menu-label>{language.t("interface.model.more")}</span>
+                    <small>{language.t("interface.model.browse")}</small>
                   </span>
                   <span aria-hidden="true" data-model-menu-value>
                     ›
@@ -999,8 +1095,8 @@ export const ModelSettingsPopover: Component<{ trigger?: "label" | "icon" }> = (
                 </button>
                 <button type="button" data-model-menu-item class={`${row} model-settings-manage`} onClick={manage}>
                   <span class="model-settings-setting">
-                    <span data-model-menu-label>Manage models</span>
-                    <small>Choose which models appear here.</small>
+                    <span data-model-menu-label>{language.t("interface.model.manage")}</span>
+                    <small>{language.t("interface.model.chooseVisible")}</small>
                   </span>
                   <span aria-hidden="true" data-model-menu-value>
                     ›
@@ -1020,18 +1116,21 @@ export const ModelSettingsPopover: Component<{ trigger?: "label" | "icon" }> = (
                     type="search"
                     value={query()}
                     onInput={(event) => searchCatalog(event.currentTarget.value)}
-                    placeholder="Find a model or provider"
-                    aria-label="Find a model or provider"
+                    placeholder={language.t("interface.model.search")}
+                    aria-label={language.t("interface.model.search")}
                   />
                 </label>
                 <div
                   class="model-settings-catalog"
                   role="radiogroup"
-                  aria-label="Available models"
+                  aria-label={language.t("interface.model.available")}
                   aria-orientation="vertical"
                   onKeyDown={focusModelRadio}
                 >
-                  <Show when={catalogReady()} fallback={<p class="model-settings-empty">Loading models…</p>}>
+                  <Show
+                    when={catalogReady()}
+                    fallback={<p class="model-settings-empty">{language.t("interface.model.loading")}</p>}
+                  >
                     <For each={visibleGroups()}>
                       {(group) => (
                         <section class="model-settings-group" aria-label={group[0]}>
@@ -1056,7 +1155,9 @@ export const ModelSettingsPopover: Component<{ trigger?: "label" | "icon" }> = (
                                   aria-label={[
                                     choiceName(choice),
                                     provider().name,
-                                    `${modelContext(model.limit.context)} context`,
+                                    language.t("interface.model.contextSize", {
+                                      size: modelContext(model.limit.context),
+                                    }),
                                     funding(choice),
                                   ]
                                     .filter(Boolean)
@@ -1071,7 +1172,7 @@ export const ModelSettingsPopover: Component<{ trigger?: "label" | "icon" }> = (
                                     <small>
                                       {byline(
                                         choice,
-                                        modelSummary({
+                                        summary({
                                           reasoning: model.capabilities.reasoning,
                                           context: model.limit.context,
                                           provider: provider().name,
@@ -1092,14 +1193,14 @@ export const ModelSettingsPopover: Component<{ trigger?: "label" | "icon" }> = (
                     <Show when={catalog().length === 0}>
                       <p class="model-settings-empty">
                         {query().trim()
-                          ? `No models match “${query()}”.`
-                          : "No models are connected yet. Add a provider key, sign in, or connect a local model under Manage models."}
+                          ? language.t("interface.model.noMatches", { query: query() })
+                          : language.t("interface.model.empty")}
                       </p>
                     </Show>
                     <Show when={catalogLimit() < catalog().length}>
                       <div class="model-settings-catalog-progress">
                         <span>
-                          Showing {catalogLimit()} of {catalog().length}
+                          {language.t("interface.model.showing", { count: catalogLimit(), total: catalog().length })}
                         </span>
                         <button
                           type="button"
@@ -1107,7 +1208,7 @@ export const ModelSettingsPopover: Component<{ trigger?: "label" | "icon" }> = (
                             setCatalogLimit((current) => Math.min(catalog().length, current + CATALOG_CHUNK))
                           }
                         >
-                          Show more
+                          {language.t("interface.model.showMore")}
                         </button>
                       </div>
                     </Show>
@@ -1116,8 +1217,8 @@ export const ModelSettingsPopover: Component<{ trigger?: "label" | "icon" }> = (
                 <div class="model-settings-divider" />
                 <button type="button" data-model-menu-item class={`${row} model-settings-manage`} onClick={manage}>
                   <span class="model-settings-setting">
-                    <span data-model-menu-label>Manage models</span>
-                    <small>Choose which connected models appear here.</small>
+                    <span data-model-menu-label>{language.t("interface.model.manage")}</span>
+                    <small>{language.t("interface.model.chooseConnected")}</small>
                   </span>
                   <span aria-hidden="true" data-model-menu-value>
                     ›
@@ -1135,7 +1236,7 @@ export const ModelSettingsPopover: Component<{ trigger?: "label" | "icon" }> = (
         }
       >
         <ModelEffortPopover
-          value={control().effort?.value ?? "Fast"}
+          value={control().effort?.value ?? language.t("interface.model.fast")}
           current={control().effort?.current.id ?? "standard"}
           options={control().effort?.options ?? []}
           fast={fast()}

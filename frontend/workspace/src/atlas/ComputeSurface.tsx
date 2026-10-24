@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import type { Component, JSX } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import { HostStrip } from "@/atlas/HostStrip"
@@ -18,11 +19,12 @@ type ComputeSurfaceProps = {
  * configuration, lifecycle controls, or completed-history workflow.
  */
 export function ComputeSurface(props: ComputeSurfaceProps = {}): JSX.Element {
+  const language = useLanguage()
   const strip = props.strip ?? HostStrip
   const kernels = props.kernels ?? KernelPanel
 
   return (
-    <section class="activity-surface compute-surface" aria-label="Compute">
+    <section class="activity-surface compute-surface" aria-label={language.t("research.compute.title")}>
       <Dynamic component={strip} />
       <div class="compute-surface__panel" data-compute-child="kernels">
         <Dynamic component={kernels} />

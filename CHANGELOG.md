@@ -8,6 +8,8 @@ tagged release also ships native binaries for Linux, macOS, and Windows.
 
 ## Unreleased
 
+- Localize settings, project and session navigation, model controls, terminals, compute/research panels, and file/skill panels in Simplified and Traditional Chinese; keep labels reactive when switching languages.
+
 - Record failed OAuth structured-output usage once per model call, even when object validation fails after the stream ends.
 
 - Classify Ace calls as managed when a local Dashboard proxy handles them, so worker traces and logging health retain their Wallet route during local testing.

@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { createMemo, createResource, createEffect, onCleanup, Match, Show, Switch, type JSX } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useParams } from "@solidjs/router"
@@ -26,11 +27,6 @@ interface ConnectInput {
   access: FilesystemAccess
   scope: FilesystemScope
 }
-
-const accessOptions = [
-  { value: "read" as const, label: "Read only" },
-  { value: "write" as const, label: "Read & write" },
-]
 
 const errorMessage = (value: unknown) => {
   if (value instanceof Error) return value.message
@@ -62,6 +58,11 @@ async function grantAccess(request: ProjectRequest, input: ConnectInput) {
 }
 
 export function ExternalFileAccess(props: { file: ContextFile; active: boolean; onClose: () => void }): JSX.Element {
+  const language = useLanguage()
+  const accessOptions = () => [
+    { value: "read" as const, label: language.t("atlas.files.readOnly") },
+    { value: "write" as const, label: language.t("atlas.files.readWrite") },
+  ]
   const sdk = useSDK()
   const sync = useSync()
   const params = useParams()
@@ -116,39 +117,38 @@ export function ExternalFileAccess(props: { file: ContextFile; active: boolean; 
           directory={projectRoot()}
           path={props.file.path}
           sessionID={sessionID()}
-          subtitle={`Connected folder · ${fileSourceName(grant()?.path ?? requestedFolder(props.file.path))}`}
+          subtitle={language.t("atlas.files.connectedFolder", {
+            name: fileSourceName(grant()?.path ?? requestedFolder(props.file.path)),
+          })}
           active={props.active}
           writable={grant()?.access === "write"}
           onClose={props.onClose}
         />
       </Match>
       <Match when={!grant()}>
-        <div class="external-file-access" role="region" aria-label="File access required">
+        <div class="external-file-access" role="region" aria-label={language.t("atlas.files.accessRequired")}>
           <div class="external-file-access__content">
             <span class="external-file-access__icon" aria-hidden="true">
               <IconFolder size={22} strokeWidth={1.5} />
             </span>
             <div class="external-file-access__copy">
-              <h2>Connect a folder</h2>
-              <p>
-                <strong>{props.file.name}</strong> is outside this project. Choose the access OpenScience needs; the
-                folder will stay connected to this project until you remove it.
-              </p>
+              <h2>{language.t("atlas.files.connect")}</h2>
+              <p>{language.t("atlas.files.externalDescription", { name: props.file.name })}</p>
             </div>
             <Show
               when={identity()}
               fallback={
                 <p class="external-file-access__notice" role="status">
-                  Open a project before connecting an external folder.
+                  {language.t("atlas.files.openProjectFirst")}
                 </p>
               }
             >
               <label class="external-file-access__field">
-                <span>Folder access</span>
+                <span>{language.t("atlas.files.folderAccess")}</span>
                 <Select
-                  aria-label="External file access"
-                  options={accessOptions}
-                  current={accessOptions.find((option) => option.value === state.access)}
+                  aria-label={language.t("atlas.files.externalAccess")}
+                  options={accessOptions()}
+                  current={accessOptions().find((option) => option.value === state.access)}
                   value={(option) => option.value}
                   label={(option) => option.label}
                   onSelect={(option) => option && setState("access", option.value)}
@@ -156,9 +156,7 @@ export function ExternalFileAccess(props: { file: ContextFile; active: boolean; 
                   triggerVariant="settings"
                 />
                 <small>
-                  {state.access === "write"
-                    ? "OpenScience can read, create, and update files in this folder."
-                    : "OpenScience can inspect files but cannot change them."}
+                  {state.access === "write" ? language.t("atlas.files.writeNote") : language.t("atlas.files.readNote")}
                 </small>
               </label>
               <Show when={state.error ?? (snapshot.error ? errorMessage(snapshot.error) : undefined)}>
@@ -171,11 +169,11 @@ export function ExternalFileAccess(props: { file: ContextFile; active: boolean; 
             </Show>
             <div class="external-file-access__actions">
               <Button type="button" variant="ghost" size="large" onClick={props.onClose}>
-                Back to files
+                {language.t("atlas.files.back")}
               </Button>
               <Show when={identity()}>
                 <Button type="button" variant="primary" size="large" onClick={request} disabled={state.busy}>
-                  {state.busy ? "Connecting…" : "Connect folder"}
+                  {state.busy ? language.t("atlas.files.connecting") : language.t("atlas.files.connectAction")}
                 </Button>
               </Show>
             </div>

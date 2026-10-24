@@ -75,7 +75,7 @@ import { sessionUnavailable } from "@/pages/session-availability"
 import { publicContextAvailable, sanitizePublicContexts } from "@/pages/public-contexts"
 import { useExecutionAuthority } from "@/atlas/use-execution-authority"
 import { sessionEntryTarget } from "@/pages/session-entry"
-import { shouldConfirmUndo, undoPreview, undoSummary, type UndoPreview } from "@/pages/session-undo"
+import { shouldConfirmUndo, undoPreview, type UndoPreview } from "@/pages/session-undo"
 import { SessionContextUsage } from "@/components/session-context-usage"
 import { createTraceExpansion } from "@/pages/session-trace"
 import { estimate, latestContext, type ContextEstimate, type ContextSample } from "@/pages/session-context"
@@ -139,6 +139,16 @@ function writeSessionSidebarWidth(width: number) {
 }
 
 export default function Page(): JSX.Element {
+  const language = useLanguage()
+  const summary = (preview: { turns: number; files: string[] }) =>
+    language.t("pages.copy.undoSummary", {
+      turns: language.t(preview.turns === 1 ? "pages.copy.turnCount.one" : "pages.copy.turnCount.other", {
+        count: preview.turns,
+      }),
+      files: language.t(preview.files.length === 1 ? "pages.copy.fileCount.one" : "pages.copy.fileCount.other", {
+        count: preview.files.length,
+      }),
+    })
   const params = useParams()
   const location = useLocation()
   const navigate = useNavigate()
@@ -186,7 +196,7 @@ export default function Page(): JSX.Element {
     prewarmed.delete(id)
     const target = sessionTabs.close(id)
     if (params.id === id) {
-      toast.error("Session is no longer available")
+      toast.error(language.t("pages.copy.sessionUnavailable"))
       navigate(target ? `/${params.dir}/session/${target}` : `/${params.dir}/session/new`, { replace: true })
     }
     return true
@@ -259,9 +269,9 @@ export default function Page(): JSX.Element {
 
   async function deleteSession(sessionID: string) {
     const ok = await confirmDialog(dialog, {
-      title: "Delete this session?",
-      message: "This removes the conversation and its session workspace. Saved Results stay available.",
-      confirmLabel: "Delete session",
+      title: language.t("pages.copy.deleteSessionQuestion"),
+      message: language.t("pages.copy.deleteSessionHint"),
+      confirmLabel: language.t("session.delete.title"),
       danger: true,
     })
     if (!ok) return
@@ -272,14 +282,14 @@ export default function Page(): JSX.Element {
     try {
       await sync.session.delete(sessionID)
       const open = sessionTabs.close(sessionID)
-      toast.info("Session deleted")
+      toast.info(language.t("pages.copy.sessionDeleted"))
       if (active) {
         const target = open ?? next
         navigate(target ? `/${params.dir}/session/${target}` : `/${params.dir}/session/new`)
       }
     } catch (error: unknown) {
       console.error("session.delete failed", error)
-      toast.error("Could not delete session", error instanceof Error ? error.message : String(error))
+      toast.error(language.t("pages.copy.deleteSessionFailed"), error instanceof Error ? error.message : String(error))
     }
   }
 
@@ -291,14 +301,14 @@ export default function Page(): JSX.Element {
       return true
     } catch (error: unknown) {
       console.error("session.rename failed", error)
-      toast.error("Could not rename session", error instanceof Error ? error.message : String(error))
+      toast.error(language.t("pages.copy.renameSessionFailed"), error instanceof Error ? error.message : String(error))
       return false
     }
   }
 
   async function pinSession(sessionID: string, pinned: boolean) {
     await sync.session.pin(sessionID, pinned).catch((error: unknown) => {
-      toast.error("Could not update pin", error instanceof Error ? error.message : String(error))
+      toast.error(language.t("pages.copy.pinFailed"), error instanceof Error ? error.message : String(error))
     })
   }
 
@@ -309,13 +319,13 @@ export default function Page(): JSX.Element {
       await sync.session.archive(sessionID)
       await sync.session.fetch(50)
       const open = sessionTabs.close(sessionID)
-      toast.success("Session archived", "Archived sessions remain available from project search.")
+      toast.success(language.t("pages.copy.sessionArchived"), language.t("pages.copy.sessionArchivedHint"))
       if (!active) return
       const target = open ?? next
       navigate(target ? `/${params.dir}/session/${target}` : `/${params.dir}/session/new`)
     } catch (error: unknown) {
       console.error("session.archive failed", error)
-      toast.error("Could not archive session", error instanceof Error ? error.message : String(error))
+      toast.error(language.t("pages.copy.archiveSessionFailed"), error instanceof Error ? error.message : String(error))
     }
   }
 
@@ -323,10 +333,10 @@ export default function Page(): JSX.Element {
     try {
       await sdk.client.session.update({ sessionID, time: { archived: 0 } })
       await sync.session.fetch(50)
-      toast.success("Session restored")
+      toast.success(language.t("pages.copy.sessionRestored"))
     } catch (error: unknown) {
       console.error("session.restore failed", error)
-      toast.error("Could not restore session", error instanceof Error ? error.message : String(error))
+      toast.error(language.t("pages.copy.restoreSessionFailed"), error instanceof Error ? error.message : String(error))
     }
   }
 
@@ -335,14 +345,14 @@ export default function Page(): JSX.Element {
     if (!sessionID || sessionID === "new") return
     try {
       const forked = await sdk.client.session.fork({ sessionID, messageID }).then((response) => response.data)
-      if (!forked?.id) throw new Error("The new session was not returned by the server.")
+      if (!forked?.id) throw new Error(language.t("pages.copy.newSessionMissing"))
       await sync.session.fetch(1)
       sessionTabs.open(forked.id)
       navigate(`/${params.dir}/session/${forked.id}`)
-      toast.success("Session forked", "Continue independently from the selected turn.")
+      toast.success(language.t("pages.copy.sessionForked"), language.t("pages.copy.sessionForkedHint"))
     } catch (error: unknown) {
       console.error("session.fork failed", error)
-      toast.error("Could not fork session", error instanceof Error ? error.message : String(error))
+      toast.error(language.t("pages.copy.forkSessionFailed"), error instanceof Error ? error.message : String(error))
     }
   }
 
@@ -478,7 +488,7 @@ export default function Page(): JSX.Element {
       const updated = session?.time?.updated ?? 0
       return {
         id,
-        title: session?.title?.trim() || "Session",
+        title: session?.title?.trim() || language.t("session.tab.session"),
         working: Boolean(sync.data.session_status?.[id] && sync.data.session_status[id].type !== "idle"),
         dirty: sessionTabs.dirty(id),
         unread: sessionTabs.unread(id, updated),
@@ -492,7 +502,7 @@ export default function Page(): JSX.Element {
       ...tabs,
       {
         id: "new",
-        title: "New session",
+        title: language.t("command.session.new"),
         working: false,
         dirty: prompt.dirty(),
         unread: false,
@@ -658,7 +668,7 @@ export default function Page(): JSX.Element {
     const id = params.id
     if (!id || undoOperation()) return
     if (sessionBusy()) {
-      toast.info("Undo available when this response finishes")
+      toast.info(language.t("pages.copy.undoAfterResponse"))
       return
     }
     const preview = undoPreview(messages(), sync.data.part, messageID, projectPath())
@@ -666,24 +676,23 @@ export default function Page(): JSX.Element {
     try {
       if (shouldConfirmUndo(preview)) {
         const ok = await confirmDialog(dialog, {
-          title: "Undo from here?",
+          title: language.t("pages.copy.undoQuestion"),
           message: (
             <div class="session-undo-preview">
-              <p>
-                <strong>{undoSummary(preview)}</strong> will be hidden and its file changes rolled back. You can restore
-                everything until you send another message.
-              </p>
+              <p>{language.t("pages.copy.undoHint", { summary: summary(preview) })}</p>
               <Show when={preview.files.length > 0}>
-                <ul class="session-undo-preview__files" aria-label="Files that will be rolled back">
+                <ul class="session-undo-preview__files" aria-label={language.t("pages.copy.undoFiles")}>
                   <For each={preview.files.slice(0, 6)}>{(file) => <li title={file}>{file}</li>}</For>
                   <Show when={preview.files.length > 6}>
-                    <li class="session-undo-preview__more">+{preview.files.length - 6} more</li>
+                    <li class="session-undo-preview__more">
+                      {language.t("pages.copy.moreFiles", { count: preview.files.length - 6 })}
+                    </li>
                   </Show>
                 </ul>
               </Show>
             </div>
           ),
-          confirmLabel: "Undo",
+          confirmLabel: language.t("command.session.undo"),
         })
         if (!ok) return
       }
@@ -693,9 +702,9 @@ export default function Page(): JSX.Element {
         turns: result?.turns ?? preview.turns,
         files: result?.files ?? preview.files,
       }
-      toast.success("Undone", `${undoSummary(applied)} rolled back. Restore remains available below the conversation.`)
+      toast.success(language.t("pages.copy.undone"), language.t("pages.copy.undoneHint", { summary: summary(applied) }))
     } catch (error: unknown) {
-      toast.error("Undo failed", requestError(error))
+      toast.error(language.t("pages.copy.undoFailed"), requestError(error))
     } finally {
       setUndoOperation(undefined)
     }
@@ -705,15 +714,18 @@ export default function Page(): JSX.Element {
     const id = params.id
     if (!id || undoOperation()) return
     if (sessionBusy()) {
-      toast.info("Restore available when this response finishes")
+      toast.info(language.t("pages.copy.restoreAfterResponse"))
       return
     }
     setUndoOperation({ type: "restore" })
     try {
       await sync.session.unrevert(id)
-      toast.success("Undo restored", `${undoSummary(revertedPreview())} restored.`)
+      toast.success(
+        language.t("pages.copy.undoRestored"),
+        language.t("pages.copy.restoredHint", { summary: summary(revertedPreview()) }),
+      )
     } catch (error: unknown) {
-      toast.error("Restore failed", requestError(error))
+      toast.error(language.t("pages.copy.restoreFailed"), requestError(error))
     } finally {
       setUndoOperation(undefined)
     }
@@ -724,7 +736,6 @@ export default function Page(): JSX.Element {
   // /redo slash) so undo works again. Undo reverts the last turn; redo restores
   // a pending revert until the next message makes it permanent.
   const commands = useCommand()
-  const language = useLanguage()
   const showTerminal = () => {
     if (uiStore.context() === "terminal" && uiStore.open()) return
     openContext("terminal")
@@ -745,7 +756,7 @@ export default function Page(): JSX.Element {
     }
     void sdk.client.session.command(request).catch((error: unknown) => {
       console.error(`${name} failed`, error)
-      toast.error(`Could not run /${name}`, requestError(error))
+      toast.error(language.t("pages.copy.commandFailed", { name }), requestError(error))
     })
   }
   commands.register(() => {
@@ -754,57 +765,57 @@ export default function Page(): JSX.Element {
     list.push(
       {
         id: "session.new",
-        title: "New session",
-        description: "Start a new research conversation",
-        category: "Session",
+        title: language.t("command.session.new"),
+        description: language.t("pages.copy.newSessionHint"),
+        category: language.t("session.tab.session"),
         onSelect: newSession,
       },
       {
         id: "project.files",
-        title: "Open project files",
-        description: "Browse, preview, and edit files in this project",
-        category: "Project",
+        title: language.t("pages.copy.openProjectFiles"),
+        description: language.t("pages.copy.openProjectFilesHint"),
+        category: language.t("command.category.project"),
         onSelect: () => openContext("files"),
       },
       {
         id: "project.compute",
-        title: "Open project compute",
-        description: "View local executions, live runtimes, and remote jobs",
-        category: "Project",
+        title: language.t("pages.copy.openProjectCompute"),
+        description: language.t("pages.copy.openProjectComputeHint"),
+        category: language.t("command.category.project"),
         onSelect: () => openContext("kernels"),
       },
       {
         id: "project.autoresearch",
-        title: "Open project autoresearch",
-        description: "Studies that hill-climb a metric, with their runs and charts",
-        category: "Project",
+        title: language.t("pages.copy.openProjectAutoresearch"),
+        description: language.t("pages.copy.openProjectAutoresearchHint"),
+        category: language.t("command.category.project"),
         onSelect: () => openContext("autoresearch"),
       },
       {
         id: "settings.open",
-        title: "Open settings",
-        description: "Configure models, capabilities, runtime, and the app",
-        category: "Application",
+        title: language.t("command.settings.open"),
+        description: language.t("pages.copy.openSettingsHint"),
+        category: language.t("pages.copy.application"),
         onSelect: () => dialog.show(() => <DialogSettings />),
       },
       {
         id: "project.home",
-        title: "Back to projects",
-        description: "Return to the projects home",
-        category: "Navigation",
+        title: language.t("pages.copy.backProjectsLower"),
+        description: language.t("pages.copy.backProjectsHint"),
+        category: language.t("settings.shortcuts.group.navigation"),
         onSelect: () => navigate("/"),
       },
       {
         id: "documentation.open",
-        title: "Open documentation",
-        description: "Read the OpenScience documentation",
-        category: "Help",
+        title: language.t("pages.copy.openDocs"),
+        description: language.t("pages.copy.openDocsHint"),
+        category: language.t("sidebar.help"),
         onSelect: () => platform.openLink(URLS.docs),
       },
       {
         id: "terminal.toggle",
         title: language.t("command.terminal.toggle"),
-        description: "Open or close the project terminal",
+        description: language.t("pages.copy.terminalToggleHint"),
         category: language.t("command.category.terminal"),
         keybind: "ctrl+`",
         onSelect: () => openContext("terminal"),
@@ -819,7 +830,10 @@ export default function Page(): JSX.Element {
         onSelect: () => {
           showTerminal()
           void terminal.new().catch((cause: unknown) => {
-            toast.error("Could not start terminal", cause instanceof Error ? cause.message : String(cause))
+            toast.error(
+              language.t("pages.copy.terminalStartFailed"),
+              cause instanceof Error ? cause.message : String(cause),
+            )
           })
         },
       },
@@ -855,10 +869,10 @@ export default function Page(): JSX.Element {
       onSelect: () => sessionCommand(id, name),
     })
     list.push(
-      action("stop", "Stop active work", "Stop the active response in this session"),
-      action("compact", "Compact conversation", "Summarize the conversation so far to free up context"),
-      action("handoff", "Write handoff & compact", "Save a resumable handoff.md for another agent, then compact"),
-      action("checkpoint", "Save checkpoint", "Capture a local recovery packet from the session state"),
+      action("stop", language.t("pages.copy.stopWork"), language.t("pages.copy.stopWorkHint")),
+      action("compact", language.t("pages.copy.compactConversation"), language.t("pages.copy.compactConversationHint")),
+      action("handoff", language.t("pages.copy.handoffCompact"), language.t("pages.copy.handoffCompactHint")),
+      action("checkpoint", language.t("pages.copy.checkpoint"), language.t("pages.copy.checkpointHint")),
     )
     return list
   })
@@ -868,8 +882,8 @@ export default function Page(): JSX.Element {
   // The center belongs to the conversation for the lifetime of the route.
   // Files and other research surfaces mount only in the right context pane.
   const chatTitle = createMemo(() => {
-    if (!params.id || params.id === "new") return "New session"
-    return activeSession()?.title?.trim() || "Session"
+    if (!params.id || params.id === "new") return language.t("command.session.new")
+    return activeSession()?.title?.trim() || language.t("session.tab.session")
   })
   // Chat scroll: stick to the bottom while the agent streams; detach the
   // moment the user scrolls up (a "jump to latest" button re-attaches).
@@ -953,7 +967,7 @@ export default function Page(): JSX.Element {
         requestAnimationFrame(restore)
       })
     } catch (error: unknown) {
-      toast.error("Could not load earlier messages", error instanceof Error ? error.message : String(error))
+      toast.error(language.t("pages.copy.loadEarlierFailed"), error instanceof Error ? error.message : String(error))
     } finally {
       setHistoryLoading(false)
     }
@@ -1085,7 +1099,7 @@ export default function Page(): JSX.Element {
           <button
             type="button"
             class="session-sidebar-backdrop"
-            aria-label="Close sessions"
+            aria-label={language.t("pages.copy.closeSessions")}
             onClick={() => setMobileSessionsOpen(false)}
           />
         </Show>
@@ -1195,7 +1209,7 @@ export default function Page(): JSX.Element {
               role="tabpanel"
               aria-labelledby={sessionTabID(params.id ?? "new")}
               data-component="conversation-center"
-              aria-label="Conversation"
+              aria-label={language.t("pages.copy.conversation")}
               style={{
                 display: "flex",
                 flex: 1,
@@ -1207,13 +1221,13 @@ export default function Page(): JSX.Element {
               <Switch>
                 <Match when={params.id === undefined}>
                   <div class="session-empty" role="status" aria-live="polite">
-                    <AtomLoader size={180} caption="Opening your last session" />
+                    <AtomLoader size={180} caption={language.t("pages.copy.openingLastSession")} />
                   </div>
                 </Match>
                 <Match when={params.id && messages().length === 0 && loadFailure()?.id === params.id}>
                   <div class="session-empty" role="alert">
                     <div class="session-empty__inner">
-                      <h2 class="session-empty__title">This conversation didn't load</h2>
+                      <h2 class="session-empty__title">{language.t("pages.copy.conversationLoadFailed")}</h2>
                       <p class="session-empty__hint">{loadFailure()?.message}</p>
                       <div class="session-empty__starters">
                         <button
@@ -1229,30 +1243,28 @@ export default function Page(): JSX.Element {
                             })
                           }}
                         >
-                          Try again
+                          {language.t("pages.copy.tryAgain")}
                         </button>
                       </div>
                     </div>
                   </div>
                 </Match>
                 <Match when={params.id && messages().length === 0 && activeSession()?.parentID}>
-                  <div class="session-empty" role="region" aria-label="Worker session">
+                  <div class="session-empty" role="region" aria-label={language.t("pages.copy.workerSession")}>
                     <div class="session-empty__inner">
-                      <h2 class="session-empty__title">Waiting for the lead's brief</h2>
-                      <p class="session-empty__hint">
-                        This worker starts when its lead delegates a task. Its work and handoff will appear here.
-                      </p>
+                      <h2 class="session-empty__title">{language.t("pages.copy.workerWaiting")}</h2>
+                      <p class="session-empty__hint">{language.t("pages.copy.workerWaitingHint")}</p>
                     </div>
                   </div>
                 </Match>
                 <Match when={params.id && messages().length === 0 && opening() === params.id}>
                   <div class="session-empty" role="status" aria-live="polite">
-                    <AtomLoader size={180} caption="Opening session" />
+                    <AtomLoader size={180} caption={language.t("pages.copy.openingSession")} />
                   </div>
                 </Match>
                 <Match when={params.id && messages().length === 0}>
                   {/* A new session opens on the composer alone. */}
-                  <div class="session-empty" role="region" aria-label="Start a session" />
+                  <div class="session-empty" role="region" aria-label={language.t("pages.copy.startSession")} />
                 </Match>
                 <Match when={params.id && messages().length > 0}>
                   {/* Scoped to just the scroll area (not the revert banner / Composer
@@ -1308,7 +1320,9 @@ export default function Page(): JSX.Element {
                             <Show when={historyLoading()} fallback={<IconChevronDown size={12} strokeWidth={1.5} />}>
                               <AsciiSpinner size={10} />
                             </Show>
-                            {historyLoading() ? "Loading earlier messages…" : "Load earlier messages"}
+                            {historyLoading()
+                              ? language.t("session.messages.loadingEarlier")
+                              : language.t("session.messages.loadEarlier")}
                           </button>
                         </div>
                       </Show>
@@ -1322,31 +1336,35 @@ export default function Page(): JSX.Element {
                               <div class="min-w-0 flex-1">
                                 <div class="text-[10px] tracking-[0.04em] text-text-weaker">
                                   {assignment()?.phase
-                                    ? `${assignment()!.phase.charAt(0).toUpperCase()}${assignment()!.phase.slice(1)} agent`
-                                    : "Delegated agent"}
+                                    ? language.t("pages.copy.namedAgent", {
+                                        name: `${assignment()!.phase.charAt(0).toUpperCase()}${assignment()!.phase.slice(1)}`,
+                                      })
+                                    : language.t("pages.copy.delegatedAgent")}
                                 </div>
                                 <div class="truncate text-xs font-medium text-text-base">
-                                  {assignment()?.description || activeSession()?.title?.trim() || "Research task"}
+                                  {assignment()?.description ||
+                                    activeSession()?.title?.trim() ||
+                                    language.t("pages.copy.researchTask")}
                                 </div>
                               </div>
                               <div
                                 class="flex items-center gap-1"
                                 role="navigation"
-                                aria-label="Delegated agent sessions"
+                                aria-label={language.t("pages.copy.delegatedSessions")}
                               >
                                 <button
                                   type="button"
                                   class="h-7 px-2 flex items-center gap-1 rounded-md text-xs text-text-weak hover:text-text-base hover:bg-surface-base-hover transition-colors"
-                                  aria-label="Back to parent session"
+                                  aria-label={language.t("pages.copy.parentSession")}
                                   onClick={() => navigate(`/${params.dir}/session/${activeSession()!.parentID}`)}
                                 >
                                   <IconChevronLeft size={12} strokeWidth={1.5} />
-                                  Parent
+                                  {language.t("pages.copy.parent")}
                                 </button>
                                 <button
                                   type="button"
                                   class="size-7 flex items-center justify-center rounded-md text-text-weak hover:text-text-base hover:bg-surface-base-hover transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                                  aria-label="Previous delegated agent"
+                                  aria-label={language.t("pages.copy.previousAgent")}
                                   disabled={!previousChild()}
                                   onClick={() => navigate(`/${params.dir}/session/${previousChild()!.id}`)}
                                 >
@@ -1358,7 +1376,7 @@ export default function Page(): JSX.Element {
                                 <button
                                   type="button"
                                   class="size-7 flex items-center justify-center rounded-md text-text-weak hover:text-text-base hover:bg-surface-base-hover transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                                  aria-label="Next delegated agent"
+                                  aria-label={language.t("pages.copy.nextAgent")}
                                   disabled={!nextChild()}
                                   onClick={() => navigate(`/${params.dir}/session/${nextChild()!.id}`)}
                                 >
@@ -1410,7 +1428,7 @@ export default function Page(): JSX.Element {
                                       }}
                                     >
                                       <AsciiSpinner size={10} />
-                                      <span>Compacting conversation…</span>
+                                      <span>{language.t("pages.copy.compacting")}</span>
                                     </div>
                                   </Show>
                                 }
@@ -1427,7 +1445,11 @@ export default function Page(): JSX.Element {
                                     container: "w-full px-4 md:px-5",
                                   }}
                                 />
-                                <div class="session-turn-actions" role="group" aria-label="Turn actions">
+                                <div
+                                  class="session-turn-actions"
+                                  role="group"
+                                  aria-label={language.t("pages.copy.turnActions")}
+                                >
                                   <Show when={!revertInfo()}>
                                     <button
                                       type="button"
@@ -1435,8 +1457,8 @@ export default function Page(): JSX.Element {
                                       disabled={Boolean(undoOperation()) || sessionBusy()}
                                       aria-busy={undoing(message.id)}
                                       onClick={() => void revertTo(message.id)}
-                                      aria-label="Undo conversation from this turn"
-                                      title="Undo from here"
+                                      aria-label={language.t("pages.copy.undoTurn")}
+                                      title={language.t("pages.copy.undoHere")}
                                     >
                                       <Show
                                         when={undoing(message.id)}
@@ -1444,18 +1466,18 @@ export default function Page(): JSX.Element {
                                       >
                                         <AsciiSpinner size={10} />
                                       </Show>
-                                      Undo
+                                      {language.t("command.session.undo")}
                                     </button>
                                   </Show>
                                   <button
                                     type="button"
                                     class="session-turn-action"
                                     onClick={() => void forkSession(nextTurnID(message.id))}
-                                    aria-label="Fork session from this turn"
-                                    title="Fork from here"
+                                    aria-label={language.t("pages.copy.forkTurn")}
+                                    title={language.t("pages.copy.forkHere")}
                                   >
                                     <IconSplit size={12} strokeWidth={1.5} />
-                                    Fork
+                                    {language.t("pages.copy.fork")}
                                   </button>
                                 </div>
                               </Show>
@@ -1473,9 +1495,14 @@ export default function Page(): JSX.Element {
 
                     <div class="session-jump-latest-rail" aria-live="polite">
                       <Show when={chatScroll.userScrolled()}>
-                        <button type="button" class="session-jump-latest" onClick={followLatest} title="Jump to latest">
+                        <button
+                          type="button"
+                          class="session-jump-latest"
+                          onClick={followLatest}
+                          title={language.t("session.messages.jumpToLatest")}
+                        >
                           <IconChevronDown size={12} strokeWidth={1.5} />
-                          Jump to latest
+                          {language.t("session.messages.jumpToLatest")}
                         </button>
                       </Show>
                     </div>
@@ -1495,8 +1522,7 @@ export default function Page(): JSX.Element {
                   <Show when={revertInfo()}>
                     <div class="session-undo-bar" role="status" aria-live="polite">
                       <span class="session-undo-bar__copy">
-                        <strong>{undoSummary(revertedPreview())} undone.</strong> Restore it now, or send a message to
-                        keep this version.
+                        {language.t("pages.copy.undoneBar", { summary: summary(revertedPreview()) })}
                       </span>
                       <button
                         type="button"
@@ -1511,7 +1537,7 @@ export default function Page(): JSX.Element {
                         >
                           <AsciiSpinner size={10} />
                         </Show>
-                        Restore
+                        {language.t("pages.copy.restore")}
                       </button>
                     </div>
                   </Show>
@@ -1521,12 +1547,12 @@ export default function Page(): JSX.Element {
                     when={!activeSession()?.parentID}
                     fallback={
                       <div class="session-worker-readonly" role="note">
-                        <span>This is a worker session. It takes instructions from its lead, not from the chat.</span>
+                        <span>{language.t("pages.copy.workerReadonly")}</span>
                         <button
                           type="button"
                           onClick={() => navigate(`/${params.dir}/session/${activeSession()!.parentID}`)}
                         >
-                          Message the lead
+                          {language.t("pages.copy.messageLead")}
                         </button>
                       </div>
                     }
@@ -1553,10 +1579,11 @@ function CompactionBoundary(props: {
   summary?: string
   onOpenFile: (path: string) => void
 }): JSX.Element {
+  const language = useLanguage()
   const detail = () => {
-    if (props.part?.trigger === "overflow") return "Recovered from a full context window"
-    if (props.part?.auto || props.part?.trigger === "proactive") return "Automatic context handoff"
-    return "Manual context handoff"
+    if (props.part?.trigger === "overflow") return language.t("pages.copy.contextRecovered")
+    if (props.part?.auto || props.part?.trigger === "proactive") return language.t("pages.copy.automaticHandoff")
+    return language.t("pages.copy.manualHandoff")
   }
 
   return (
@@ -1564,7 +1591,7 @@ function CompactionBoundary(props: {
       <summary>
         <span class="session-compaction__rule" aria-hidden="true" />
         <span class="session-compaction__label">
-          Context compacted
+          {language.t("pages.copy.contextCompacted")}
           <span>{detail()}</span>
         </span>
         <IconChevronDown size={12} strokeWidth={1.5} />
@@ -1574,15 +1601,15 @@ function CompactionBoundary(props: {
         <Show when={props.part?.focus}>
           {(focus) => (
             <div>
-              <strong>Focus</strong>
+              <strong>{language.t("pages.copy.focus")}</strong>
               <p>{focus()}</p>
             </div>
           )}
         </Show>
-        <Show when={props.summary} fallback={<p>The next turn continues from a compact context handoff.</p>}>
+        <Show when={props.summary} fallback={<p>{language.t("pages.copy.compactHandoffHint")}</p>}>
           {(summary) => (
             <div>
-              <strong>Handoff</strong>
+              <strong>{language.t("pages.copy.handoff")}</strong>
               <pre>{summary()}</pre>
             </div>
           )}
@@ -1590,7 +1617,7 @@ function CompactionBoundary(props: {
         <Show when={props.part?.handoffFile}>
           {(path) => (
             <button type="button" class="session-compaction__file" onClick={() => props.onOpenFile(path())}>
-              Open {path()}
+              {language.t("pages.copy.openNamed", { name: path() })}
             </button>
           )}
         </Show>
@@ -1612,22 +1639,23 @@ function Header(props: {
   onToggleSessions: () => void
   context?: ContextSample
 }): JSX.Element {
+  const language = useLanguage()
   return (
     <AppHeader class="workspace-header">
       <button
         type="button"
         class="session-sidebar-toggle workspace-header__sessions"
         onClick={props.onToggleSessions}
-        title="Show sessions"
-        aria-label="Show sessions"
+        title={language.t("pages.copy.showSessions")}
+        aria-label={language.t("pages.copy.showSessions")}
       >
         <IconMessageSquare size={12} strokeWidth={1.5} />
       </button>
       <button
         class="workspace-header__back"
         onClick={props.onBack}
-        title="Back to projects"
-        aria-label="Back to projects"
+        title={language.t("pages.copy.backProjectsLower")}
+        aria-label={language.t("pages.copy.backProjectsLower")}
       >
         <IconChevronLeft size={14} strokeWidth={1.5} />
       </button>
@@ -1674,6 +1702,7 @@ function SessionsSidebar(props: {
   onRename: (id: string, title: string) => void
   onPin: (id: string, pinned: boolean) => void
 }): JSX.Element {
+  const language = useLanguage()
   const compact = createMediaQuery("(max-width: 719px)")
   const mobileHidden = () => compact() && !props.mobileOpen
   let sidebar: HTMLElement | undefined
@@ -1721,7 +1750,7 @@ function SessionsSidebar(props: {
       class="atlas-scroll session-sidebar"
       data-mobile-open={props.mobileOpen ? "true" : "false"}
       data-collapsed={props.collapsed ? "true" : "false"}
-      aria-label="Research sessions"
+      aria-label={language.t("pages.copy.researchSessions")}
       aria-hidden={mobileHidden() ? "true" : undefined}
       aria-modal={compact() && props.mobileOpen ? "true" : undefined}
       role={compact() && props.mobileOpen ? "dialog" : undefined}
@@ -1735,8 +1764,8 @@ function SessionsSidebar(props: {
         <button
           type="button"
           class="session-sidebar__project"
-          aria-label="Back to projects"
-          data-tooltip="Projects"
+          aria-label={language.t("pages.copy.backProjectsLower")}
+          data-tooltip={language.t("pages.copy.projects")}
           onClick={props.onBack}
         >
           <IconHome size={16} strokeWidth={1.5} />
@@ -1746,11 +1775,21 @@ function SessionsSidebar(props: {
           type="button"
           class="session-sidebar__collapse"
           aria-label={
-            compact() ? "Close sessions" : props.collapsed ? "Expand sessions sidebar" : "Collapse sessions sidebar"
+            compact()
+              ? language.t("pages.copy.closeSessions")
+              : props.collapsed
+                ? language.t("pages.copy.expandSessions")
+                : language.t("pages.copy.collapseSessions")
           }
           aria-controls="session-sidebar"
           aria-expanded={compact() ? props.mobileOpen : !props.collapsed}
-          data-tooltip={compact() ? "Close sessions" : props.collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          data-tooltip={
+            compact()
+              ? language.t("pages.copy.closeSessions")
+              : props.collapsed
+                ? language.t("pages.copy.expandSidebar")
+                : language.t("pages.copy.collapseSidebar")
+          }
           onClick={() => (compact() ? props.onCloseMobile() : props.onCollapse())}
         >
           <Show
@@ -1766,13 +1805,13 @@ function SessionsSidebar(props: {
         </button>
       </div>
 
-      <nav class="session-sidebar__actions" aria-label="Research navigation">
+      <nav class="session-sidebar__actions" aria-label={language.t("pages.copy.researchNavigation")}>
         <div class="session-sidebar__action-list session-sidebar__primary-actions">
           <SidebarAction
             class="session-sidebar__new"
-            label={props.creating ? "Creating…" : "New"}
-            detail="Start a session"
-            ariaLabel="New research"
+            label={props.creating ? language.t("pages.copy.creating") : language.t("pages.copy.new")}
+            detail={language.t("pages.copy.startSession")}
+            ariaLabel={language.t("pages.copy.newResearch")}
             shortcut="⌘N"
             disabled={props.creating}
             onClick={props.onNew}
@@ -1780,18 +1819,18 @@ function SessionsSidebar(props: {
             <IconPlus size={16} strokeWidth={1.5} />
           </SidebarAction>
           <SidebarAction
-            label="Search"
-            detail="Files, messages, and actions"
-            ariaLabel="Search this project"
+            label={language.t("common.search.placeholder")}
+            detail={language.t("pages.copy.searchProjectHint")}
+            ariaLabel={language.t("pages.copy.searchProject")}
             shortcut="⌘K"
             onClick={props.onSearch}
           >
             <IconSearch size={16} strokeWidth={1.5} />
           </SidebarAction>
           <SidebarAction
-            label="Customize"
-            detail="Open settings"
-            ariaLabel="Customize OpenScience"
+            label={language.t("pages.copy.customize")}
+            detail={language.t("command.settings.open")}
+            ariaLabel={language.t("pages.copy.customizeApp")}
             onClick={props.onCustomize}
           >
             <IconSettings size={16} strokeWidth={1.5} />
@@ -1807,8 +1846,8 @@ function SessionsSidebar(props: {
           owner={props.dirParam}
           controls="session-sidebar"
           class="session-sidebar__resize"
-          label="Resize sessions sidebar"
-          title="Drag or use arrow keys to resize. Shift resizes faster. Home/End sets the minimum/maximum. Double-click to reset sidebar width. Escape cancels a drag."
+          label={language.t("pages.copy.resizeSessions")}
+          title={language.t("pages.copy.resizeSessionsHint")}
           edge="right"
           disabled={props.collapsed || compact()}
           min={SIDEBAR_WIDTH.min}
@@ -1821,7 +1860,7 @@ function SessionsSidebar(props: {
       </Show>
 
       <div class="session-sidebar__label" id="session-sidebar-sessions">
-        Sessions
+        {language.t("pages.copy.sessions")}
       </div>
 
       <nav class="session-sidebar__list" aria-labelledby="session-sidebar-sessions">
@@ -1840,14 +1879,14 @@ function SessionsSidebar(props: {
           )}
         </For>
         <Show when={props.sessions.length === 0}>
-          <div class="session-sidebar__empty">No sessions yet.</div>
+          <div class="session-sidebar__empty">{language.t("pages.copy.noSessions")}</div>
         </Show>
       </nav>
       <Show when={props.archivedSessions.length > 0}>
         <details class="session-sidebar__archived">
           <summary>
             <IconArchive size={12} strokeWidth={1.5} />
-            Archived
+            {language.t("pages.copy.archived")}
             <span>{props.archivedSessions.length}</span>
             <IconChevronDown size={12} strokeWidth={1.5} />
           </summary>
@@ -1855,9 +1894,11 @@ function SessionsSidebar(props: {
             <For each={props.archivedSessions}>
               {(session) => (
                 <div class="session-sidebar__archived-row">
-                  <span title={session.title || "Session"}>{session.title || "Session"}</span>
+                  <span title={session.title || language.t("session.tab.session")}>
+                    {session.title || language.t("session.tab.session")}
+                  </span>
                   <button type="button" onClick={() => props.onRestore(session.id)}>
-                    Restore
+                    {language.t("pages.copy.restore")}
                   </button>
                 </div>
               )}
@@ -1870,6 +1911,7 @@ function SessionsSidebar(props: {
 }
 
 function ProjectTrustControl(): JSX.Element {
+  const language = useLanguage()
   const authority = useExecutionAuthority("shell")
   const dialog = useDialog()
 
@@ -1877,16 +1919,16 @@ function ProjectTrustControl(): JSX.Element {
     const root = authority.decision()?.remediation?.body.root
     if (!root || authority.trusting()) return
     const confirmed = await confirmDialog(dialog, {
-      title: "Trust this project?",
-      message: `Allow project code under ${root} to run using the current execution policy. If sandboxing is off or unavailable and fallback permits it, code may run with your user authority. Review Settings → Sandbox first.`,
-      confirmLabel: "Trust project",
+      title: language.t("pages.copy.trustQuestion"),
+      message: language.t("pages.copy.trustHint", { root }),
+      confirmLabel: language.t("pages.copy.trustProject"),
     })
     if (!confirmed) return
     try {
       await authority.trust()
-      toast.success("Project trusted", "Project code can now run under the current execution policy.")
+      toast.success(language.t("pages.copy.projectTrusted"), language.t("pages.copy.projectTrustedHint"))
     } catch (error) {
-      toast.error("Could not trust project", error instanceof Error ? error.message : String(error))
+      toast.error(language.t("pages.copy.trustProjectFailed"), error instanceof Error ? error.message : String(error))
     }
   }
 
@@ -1894,9 +1936,9 @@ function ProjectTrustControl(): JSX.Element {
     <Show when={authority.canTrust()}>
       <SidebarAction
         class="session-sidebar__trust"
-        label={authority.trusting() ? "Trusting…" : "Trust project"}
-        detail="Allow project code"
-        ariaLabel="Trust this project to run project code"
+        label={authority.trusting() ? language.t("pages.copy.trusting") : language.t("pages.copy.trustProject")}
+        detail={language.t("pages.copy.allowProjectCode")}
+        ariaLabel={language.t("pages.copy.trustProjectAria")}
         disabled={authority.trusting()}
         onClick={() => void trust()}
       >
@@ -1916,6 +1958,7 @@ function SessionRow(props: {
   onRename: (title: string) => void
   onPin: (pinned: boolean) => void
 }): JSX.Element {
+  const language = useLanguage()
   const [hover, setHover] = createSignal(false)
   const [menu, setMenu] = createSignal(false)
   const [editing, setEditing] = createSignal(false)
@@ -1964,7 +2007,7 @@ function SessionRow(props: {
             type="button"
             class="session-sidebar__session-main"
             aria-current={props.active ? "page" : undefined}
-            aria-label={props.session.title || "Session"}
+            aria-label={props.session.title || language.t("session.tab.session")}
             data-session-id={props.session.id}
             onPointerEnter={props.onWarm}
             onFocus={props.onWarm}
@@ -1986,8 +2029,8 @@ function SessionRow(props: {
                 <IconPinFilled size={10} strokeWidth={1.5} />
               </Show>
             </span>
-            <span class="session-sidebar__session-title" title="Double-click to rename">
-              {props.session.title || "Session"}
+            <span class="session-sidebar__session-title" title={language.t("pages.copy.renameDoubleClick")}>
+              {props.session.title || language.t("session.tab.session")}
             </span>
           </button>
         }
@@ -2000,7 +2043,7 @@ function SessionRow(props: {
             })
           }
           class="session-sidebar__session-input"
-          aria-label="Rename session"
+          aria-label={language.t("pages.copy.renameSession")}
           value={draft()}
           onInput={(e) => setDraft(e.currentTarget.value)}
           onKeyDown={(e) => {
@@ -2025,8 +2068,10 @@ function SessionRow(props: {
         <DropdownMenu onOpenChange={setMenu}>
           <DropdownMenu.Trigger
             class="session-sidebar__session-menu-button"
-            title="Session actions"
-            aria-label={`Session actions for ${props.session.title || "Session"}`}
+            title={language.t("pages.copy.sessionActions")}
+            aria-label={language.t("pages.copy.sessionActionsNamed", {
+              name: props.session.title || language.t("session.tab.session"),
+            })}
             tabindex={props.active || hover() || menu() ? 0 : -1}
           >
             <IconMoreH size={12} strokeWidth={1.5} />
@@ -2037,19 +2082,21 @@ function SessionRow(props: {
                 <Show when={props.session.time?.pinned} fallback={<IconPin size={12} strokeWidth={1.5} />}>
                   <IconPinFilled size={12} strokeWidth={1.5} />
                 </Show>
-                <DropdownMenu.ItemLabel>{props.session.time?.pinned ? "Unpin" : "Pin"}</DropdownMenu.ItemLabel>
+                <DropdownMenu.ItemLabel>
+                  {props.session.time?.pinned ? language.t("pages.copy.unpin") : language.t("pages.copy.pin")}
+                </DropdownMenu.ItemLabel>
               </DropdownMenu.Item>
               <DropdownMenu.Item onSelect={startEdit}>
-                <DropdownMenu.ItemLabel>Rename</DropdownMenu.ItemLabel>
+                <DropdownMenu.ItemLabel>{language.t("common.rename")}</DropdownMenu.ItemLabel>
               </DropdownMenu.Item>
               <DropdownMenu.Item onSelect={props.onArchive}>
                 <IconArchive size={12} strokeWidth={1.5} />
-                <DropdownMenu.ItemLabel>Archive</DropdownMenu.ItemLabel>
+                <DropdownMenu.ItemLabel>{language.t("common.archive")}</DropdownMenu.ItemLabel>
               </DropdownMenu.Item>
               <DropdownMenu.Separator />
               <DropdownMenu.Item class="session-sidebar__session-menu-danger" onSelect={props.onDelete}>
                 <IconTrash size={12} strokeWidth={1.5} />
-                <DropdownMenu.ItemLabel>Delete</DropdownMenu.ItemLabel>
+                <DropdownMenu.ItemLabel>{language.t("common.delete")}</DropdownMenu.ItemLabel>
               </DropdownMenu.Item>
             </DropdownMenu.Content>
           </DropdownMenu.Portal>

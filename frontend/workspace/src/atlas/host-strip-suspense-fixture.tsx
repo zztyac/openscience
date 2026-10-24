@@ -1,3 +1,4 @@
+import { TestLanguage } from "../../test/language"
 import { Suspense, type JSX } from "solid-js"
 import { render } from "solid-js/web"
 import { HostStrip } from "@/atlas/HostStrip"
@@ -19,9 +20,11 @@ export function mountHostStripInSuspense(
 ): () => void {
   return render(
     () => (
-      <Suspense fallback={fallback()}>
-        <HostStrip request={request} />
-      </Suspense>
+      <TestLanguage>
+        <Suspense fallback={fallback()}>
+          <HostStrip request={request} />
+        </Suspense>
+      </TestLanguage>
     ),
     host,
   )

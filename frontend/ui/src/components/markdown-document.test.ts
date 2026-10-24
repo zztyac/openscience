@@ -23,6 +23,9 @@ const marked = (await vite.ssrLoadModule("@synsci/ui/context/marked")) as typeof
 const subject = (await vite.ssrLoadModule(
   "/src/atlas/MarkdownDocument.tsx",
 )) as typeof import("../../../workspace/src/atlas/MarkdownDocument")
+const { TestLanguage } = (await vite.ssrLoadModule(
+  "/test/language.tsx",
+)) as typeof import("../../../workspace/test/language")
 const cleanups: Array<() => void> = []
 const settle = () => new Promise((resolve) => setTimeout(resolve, 20))
 const ready = async (check: () => boolean) => {
@@ -37,7 +40,11 @@ const mount = (props: Parameters<typeof subject.MarkdownDocument>[0]) => {
       () =>
         marked.MarkedProvider({
           get children() {
-            return subject.MarkdownDocument(props)
+            return web.createComponent(TestLanguage, {
+              get children() {
+                return subject.MarkdownDocument(props)
+              },
+            })
           },
         }),
       host,

@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { For, Match, Show, Switch, onCleanup, onMount, type JSX } from "solid-js"
 import { createStore } from "solid-js/store"
 import { DateTime } from "luxon"
@@ -43,6 +44,7 @@ export function ProjectsWorkbench(props: {
   onSettings: () => void
   onServer: () => void
 }): JSX.Element {
+  const language = useLanguage()
   const recent = () => props.state === "recent"
   const [clock, setClock] = createStore({ now: Date.now() })
   onMount(() => {
@@ -63,16 +65,23 @@ export function ProjectsWorkbench(props: {
 
   const countLabel = () => {
     const total = props.totalProjects
-    const noun = total === 1 ? "project" : "projects"
-    if (props.query.trim()) return `${props.projects.length} of ${total} ${noun}`
-    return `${total} ${noun}`
+    if (props.query.trim())
+      return language.t(total === 1 ? "pages.copy.projectFiltered.one" : "pages.copy.projectFiltered.other", {
+        matches: props.projects.length,
+        count: total,
+      })
+    return language.t(total === 1 ? "pages.copy.projectCount.one" : "pages.copy.projectCount.other", { count: total })
   }
 
   const activityLabel = (project: HomeProject) => {
     const relative =
-      DateTime.fromMillis(project.updatedAt).toRelative({ base: DateTime.fromMillis(clock.now) }) ?? "recently"
-    const label = (project.time.activity ?? 0) > project.time.created ? "Active" : "Created"
-    return `${label} ${relative}`
+      DateTime.fromMillis(project.updatedAt)
+        .setLocale(language.locale() === "zht" ? "zh-TW" : language.locale())
+        .toRelative({ base: DateTime.fromMillis(clock.now) }) ?? language.t("pages.copy.recently")
+    return language.t(
+      (project.time.activity ?? 0) > project.time.created ? "pages.copy.activity" : "pages.copy.created",
+      { time: relative },
+    )
   }
 
   return (
@@ -87,14 +96,19 @@ export function ProjectsWorkbench(props: {
             class="science-home__server"
             type="button"
             aria-label={props.serverName}
-            title={`Server · ${props.serverName}`}
+            title={language.t("pages.copy.server", { name: props.serverName })}
             onClick={props.onServer}
           >
             <span class="science-home__server-dot" data-status={props.serverStatus} aria-hidden="true" />
             <span>{props.serverName}</span>
           </button>
           <span class="science-home__bar-divider" aria-hidden="true" />
-          <button class="science-home__icon" type="button" aria-label="Settings" onClick={props.onSettings}>
+          <button
+            class="science-home__icon"
+            type="button"
+            aria-label={language.t("sidebar.settings")}
+            onClick={props.onSettings}
+          >
             <IconSettings size={16} strokeWidth={1.5} />
           </button>
         </div>
@@ -107,40 +121,40 @@ export function ProjectsWorkbench(props: {
           <header class="science-home__heading">
             <div class="science-home__heading-copy">
               <div class="science-home__title">
-                <h1 id="science-home-projects-title">Projects</h1>
+                <h1 id="science-home-projects-title">{language.t("pages.copy.projects")}</h1>
                 <Show when={recent() && props.refreshing}>
                   <span class="science-home__refreshing" role="status">
-                    Syncing…
+                    {language.t("pages.copy.syncing")}
                   </span>
                 </Show>
               </div>
-              <p>Research workspaces, sessions, and files in one place.</p>
+              <p>{language.t("pages.copy.projectDescription")}</p>
             </div>
             <div class="science-home__heading-actions">
               <button
                 class="science-home__button science-home__button--primary"
                 type="button"
-                aria-label="New project"
+                aria-label={language.t("pages.copy.newProject")}
                 onClick={props.onCreate}
               >
                 <IconPlus size={16} strokeWidth={1.5} />
-                New project
+                {language.t("pages.copy.newProject")}
               </button>
             </div>
           </header>
 
           <Show when={recent()}>
-            <div class="science-home__toolbar" aria-label="Project controls">
+            <div class="science-home__toolbar" aria-label={language.t("pages.copy.projectControls")}>
               <label class="science-home__search" for="science-home-project-search">
                 <IconSearch size={16} strokeWidth={1.5} />
                 <input
                   ref={input}
                   id="science-home-project-search"
                   type="search"
-                  aria-label="Search projects"
+                  aria-label={language.t("pages.copy.searchProjects")}
                   aria-controls="science-home-project-list"
                   value={props.query}
-                  placeholder="Search projects by name, folder, or ID"
+                  placeholder={language.t("pages.copy.searchProjectsHint")}
                   onInput={(event) => props.onQuery(event.currentTarget.value)}
                   onKeyDown={(event) => {
                     if (event.key !== "Escape") return
@@ -148,7 +162,7 @@ export function ProjectsWorkbench(props: {
                   }}
                 />
                 <Show when={props.query}>
-                  <button type="button" aria-label="Clear search" onClick={clearSearch}>
+                  <button type="button" aria-label={language.t("pages.copy.clearSearch")} onClick={clearSearch}>
                     <IconX size={12} strokeWidth={1.5} />
                   </button>
                 </Show>
@@ -162,18 +176,18 @@ export function ProjectsWorkbench(props: {
           <Switch>
             <Match when={props.state === "loading"}>
               <section class="science-home__state science-home__state--loading" role="status" aria-live="polite">
-                <AtomLoader size={144} caption="Loading projects" />
+                <AtomLoader size={144} caption={language.t("pages.copy.loadingProjects")} />
               </section>
             </Match>
 
             <Match when={props.state === "error"}>
               <section class="science-home__state science-home__state--error" role="alert">
                 <div>
-                  <strong>Local workspace unavailable</strong>
-                  <span>Check the selected server, then try the connection again.</span>
+                  <strong>{language.t("pages.copy.workspaceUnavailable")}</strong>
+                  <span>{language.t("pages.copy.workspaceUnavailableHint")}</span>
                 </div>
                 <button class="science-home__button" type="button" onClick={props.onRetry}>
-                  Try again
+                  {language.t("pages.copy.tryAgain")}
                 </button>
               </section>
             </Match>
@@ -181,11 +195,11 @@ export function ProjectsWorkbench(props: {
             <Match when={props.state === "empty"}>
               <section class="science-home__state science-home__state--empty">
                 <div>
-                  <strong>Create your first project</strong>
-                  <span>Open a research folder or start blank, then send your first message.</span>
+                  <strong>{language.t("pages.copy.firstProject")}</strong>
+                  <span>{language.t("pages.copy.firstProjectHint")}</span>
                 </div>
                 <button class="science-home__button" type="button" onClick={props.onCreate}>
-                  New project
+                  {language.t("pages.copy.newProject")}
                 </button>
               </section>
             </Match>
@@ -203,8 +217,8 @@ export function ProjectsWorkbench(props: {
                         aria-live="polite"
                       >
                         <div>
-                          <strong>No active projects</strong>
-                          <span>Restore an archived project below or start a new one.</span>
+                          <strong>{language.t("pages.copy.noActiveProjects")}</strong>
+                          <span>{language.t("pages.copy.noActiveProjectsHint")}</span>
                         </div>
                       </section>
                     }
@@ -215,11 +229,11 @@ export function ProjectsWorkbench(props: {
                       aria-live="polite"
                     >
                       <div>
-                        <strong>No matching projects</strong>
-                        <span>No projects match “{props.query.trim()}”. Try another search or clear this one.</span>
+                        <strong>{language.t("pages.copy.noMatchingProjects")}</strong>
+                        <span>{language.t("pages.copy.projectSearchMiss", { query: props.query.trim() })}</span>
                       </div>
                       <button class="science-home__button" type="button" onClick={clearSearch}>
-                        Clear search
+                        {language.t("pages.copy.clearSearch")}
                       </button>
                     </section>
                   </Show>
@@ -237,7 +251,7 @@ export function ProjectsWorkbench(props: {
                           class="science-home__project"
                           type="button"
                           data-project={project.id}
-                          title={`Open ${projectName(project)}`}
+                          title={language.t("pages.copy.openNamed", { name: projectName(project) })}
                           onPointerEnter={preloadSession}
                           onFocus={preloadSession}
                           onClick={() => props.onOpen(project)}
@@ -247,7 +261,12 @@ export function ProjectsWorkbench(props: {
                             <span class="science-home__project-meta">
                               <Show when={project.sessions !== undefined}>
                                 <span class="science-home__sessions">
-                                  {project.sessions} {project.sessions === 1 ? "session" : "sessions"}
+                                  {language.t(
+                                    project.sessions === 1
+                                      ? "pages.copy.sessionCount.one"
+                                      : "pages.copy.sessionCount.other",
+                                    { count: project.sessions ?? 0 },
+                                  )}
                                 </span>
                                 <span class="science-home__meta-separator" aria-hidden="true">
                                   ·
@@ -255,7 +274,7 @@ export function ProjectsWorkbench(props: {
                               </Show>
                               <time
                                 datetime={DateTime.fromMillis(project.updatedAt).toISO() ?? undefined}
-                                title="Last research activity; opening a project does not change this date"
+                                title={language.t("pages.copy.activityHint")}
                               >
                                 {activityLabel(project)}
                               </time>
@@ -266,9 +285,15 @@ export function ProjectsWorkbench(props: {
                           <button
                             class="science-home__project-action science-home__project-pin"
                             type="button"
-                            aria-label={`${project.pinned ? "Unpin" : "Pin"} ${projectName(project)}`}
+                            aria-label={language.t(project.pinned ? "pages.copy.unpinNamed" : "pages.copy.pinNamed", {
+                              name: projectName(project),
+                            })}
                             aria-pressed={project.pinned}
-                            title={project.pinned ? "Unpin project" : "Pin project"}
+                            title={
+                              project.pinned
+                                ? language.t("pages.copy.unpinProject")
+                                : language.t("pages.copy.pinProject")
+                            }
                             onClick={() => props.onPin(project)}
                           >
                             <Show when={project.pinned} fallback={<IconPin size={16} strokeWidth={1.5} />}>
@@ -278,8 +303,8 @@ export function ProjectsWorkbench(props: {
                           <button
                             class="science-home__project-action science-home__project-archive"
                             type="button"
-                            aria-label={`Archive ${projectName(project)}`}
-                            title="Archive project"
+                            aria-label={language.t("pages.copy.archiveNamed", { name: projectName(project) })}
+                            title={language.t("pages.copy.archiveProject")}
                             onClick={() => props.onArchive(project)}
                           >
                             <IconArchive size={14} strokeWidth={1.5} />
@@ -294,17 +319,17 @@ export function ProjectsWorkbench(props: {
                 <details class="science-home__archived">
                   <summary>
                     <IconArchive size={14} strokeWidth={1.5} />
-                    <span>Archived</span>
+                    <span>{language.t("pages.copy.archived")}</span>
                     <span class="science-home__archived-count">{props.archivedProjects.length}</span>
                     <IconChevronRight class="science-home__archived-chevron" size={12} strokeWidth={1.5} />
                   </summary>
-                  <ul aria-label="Archived projects">
+                  <ul aria-label={language.t("pages.copy.archivedProjects")}>
                     <For each={props.archivedProjects}>
                       {(project) => (
                         <li>
                           <span>{projectName(project)}</span>
                           <button type="button" onClick={() => props.onRestore(project)}>
-                            Restore
+                            {language.t("pages.copy.restore")}
                           </button>
                         </li>
                       )}

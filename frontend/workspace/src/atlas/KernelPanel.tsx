@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { For, Show, createMemo, createResource, onCleanup, type JSX } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useParams } from "@solidjs/router"
@@ -48,37 +49,52 @@ export function inventory<T>(
   )
 }
 
-export function freshness(view: { runtime: string; remote: string; runtimeSeen: boolean; remoteSeen: boolean }) {
+export function freshness(
+  view: { runtime: string; remote: string; runtimeSeen: boolean; remoteSeen: boolean },
+  translate?: ReturnType<typeof useLanguage>["t"],
+) {
   const problem = view.runtime || view.remote
   const stale = Boolean(problem) && view.runtimeSeen && view.remoteSeen
   const ready = view.runtimeSeen && view.remoteSeen && !problem
   const empty = problem
     ? stale
-      ? "Compute activity may be out of date"
-      : "Compute unavailable"
+      ? (translate?.("research.compute.stale") ?? "Compute activity may be out of date")
+      : (translate?.("research.compute.unavailable") ?? "Compute unavailable")
     : ready
-      ? "No active compute"
-      : "Reading compute…"
+      ? (translate?.("research.compute.noActive") ?? "No active compute")
+      : (translate?.("research.compute.loading") ?? "Reading compute…")
   return { problem, stale, empty }
 }
 
-export const usage = (group: Group) => {
+export const usage = (group: Group, translate?: ReturnType<typeof useLanguage>["t"]) => {
   const entries = [...group.kernels, ...group.commands]
   const memory = entries.reduce((total, entry) => total + (entry.resources?.memory_bytes ?? 0), 0)
   const cpu = entries.reduce((total, entry) => total + (entry.resources?.cpu_percent ?? 0), 0) / 100
   const kinds = [
-    group.kernels.length ? `${group.kernels.length} ${group.kernels.length === 1 ? "kernel" : "kernels"}` : undefined,
-    group.commands.length
-      ? `${group.commands.length} ${group.commands.length === 1 ? "command" : "commands"}`
+    group.kernels.length
+      ? (translate?.(
+          group.kernels.length === 1 ? "research.compute.count.kernel.one" : "research.compute.count.kernel",
+          { count: group.kernels.length },
+        ) ?? `${group.kernels.length} ${group.kernels.length === 1 ? "kernel" : "kernels"}`)
       : undefined,
-    group.jobs.length ? `${group.jobs.length} ${group.jobs.length === 1 ? "job" : "jobs"}` : undefined,
+    group.commands.length
+      ? (translate?.(
+          group.commands.length === 1 ? "research.compute.count.command.one" : "research.compute.count.command",
+          { count: group.commands.length },
+        ) ?? `${group.commands.length} ${group.commands.length === 1 ? "command" : "commands"}`)
+      : undefined,
+    group.jobs.length
+      ? (translate?.(group.jobs.length === 1 ? "research.compute.count.job.one" : "research.compute.count.job", {
+          count: group.jobs.length,
+        }) ?? `${group.jobs.length} ${group.jobs.length === 1 ? "job" : "jobs"}`)
+      : undefined,
   ]
     .filter(Boolean)
     .join(" · ")
   const ram = entries.some((entry) => entry.resources?.memory_bytes !== undefined) ? kernelMemoryLabel(memory) : "— RSS"
   const cores = entries.some((entry) => entry.resources?.cpu_percent !== undefined)
-    ? `${cpu.toFixed(1)} cores`
-    : "— cores"
+    ? (translate?.("research.compute.coreCount", { count: cpu.toFixed(1) }) ?? `${cpu.toFixed(1)} cores`)
+    : (translate?.("research.compute.coreUnknown") ?? "— cores")
   return { kinds, memory: ram, cpu: cores }
 }
 
@@ -158,6 +174,7 @@ export function provisionalKernels(parts: Part[], registered: KernelStatus[]): K
 }
 
 export function KernelPanel(props: KernelPanelProps = {}): JSX.Element {
+  const language = useLanguage()
   const transport = props.request ?? useSDK().request
   const routeRequest = createKernelRouteRequester(transport)
   const sync = useSync()
@@ -227,7 +244,9 @@ export function KernelPanel(props: KernelPanelProps = {}): JSX.Element {
     return [...registered, ...provisionalKernels(activeParts(), kernels)]
   })
   const title = (sessionID: string) =>
-    sessionID === projectJobs ? "Project jobs" : sync.session.get(sessionID)?.title?.trim() || "Untitled session"
+    sessionID === projectJobs
+      ? language.t("research.compute.projectJobs")
+      : sync.session.get(sessionID)?.title?.trim() || language.t("research.compute.untitled")
   const grouped = createMemo(() => {
     const groups = new Map<string, Group>()
     const group = (sessionID: string) => groups.get(sessionID) ?? emptyGroup()
@@ -273,9 +292,9 @@ export function KernelPanel(props: KernelPanelProps = {}): JSX.Element {
         jobs: [...combined.jobs, ...group.jobs],
       }
     }, emptyGroup())
-    return usage(aggregate)
+    return usage(aggregate, language.t)
   })
-  const state = createMemo(() => freshness(view))
+  const state = createMemo(() => freshness(view, language.t))
 
   const refresh = () => {
     if (document.hidden) return
@@ -290,11 +309,17 @@ export function KernelPanel(props: KernelPanelProps = {}): JSX.Element {
   })
 
   return (
-    <section aria-label="Project compute" data-testid="kernel-panel" class="kernel-panel activity-panel">
+    <section
+      aria-label={language.t("research.compute.project")}
+      data-testid="kernel-panel"
+      class="kernel-panel activity-panel"
+    >
       <div class="atlas-scroll kernel-panel__body">
         <Show when={state().problem && groups().length > 0}>
           <div role="status" class="kernel-panel__message" data-state={state().stale ? "stale" : "unavailable"}>
-            {state().stale ? "Showing the last successful compute inventory." : "Some live compute is unavailable."}
+            {state().stale
+              ? language.t("research.compute.lastInventory")
+              : language.t("research.compute.someUnavailable")}
           </div>
         </Show>
 
@@ -310,9 +335,9 @@ export function KernelPanel(props: KernelPanelProps = {}): JSX.Element {
                 <span>
                   {state().problem
                     ? state().stale
-                      ? "Showing the last successful inventory."
-                      : "The live inventory could not be read."
-                    : "Runtimes and jobs appear here while agents work."}
+                      ? language.t("research.compute.lastSuccessful")
+                      : language.t("research.compute.inventoryError")
+                    : language.t("research.compute.emptyHint")}
                 </span>
               </div>
             </div>
@@ -322,12 +347,12 @@ export function KernelPanel(props: KernelPanelProps = {}): JSX.Element {
             <For each={groups()}>
               {(sessionID, index) => {
                 const group = () => grouped().get(sessionID) ?? emptyGroup()
-                const summary = () => usage(group())
+                const summary = () => usage(group(), language.t)
                 return (
                   <>
                     <Show when={index() === firstOther()}>
-                      <div class="kernel-panel__other" aria-label="Other sessions summary">
-                        <span>Other sessions</span>
+                      <div class="kernel-panel__other" aria-label={language.t("research.compute.otherSummary")}>
+                        <span>{language.t("research.compute.otherSessions")}</span>
                         <span>
                           {otherUsage().kinds} · {otherUsage().memory} · {otherUsage().cpu}
                         </span>
@@ -335,14 +360,14 @@ export function KernelPanel(props: KernelPanelProps = {}): JSX.Element {
                     </Show>
                     <section
                       class="kernel-session"
-                      aria-label={`${title(sessionID)} compute`}
+                      aria-label={language.t("research.compute.session", { name: title(sessionID) })}
                       data-current={route() === sessionID ? "true" : undefined}
                     >
                       <header class="kernel-session__header">
                         <div class="kernel-session__identity">
                           <strong>{title(sessionID)}</strong>
                           <Show when={route() === sessionID}>
-                            <em>Current</em>
+                            <em>{language.t("research.compute.current")}</em>
                           </Show>
                         </div>
                         <div class="kernel-session__summary" aria-label={summary().kinds}>

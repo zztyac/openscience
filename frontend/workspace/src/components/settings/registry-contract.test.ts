@@ -76,7 +76,6 @@ describe("settings registry source contract", () => {
 
     // Money and identity live on Ace; Models keeps connections and preferences.
     expect(ace).toContain("<ManagedInference")
-    expect(ace).toContain('title="Account"')
     expect(ace).toContain('"/account/login-browser"')
     expect(models).not.toContain("ManagedInference")
     expect(models).toContain("<CodexConnection")

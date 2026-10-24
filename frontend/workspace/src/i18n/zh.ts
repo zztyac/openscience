@@ -1,8 +1,53 @@
+import { dict as researchCopy } from "./zh-research-copy"
+import { dict as atlasCopy } from "./zh-atlas-copy"
+import { dict as coreCopy } from "./zh-core-copy"
+import { dict as settingsCopy } from "./zh-settings-copy"
+import { dict as pagesCopy } from "./zh-pages-copy"
 import { dict as en } from "./en"
 
 type Keys = keyof typeof en
 
 export const dict = {
+  ...researchCopy,
+  ...atlasCopy,
+  "prompt.placeholder.working": "工作进行中，可继续补充本轮内容 · Esc 停止",
+  "prompt.placeholder.backgroundWorker": "一个后台智能体仍在运行；它的报告将开始新一轮。可继续补充会话…",
+  "prompt.placeholder.backgroundWorkers": "{{count}} 个后台智能体仍在运行；它们的报告将开始新一轮。可继续补充会话…",
+  "prompt.popover.searching": "正在搜索…",
+  "prompt.dropzone.hint": "图片、PDF、文本、代码和数据 · 每个文件最大 20 MB",
+  "prompt.agent.label": "智能体：{{name}}。点击或按 Tab 切换",
+  "prompt.agent.tooltip": "选择主要回答的智能体。输入框为空时按 Tab 依次切换。",
+  "dialog.server.action.cancel": "取消",
+  "dialog.server.action.save": "保存",
+  "context.composition.title": "可用输入文本（估算）",
+  "context.composition.instructions": "自定义指令",
+  "context.composition.note":
+    "按每个词元四个字符估算本次调用前已加载文本的占比。不包含本次回复、完整系统指令、工具定义、媒体及服务端上下文变更。这些占比不代表提供商统计的词元用量。",
+  "context.composition.recordedNote":
+    "根据上次调用前的上下文估算，包含每次请求发送的工具定义。文档和图片与文本分开计算。忽略了少量提供商特定的封装内容，因此可能略低于提供商统计值。",
+  "context.composition.notReported": "未报告",
+  "context.headline.of": "共 {{window}} 个词元",
+  "context.headline.tokens": "词元",
+  "context.headline.cap": "已限制为低于 {{full}} 的上限",
+  "context.headline.reported": "由提供商报告的上次请求用量",
+  "context.section.composition": "上下文窗口组成",
+  "context.section.lastRequest": "上次请求",
+  "context.section.session": "会话",
+  "context.stats.cacheRead": "缓存读取",
+  "context.stats.cacheWrite": "缓存写入",
+  "context.stats.messagesDetail": "你发送的 {{user}} 条 · 智能体发送的 {{assistant}} 条",
+  "context.usage.ofWindow": "占 {{window}} 上下文窗口",
+  "context.usage.workerCost": "包含委派智能体花费的 {{cost}}",
+  "context.usage.estimate": "当前轮次的估算用量",
+  "settings.general.sounds.enabled.title": "播放音效",
+  "settings.general.sounds.enabled.description": "在重要工作和错误发生时播放轻柔的提示音",
+  "settings.general.sounds.volume.title": "音效音量",
+  "settings.general.sounds.volume.description": "独立于系统音量设置声音反馈",
+
+  ...coreCopy,
+  ...settingsCopy,
+  ...pagesCopy,
+
   "terminal.claude.open": "打开 Claude Code",
   "terminal.claude.description": "在工作目录中运行已安装的 Claude CLI，使用其自身的登录信息和权限",
   "settings.shell.title": "设置",

@@ -149,7 +149,7 @@ export const PermissionToolDefaults: Component = () => {
   return (
     <Section
       title={language.t("settings.permissions.section.tools")}
-      description="Set the default response for each class of tool request."
+      description={language.t("settings.copy.setTheDefaultResponseForEachClassOf")}
     >
       <div class="settings-card">
         <For each={ITEMS}>

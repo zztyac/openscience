@@ -79,7 +79,13 @@ async function mount(connected = true, costs?: UsageRow["costs"]) {
   const host = document.createElement("div")
   document.body.append(host)
   const dispose = web.render(
-    () => subject.default({ services: { sdk: { url: `http://127.0.0.1:${address.port}` }, platform: { fetch } } }),
+    () =>
+      web.createComponent(languageFixture.TestLanguage, {
+        get children() {
+          return (() =>
+            subject.default({ services: { sdk: { url: `http://127.0.0.1:${address.port}` }, platform: { fetch } } }))()
+        },
+      }),
     host,
   )
   cleanups.push(() => {
@@ -92,6 +98,8 @@ async function mount(connected = true, costs?: UsageRow["costs"]) {
   await ready(() => !button("Refresh").disabled)
   return { host, state, button }
 }
+const languageFixture = (await vite.ssrLoadModule("/test/language.tsx")) as typeof import("../../../test/language")
+
 afterAll(() => vite.close())
 afterEach(() => {
   cleanups.splice(0).forEach((dispose) => dispose())

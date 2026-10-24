@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { Match, Show, Switch, createEffect, createSignal, onCleanup, type JSX } from "solid-js"
 import { IconDownload, IconX } from "@/atlas/shared/Icon"
 import { bytes } from "./bytes"
@@ -61,6 +62,7 @@ const keep = (key: string, entry: Cached) => {
 }
 
 export function RemoteFileView(props: RemoteFileViewProps): JSX.Element {
+  const copy = useLanguage()
   const [text, setText] = createSignal<{ body: string; html?: string }>()
   const [url, setUrl] = createSignal<string>()
   const [failed, setFailed] = createSignal("")
@@ -143,7 +145,10 @@ export function RemoteFileView(props: RemoteFileViewProps): JSX.Element {
   })
 
   return (
-    <section class="remote-view" aria-label={`${props.file.name} in ${props.file.volume}`}>
+    <section
+      class="remote-view"
+      aria-label={copy.t("interface.preview.fileVolume", { name: props.file.name, volume: props.file.volume })}
+    >
       <header class="remote-view__bar">
         <span class="remote-view__title">
           <span class="remote-view__name">{props.file.name}</span>
@@ -159,12 +164,12 @@ export function RemoteFileView(props: RemoteFileViewProps): JSX.Element {
           onClick={() => props.onDownload(props.file)}
         >
           <IconDownload size={12} strokeWidth={1.5} />
-          Download
+          {copy.t("interface.preview.download")}
         </button>
         <button
           type="button"
           class="remote-view__action remote-view__action--icon"
-          aria-label={`Close ${props.file.name}`}
+          aria-label={copy.t("interface.preview.close", { name: props.file.name })}
           onClick={() => props.onClose()}
         >
           <IconX size={12} strokeWidth={1.5} />
@@ -177,8 +182,8 @@ export function RemoteFileView(props: RemoteFileViewProps): JSX.Element {
             // Not an error: a format this viewer will not guess at, or a file
             // too large to pull whole out of the cloud for a look.
             <div class="remote-view__empty" data-remote-unsupported>
-              <p>This file is not previewed here.</p>
-              <p class="remote-view__hint">Download it to open it with something that understands the format.</p>
+              <p>{copy.t("interface.preview.unsupported")}</p>
+              <p class="remote-view__hint">{copy.t("interface.preview.downloadHint")}</p>
             </div>
           }
         >
@@ -210,7 +215,7 @@ export function RemoteFileView(props: RemoteFileViewProps): JSX.Element {
           </Match>
           <Match when={kind() && !text() && !url()}>
             <div class="remote-view__empty" data-remote-loading>
-              <p>Fetching {props.file.name}…</p>
+              <p>{copy.t("interface.preview.fetching", { name: props.file.name })}</p>
             </div>
           </Match>
         </Switch>

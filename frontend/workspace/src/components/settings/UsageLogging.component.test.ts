@@ -77,8 +77,13 @@ async function mount(error?: string) {
   document.body.append(host)
   const dispose = web.render(
     () =>
-      subject.UsageLogging({
-        services: { sdk: { url: `http://127.0.0.1:${address.port}` }, platform: { fetch } },
+      web.createComponent(languageFixture.TestLanguage, {
+        get children() {
+          return (() =>
+            subject.UsageLogging({
+              services: { sdk: { url: `http://127.0.0.1:${address.port}` }, platform: { fetch } },
+            }))()
+        },
       }),
     host,
   )
@@ -91,6 +96,8 @@ async function mount(error?: string) {
   await ready(() => input()?.disabled === false)
   return { state, host, input }
 }
+
+const languageFixture = (await vite.ssrLoadModule("/test/language.tsx")) as typeof import("../../../test/language")
 
 afterAll(() => vite.close())
 afterEach(() => {

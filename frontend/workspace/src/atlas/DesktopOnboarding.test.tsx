@@ -25,6 +25,8 @@ const vite = await createServer({
 })
 const web = (await vite.ssrLoadModule("solid-js/web")) as typeof import("solid-js/web")
 const subject = (await vite.ssrLoadModule("/src/atlas/DesktopOnboarding.tsx")) as typeof import("./DesktopOnboarding")
+const platformContext = (await vite.ssrLoadModule("/src/context/platform.tsx")) as typeof import("@/context/platform")
+const languageContext = (await vite.ssrLoadModule("/src/context/language.tsx")) as typeof import("@/context/language")
 const cleanups: Array<() => void> = []
 const versionKey = "openscience.desktop_onboarding_version"
 
@@ -199,16 +201,25 @@ function fixture(
     document.body.append(host)
     const dispose = web.render(
       () =>
-        subject.DesktopOnboardingController({
-          server,
-          platform,
-          desktop,
-          acePollMs: 10,
-          ...extra,
+        web.createComponent(platformContext.PlatformProvider, {
+          value: platform,
           get children() {
-            const content = document.createElement("div")
-            content.textContent = "Research workspace loaded"
-            return content
+            return web.createComponent(languageContext.LanguageProvider, {
+              get children() {
+                return subject.DesktopOnboardingController({
+                  server,
+                  platform,
+                  desktop,
+                  acePollMs: 10,
+                  ...extra,
+                  get children() {
+                    const content = document.createElement("div")
+                    content.textContent = "Research workspace loaded"
+                    return content
+                  },
+                })
+              },
+            })
           },
         }),
       host,

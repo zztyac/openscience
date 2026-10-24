@@ -25,6 +25,8 @@ const [fixture, web] = await Promise.all([
   server.ssrLoadModule("solid-js/web") as Promise<typeof import("solid-js/web")>,
 ])
 
+const languageFixture = (await server.ssrLoadModule("/test/language.tsx")) as typeof import("../../../test/language")
+
 afterAll(() => server.close())
 afterEach(() => {
   cleanups.splice(0).forEach((cleanup) => cleanup())
@@ -34,7 +36,17 @@ afterEach(() => {
 const mount = (view: () => JSX.Element) => {
   const host = document.createElement("div")
   document.body.append(host)
-  cleanups.push(web.render(view, host))
+  cleanups.push(
+    web.render(
+      () =>
+        web.createComponent(languageFixture.TestLanguage, {
+          get children() {
+            return view()
+          },
+        }),
+      host,
+    ),
+  )
   return host
 }
 

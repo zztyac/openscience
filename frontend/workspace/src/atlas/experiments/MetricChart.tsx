@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { onCleanup, createMemo, createSignal, For, Show, type JSX } from "solid-js"
 
 export type ChartSeries = {
@@ -66,15 +67,15 @@ export type ClimbPoint = {
   verdict: "baseline" | "kept" | "reverted" | "running" | "killed" | "failed" | "pending"
 }
 
-const VERDICT: Record<ClimbPoint["verdict"], string> = {
-  baseline: "Baseline",
-  kept: "Kept",
-  reverted: "Reverted",
-  running: "Running",
-  killed: "Killed",
-  failed: "Failed",
-  pending: "Unrecorded",
-}
+const VERDICT = {
+  baseline: "research.state.baseline",
+  kept: "research.state.kept",
+  reverted: "research.state.reverted",
+  running: "research.state.running",
+  killed: "research.state.killed",
+  failed: "research.state.failed",
+  pending: "research.state.pending",
+} as const satisfies Record<ClimbPoint["verdict"], string>
 
 /**
  * The shape of a study: every run in order, the best-so-far line stepping
@@ -87,6 +88,7 @@ export function HillClimbChart(props: {
   metric: string
   height?: number
 }): JSX.Element {
+  const language = useLanguage()
   const [width, setWidth] = createSignal(480)
   const [hover, setHover] = createSignal<number>()
   const height = () => props.height ?? 120
@@ -167,7 +169,7 @@ export function HillClimbChart(props: {
         height={height()}
         viewBox={`0 0 ${width()} ${height()}`}
         role="img"
-        aria-label={`${props.metric} across ${props.points.length} runs`}
+        aria-label={language.t("research.chart.runsMetric", { metric: props.metric, count: props.points.length })}
         onMouseMove={track}
         onMouseLeave={() => setHover(undefined)}
       >
@@ -221,13 +223,17 @@ export function HillClimbChart(props: {
         {(point) => (
           <div class="climb-chart__tooltip" role="status">
             <span class="climb-chart__tooltip-label">{point().label}</span>
-            <span class="climb-chart__tooltip-verdict">{VERDICT[point().verdict]}</span>
-            <b>{point().value === null ? "n/a" : formatValue(point().value as number)}</b>
+            <span class="climb-chart__tooltip-verdict">{language.t(VERDICT[point().verdict])}</span>
+            <b>
+              {point().value === null
+                ? language.t("research.chart.notAvailable")
+                : formatValue(point().value as number)}
+            </b>
           </div>
         )}
       </Show>
       <Show when={!range()}>
-        <div class="metric-chart__empty">No finished runs yet</div>
+        <div class="metric-chart__empty">{language.t("research.chart.noRuns")}</div>
       </Show>
     </div>
   )
@@ -247,6 +253,7 @@ export function MetricChart(props: {
   xLabel?: string
   emphasize?: string
 }): JSX.Element {
+  const language = useLanguage()
   const [width, setWidth] = createSignal(480)
   const [hover, setHover] = createSignal<number>()
   const height = () => props.height ?? 200
@@ -363,7 +370,7 @@ export function MetricChart(props: {
         height={height()}
         viewBox={`0 0 ${width()} ${height()}`}
         role="img"
-        aria-label={`${props.series.length} series`}
+        aria-label={language.t("research.chart.seriesCount", { count: props.series.length })}
         onMouseMove={track}
         onMouseLeave={() => setHover(undefined)}
       >
@@ -420,7 +427,9 @@ export function MetricChart(props: {
       <Show when={cursor()}>
         {(current) => (
           <div class="metric-chart__tooltip" role="status">
-            <span class="metric-chart__tooltip-step">step {Math.round(current().step)}</span>
+            <span class="metric-chart__tooltip-step">
+              {language.t("research.chart.step", { step: Math.round(current().step) })}
+            </span>
             <For each={current().values}>
               {(item) => (
                 <span class="metric-chart__tooltip-row">
@@ -434,7 +443,7 @@ export function MetricChart(props: {
         )}
       </Show>
       <Show when={!domain()}>
-        <div class="metric-chart__empty">No points yet</div>
+        <div class="metric-chart__empty">{language.t("research.chart.noPoints")}</div>
       </Show>
     </div>
   )

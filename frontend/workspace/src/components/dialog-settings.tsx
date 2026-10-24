@@ -1611,6 +1611,7 @@ type FooterAccount = { session: boolean; user?: { email?: string } }
 
 /** The signed-in person and the app version, as the rail's last row. */
 const SettingsAccountFooter: Component<{ version?: string; onOpen: () => void }> = (props) => {
+  const language = useLanguage()
   const sdk = useGlobalSDK()
   const platform = usePlatform()
   const [account, setAccount] = createSignal<FooterAccount>()
@@ -1623,15 +1624,21 @@ const SettingsAccountFooter: Component<{ version?: string; onOpen: () => void }>
     window.addEventListener("openscience:account-changed", load)
   })
   onCleanup(() => window.removeEventListener("openscience:account-changed", load))
-  const email = () => (account()?.session ? account()?.user?.email || "Signed in" : undefined)
+  const email = () =>
+    account()?.session ? account()?.user?.email || language.t("interface.account.signedIn") : undefined
   const initial = () => (email() ?? "O").trim().charAt(0).toUpperCase()
   return (
-    <button type="button" class="settings-nav__footer" onClick={() => props.onOpen()} aria-label="Open Ace account">
+    <button
+      type="button"
+      class="settings-nav__footer"
+      onClick={() => props.onOpen()}
+      aria-label={language.t("interface.account.open")}
+    >
       <span class="settings-nav__avatar" aria-hidden="true">
         {initial()}
       </span>
       <span class="settings-nav__identity">
-        <span class="settings-nav__identity-name">{email() ?? "Not signed in"}</span>
+        <span class="settings-nav__identity-name">{email() ?? language.t("interface.account.signedOut")}</span>
         <span class="settings-nav__identity-meta">OpenScience{props.version ? ` v${props.version}` : ""}</span>
       </span>
     </button>

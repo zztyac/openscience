@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import { For, Show, createEffect, on, onCleanup, onMount } from "solid-js"
 import { createStore } from "solid-js/store"
 import type { SettingsUsageLoggingHealthResponses } from "@synsci/sdk/v2/client"
@@ -5,30 +6,30 @@ import { Card, Row, RowCopy } from "./_shared"
 
 type Result = SettingsUsageLoggingHealthResponses[200]
 const reasons = {
-  signed_out: "Sign in to check server evidence.",
-  unsupported: "This server does not support logging-health reports yet.",
-  unauthorized: "The server could not authorize this account or workspace. Check your connection and try again.",
-  server_unavailable: "The server could not be reached or did not complete the check. Try again.",
-  invalid_report: "The server returned an unreadable health report. Try again.",
-  account_changed: "The account or workspace changed during this check. Check again for the current connection.",
-}
+  signed_out: "settings.copy.helper.signInToCheckServerEvidence",
+  unsupported: "settings.copy.helper.thisServerDoesNotSupportLoggingHealthReports",
+  unauthorized: "settings.copy.helper.theServerCouldNotAuthorizeThisAccountOr",
+  server_unavailable: "settings.copy.helper.theServerCouldNotBeReachedOrDid",
+  invalid_report: "settings.copy.helper.theServerReturnedAnUnreadableHealthReportTry",
+  account_changed: "settings.copy.helper.theAccountOrWorkspaceChangedDuringThisCheck",
+} as const
 const labels = {
-  missing_call_id: "Missing call IDs",
-  missing_link: "Missing call-to-hold links",
-  ambiguous_link: "Ambiguous call-to-hold links",
-  missing_hold: "Missing holds",
-  hold_mismatch: "Hold identity mismatches",
-  settled_missing_charge: "Settled holds without charges",
-  duplicate_charge: "Duplicate charges",
-  token_mismatch: "Provider/ledger token evidence gaps or mismatches",
-  charge_amount_mismatch: "Hold/ledger charge mismatches",
-}
+  missing_call_id: "settings.copy.helper.missingCallIds",
+  missing_link: "settings.copy.helper.missingCallToHoldLinks",
+  ambiguous_link: "settings.copy.helper.ambiguousCallToHoldLinks",
+  missing_hold: "settings.copy.helper.missingHolds",
+  hold_mismatch: "settings.copy.helper.holdIdentityMismatches",
+  settled_missing_charge: "settings.copy.helper.settledHoldsWithoutCharges",
+  duplicate_charge: "settings.copy.helper.duplicateCharges",
+  token_mismatch: "settings.copy.helper.providerLedgerTokenEvidenceGapsOrMismatches",
+  charge_amount_mismatch: "settings.copy.helper.holdLedgerChargeMismatches",
+} as const
 const summaries = {
-  healthy: "No discrepancies found in the stored evidence checked.",
-  attention: "Stored evidence needs attention. Review the findings below.",
-  incomplete: "Some call outcomes, token counts or settlement evidence are still unavailable.",
-  no_data: "No stored model-call evidence found for this device and workspace in the checked window.",
-}
+  healthy: "settings.copy.helper.noDiscrepanciesFoundInTheStoredEvidenceChecked",
+  attention: "settings.copy.helper.storedEvidenceNeedsAttentionReviewTheFindingsBelow",
+  incomplete: "settings.copy.helper.someCallOutcomesTokenCountsOrSettlementEvidence",
+  no_data: "settings.copy.helper.noStoredModelCallEvidenceFoundForThis",
+} as const
 
 export function ServerLoggingHealth(props: {
   signedIn: boolean
@@ -36,6 +37,7 @@ export function ServerLoggingHealth(props: {
   quarantined: number
   check: () => Promise<Result>
 }) {
+  const language = useLanguage()
   const [state, setState] = createStore<{ result?: Result; busy: boolean; error?: string; revision: number }>({
     busy: false,
     revision: 0,
@@ -54,7 +56,8 @@ export function ServerLoggingHealth(props: {
         if (revision === state.revision) setState({ result })
       })
       .catch(() => {
-        if (revision === state.revision) setState({ error: "Could not check server logging health. Please retry." })
+        if (revision === state.revision)
+          setState({ error: language.t("settings.copy.couldNotCheckServerLoggingHealthPleaseRetry") })
       })
       .finally(() => {
         if (revision === state.revision) setState({ busy: false })
@@ -65,18 +68,18 @@ export function ServerLoggingHealth(props: {
     <Card>
       <Row>
         <RowCopy
-          title="Server reconciliation"
+          title={language.t("settings.copy.serverReconciliation")}
           description={
             state.error ??
             (state.busy
-              ? "Checking…"
+              ? language.t("settings.copy.checking")
               : !props.signedIn
-                ? reasons.signed_out
+                ? language.t(reasons.signed_out)
                 : state.result?.state === "unavailable"
-                  ? reasons[state.result.reason]
+                  ? language.t(reasons[state.result.reason])
                   : report()
-                    ? summaries[report()!.status]
-                    : "Check stored evidence for this account, device and workspace over the last 24 hours.")
+                    ? language.t(summaries[report()!.status])
+                    : language.t("settings.copy.checkStoredEvidenceForThisAccountDeviceAnd"))
           }
         />
         <button
@@ -85,7 +88,7 @@ export function ServerLoggingHealth(props: {
           disabled={state.busy || !props.signedIn}
           onClick={() => void check()}
         >
-          Check server
+          {language.t("settings.copy.checkServer")}
         </button>
       </Row>
       <Show when={report()}>
@@ -93,64 +96,104 @@ export function ServerLoggingHealth(props: {
           <>
             <Row>
               <RowCopy
-                title="Checked window"
-                description={`${value().since} to ${value().until} · checked ${value().checked_at}`}
+                title={language.t("settings.copy.checkedWindow")}
+                description={language.t("settings.copy.health.window", {
+                  since: value().since,
+                  until: value().until,
+                  checked: value().checked_at,
+                })}
               />
             </Row>
             <Row>
               <RowCopy
-                title="Delivery receipts"
-                description={`${value().receipts.deliveries} deliveries · ${value().receipts.receipt_only} without stored events (${value().receipts.replayed_only} replay-only) · ${value().receipts.anomalous} inconsistent receipts · ${value().receipts.orphaned_events} events without receipts`}
+                title={language.t("settings.copy.deliveryReceipts")}
+                description={language.t("settings.copy.health.receipts", {
+                  deliveries: value().receipts.deliveries,
+                  receiptOnly: value().receipts.receipt_only ?? language.t("settings.copy.unknown"),
+                  replayed: value().receipts.replayed_only ?? language.t("settings.copy.unknown"),
+                  anomalous: value().receipts.anomalous ?? language.t("settings.copy.unknown"),
+                  orphaned: value().receipts.orphaned_events,
+                })}
               />
             </Row>
             <Row>
               <RowCopy
-                title="Server usage"
-                description={`${value().usage.responses} model responses · ${value().usage.projected} usage records · ${value().usage.missing_projection} missing usage records`}
+                title={language.t("settings.copy.serverUsage")}
+                description={language.t("settings.copy.health.usage", {
+                  responses: value().usage.responses,
+                  projected: value().usage.projected,
+                  missing: value().usage.missing_projection,
+                })}
               />
             </Row>
             <Row>
               <RowCopy
-                title="HTTP attempts"
+                title={language.t("settings.copy.httpAttempts")}
                 description={
                   value().attempts
-                    ? `${value().attempts!.calls} calls · ${value().attempts!.dispatched} dispatches · ${value().attempts!.completed} completed · ${value().attempts!.failed} failed · ${value().attempts!.cancelled} cancelled · ${value().attempts!.timed_out} timed out · ${value().attempts!.pending} without a terminal outcome · ${value().attempts!.unclassified_requests} requests without HTTP attempt evidence`
-                    : "This server does not report pre-response attempt coverage. Failure and cancellation coverage is unknown."
+                    ? language.t("settings.copy.health.attempts", {
+                        calls: value().attempts!.calls,
+                        dispatched: value().attempts!.dispatched,
+                        completed: value().attempts!.completed,
+                        failed: value().attempts!.failed,
+                        cancelled: value().attempts!.cancelled,
+                        timedOut: value().attempts!.timed_out,
+                        pending: value().attempts!.pending,
+                        unclassified: value().attempts!.unclassified_requests,
+                      })
+                    : language.t("settings.copy.thisServerDoesNotReportPreResponseAttempt")
                 }
               />
             </Row>
             <Row>
               <RowCopy
-                title="Unknown provider fields"
-                description={`Input ${value().usage.unknown_input} · output ${value().usage.unknown_output} · reasoning ${value().usage.unknown_reasoning} · cache read ${value().usage.unknown_cache_read} · cache write ${value().usage.unknown_cache_write}. An omitted field is not a token-count mismatch.`}
+                title={language.t("settings.copy.unknownProviderFields")}
+                description={language.t("settings.copy.health.fields", {
+                  input: value().usage.unknown_input,
+                  output: value().usage.unknown_output,
+                  reasoning: value().usage.unknown_reasoning,
+                  cacheRead: value().usage.unknown_cache_read,
+                  cacheWrite: value().usage.unknown_cache_write,
+                })}
               />
             </Row>
             <Row>
               <RowCopy
-                title="Ace settlement evidence"
-                description={`${value().managed.settled} settled holds · ${value().managed.pending} pending · ${value().managed.not_charged} released or expired · ${value().managed.unknown_charge_amount} settled amounts unknown`}
+                title={language.t("settings.copy.aceSettlementEvidence")}
+                description={language.t("settings.copy.health.settled", {
+                  settled: value().managed.settled,
+                  pending: value().managed.pending,
+                  released: value().managed.not_charged,
+                  unknown: value().managed.unknown_charge_amount,
+                })}
               />
             </Row>
             <Show when={value().managed.attempts_without_response !== undefined}>
               <Row>
                 <RowCopy
-                  title="Ace calls without responses"
-                  description={`${value().managed.attempts_without_response} HTTP attempts checked · ${value().managed.unknown_attempt_charge ?? 0} without a known call-to-hold link. An absent link does not establish a zero charge.`}
+                  title={language.t("settings.copy.aceCallsWithoutResponses")}
+                  description={language.t("settings.copy.health.noResponse", {
+                    attempts: value().managed.attempts_without_response ?? language.t("settings.copy.unknown"),
+                    unknown: value().managed.unknown_attempt_charge ?? 0,
+                  })}
                 />
               </Row>
             </Show>
             <For each={(Object.keys(labels) as Array<keyof typeof labels>).filter((key) => value().managed[key] > 0)}>
               {(key) => (
                 <Row>
-                  <RowCopy title={labels[key]} description={String(value().managed[key])} />
+                  <RowCopy title={language.t(labels[key])} description={String(value().managed[key])} />
                 </Row>
               )}
             </For>
             <Show when={props.queued + props.quarantined > 0}>
               <Row>
                 <RowCopy
-                  title="Still on this device"
-                  description={`${props.queued} queued and ${props.quarantined} rejected records are outside the server report. Server evidence cannot prove these records arrived.`}
+                  title={language.t("settings.copy.stillOnThisDevice")}
+                  description={language.t("settings.copy.health.queue", {
+                    queued: props.queued,
+                    rejected: props.quarantined,
+                  })}
                 />
               </Row>
             </Show>

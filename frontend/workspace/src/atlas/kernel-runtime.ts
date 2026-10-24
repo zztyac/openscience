@@ -1,3 +1,4 @@
+import type { useLanguage } from "@/context/language"
 export type KernelState = "lazy" | "starting" | "idle" | "running" | "stopped" | "crashed"
 
 type KernelEnvironment = {
@@ -113,13 +114,21 @@ export async function resolveRuntimeSession(routeID: string | undefined, create:
   return id
 }
 
-export function kernelLabel(kernel: KernelStatus) {
+export function kernelLabel(kernel: KernelStatus, translate?: ReturnType<typeof useLanguage>["t"]) {
   if (kernel.name.startsWith("notebook:")) return kernel.name.slice("notebook:".length)
-  if (kernel.name.startsWith("environment:")) return `${kernel.name.slice("environment:".length)} environment`
+  if (kernel.name.startsWith("environment:"))
+    return (
+      translate?.("research.compute.environment", { name: kernel.name.slice("environment:".length) }) ??
+      `${kernel.name.slice("environment:".length)} environment`
+    )
   if (kernel.name === "agent") {
     const environment = kernel.environment_name
-    if (environment && environment !== kernel.language) return `${environment} analysis`
-    return `${kernel.language === "r" ? "R" : "Python"} analysis`
+    if (environment && environment !== kernel.language)
+      return translate?.("research.compute.analysis", { name: environment }) ?? `${environment} analysis`
+    return (
+      translate?.("research.compute.analysis", { name: kernel.language === "r" ? "R" : "Python" }) ??
+      `${kernel.language === "r" ? "R" : "Python"} analysis`
+    )
   }
   return kernel.name
 }

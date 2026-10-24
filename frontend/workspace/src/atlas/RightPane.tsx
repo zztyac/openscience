@@ -1,3 +1,4 @@
+import { useLanguage } from "@/context/language"
 import {
   createEffect,
   createMemo,
@@ -57,14 +58,19 @@ import {
 } from "@/atlas/right-pane-layout"
 import "./right-pane-tabs.css"
 
-const labels: Record<ContextTab, string> = {
-  artifact: "Files",
-  files: "Files",
-  terminal: "Terminal",
+const labels = {
+  artifact: "palette.group.files",
+  files: "palette.group.files",
+  terminal: "command.category.terminal",
   canvas: "Synthetic Sciences",
-  kernels: "Compute",
-  autoresearch: "Autoresearch",
-  trace: "Trace",
+  kernels: "settings.shell.panel.compute",
+  autoresearch: "pages.copy.autoresearch",
+  trace: "pages.surface.trace",
+} as const
+
+function contextLabel(context: ContextTab, language: ReturnType<typeof useLanguage>) {
+  if (context === "canvas") return "Synthetic Sciences"
+  return language.t(labels[context])
 }
 
 export function RightPaneGate(props: { children: JSX.Element }): JSX.Element {
@@ -97,6 +103,7 @@ export function RightPaneFrame(props: {
   onPane?: (element: HTMLElement) => void
   children: JSX.Element
 }): JSX.Element {
+  const language = useLanguage()
   const refs: {
     pane?: HTMLElement
     prior?: HTMLElement
@@ -167,7 +174,7 @@ export function RightPaneFrame(props: {
         <button
           type="button"
           class="session-right-pane-backdrop"
-          aria-label="Close inspector overlay"
+          aria-label={language.t("pages.surface.closeInspectorOverlay")}
           aria-hidden="true"
           tabindex={-1}
           onClick={props.onClose}
@@ -186,7 +193,7 @@ export function RightPaneFrame(props: {
           props.onPane?.(element)
         }}
         class="session-right-pane"
-        aria-label="Research inspector"
+        aria-label={language.t("pages.surface.researchInspector")}
         role={props.modal ? "dialog" : undefined}
         aria-modal={props.modal ? "true" : undefined}
         tabindex={props.modal ? -1 : undefined}
@@ -230,6 +237,7 @@ export function RightPane(
     route?: string
   } = {},
 ): JSX.Element {
+  const language = useLanguage()
   const sdk = useSDK()
   const paneID = createUniqueId()
   const context = uiStore.context
@@ -295,9 +303,9 @@ export function RightPane(
     const target = uiStore.workTabs().find((tab) => tab.id === (id ?? uiStore.activeWorkTab()))
     if (target?.kind === "file" && openDirty().includes(target.id)) {
       const confirmed = await confirmDialog(dialog, {
-        title: "Discard unsaved changes?",
-        message: `${target.file.name} has changes that have not been saved.`,
-        confirmLabel: "Discard and close",
+        title: language.t("pages.surface.discardQuestion"),
+        message: language.t("pages.surface.unsavedFile", { name: target.file.name }),
+        confirmLabel: language.t("pages.surface.discardClose"),
         danger: true,
       })
       if (!confirmed || !live || fileOwner() !== owner) return
@@ -312,9 +320,12 @@ export function RightPane(
     const pending = openDirty()
     if (pending.length > 0) {
       const confirmed = await confirmDialog(dialog, {
-        title: "Close with unsaved changes?",
-        message: `${pending.length} ${pending.length === 1 ? "file has" : "files have"} changes that have not been saved.`,
-        confirmLabel: "Discard and close",
+        title: language.t("pages.surface.closeUnsavedQuestion"),
+        message: language.t(
+          pending.length === 1 ? "pages.surface.unsavedFiles.one" : "pages.surface.unsavedFiles.other",
+          { count: pending.length },
+        ),
+        confirmLabel: language.t("pages.surface.discardClose"),
         danger: true,
       })
       if (!confirmed || !live || fileOwner() !== owner) return
@@ -417,6 +428,8 @@ export function RightPane(
       >
         <>
           <PaneResizer
+            label={language.t("pages.surface.resizeInspector")}
+            title={language.t("pages.surface.resizeInspectorHint")}
             owner={key()}
             controls={paneID}
             disabled={narrow() || expanded() || !uiStore.rightPaneOpen()}
@@ -432,7 +445,7 @@ export function RightPane(
               when={uiStore.workTabs().length > 0}
               fallback={
                 <div class="research-inspector__context">
-                  <strong>{labels[context()]}</strong>
+                  <strong>{contextLabel(context(), language)}</strong>
                 </div>
               }
             >
@@ -449,29 +462,31 @@ export function RightPane(
                 <DropdownMenu placement="bottom-end">
                   <DropdownMenu.Trigger
                     class="research-inspector__control"
-                    title="Workspace layout"
-                    aria-label="Workspace layout"
+                    title={language.t("pages.surface.workspaceLayout")}
+                    aria-label={language.t("pages.surface.workspaceLayout")}
                   >
                     <IconSplit size={16} strokeWidth={1.5} />
                   </DropdownMenu.Trigger>
                   <DropdownMenu.Portal>
                     <DropdownMenu.Content class="research-inspector__layout-menu">
                       <DropdownMenu.Item onSelect={splitEvenly}>
-                        <DropdownMenu.ItemLabel>Equal split</DropdownMenu.ItemLabel>
+                        <DropdownMenu.ItemLabel>{language.t("pages.surface.equalSplit")}</DropdownMenu.ItemLabel>
                       </DropdownMenu.Item>
                       <DropdownMenu.Item onSelect={() => preset("conversation")}>
-                        <DropdownMenu.ItemLabel>Wider conversation</DropdownMenu.ItemLabel>
+                        <DropdownMenu.ItemLabel>{language.t("pages.surface.widerConversation")}</DropdownMenu.ItemLabel>
                       </DropdownMenu.Item>
                       <DropdownMenu.Item onSelect={() => preset("inspector")}>
-                        <DropdownMenu.ItemLabel>Wider inspector</DropdownMenu.ItemLabel>
+                        <DropdownMenu.ItemLabel>{language.t("pages.surface.widerInspector")}</DropdownMenu.ItemLabel>
                       </DropdownMenu.Item>
                       <DropdownMenu.Item onSelect={() => preset("default")}>
-                        <DropdownMenu.ItemLabel>Reset width</DropdownMenu.ItemLabel>
+                        <DropdownMenu.ItemLabel>{language.t("pages.surface.resetWidth")}</DropdownMenu.ItemLabel>
                       </DropdownMenu.Item>
                       <DropdownMenu.Separator />
                       <DropdownMenu.Item onSelect={() => uiStore.closeContext()}>
-                        <DropdownMenu.ItemLabel>Focus conversation</DropdownMenu.ItemLabel>
-                        <DropdownMenu.ItemDescription>Keep files and tabs open</DropdownMenu.ItemDescription>
+                        <DropdownMenu.ItemLabel>{language.t("pages.surface.focusConversation")}</DropdownMenu.ItemLabel>
+                        <DropdownMenu.ItemDescription>
+                          {language.t("pages.surface.keepFilesTabs")}
+                        </DropdownMenu.ItemDescription>
                       </DropdownMenu.Item>
                     </DropdownMenu.Content>
                   </DropdownMenu.Portal>
@@ -482,8 +497,16 @@ export function RightPane(
                   type="button"
                   class="research-inspector__control"
                   onClick={() => setExpanded((value) => !value)}
-                  title={expanded() ? "Restore inspector" : "Open inspector full screen"}
-                  aria-label={expanded() ? "Restore inspector" : "Open inspector full screen"}
+                  title={
+                    expanded()
+                      ? language.t("pages.surface.restoreInspector")
+                      : language.t("pages.surface.inspectorFullScreen")
+                  }
+                  aria-label={
+                    expanded()
+                      ? language.t("pages.surface.restoreInspector")
+                      : language.t("pages.surface.inspectorFullScreen")
+                  }
                   aria-pressed={expanded()}
                 >
                   <Show when={expanded()} fallback={<IconExpand size={16} strokeWidth={1.5} />}>
@@ -495,8 +518,12 @@ export function RightPane(
                 type="button"
                 class="research-inspector__control"
                 onClick={() => (narrow() ? void closePane() : void closeWorkTab())}
-                title={narrow() ? "Back to conversation" : "Close context"}
-                aria-label={narrow() ? "Back to conversation" : "Close context"}
+                title={
+                  narrow() ? language.t("pages.surface.backConversation") : language.t("pages.surface.closeContext")
+                }
+                aria-label={
+                  narrow() ? language.t("pages.surface.backConversation") : language.t("pages.surface.closeContext")
+                }
                 data-modal-initial-focus
               >
                 <Show when={narrow()} fallback={<IconX size={16} strokeWidth={1.5} />}>
@@ -505,7 +532,7 @@ export function RightPane(
               </button>
             </div>
           </div>
-          <Suspense fallback={<InspectorLoading label={labels[context()]} />}>
+          <Suspense fallback={<InspectorLoading label={contextLabel(context(), language)} />}>
             <For each={fileTabs()}>
               {(tab) => (
                 <div
@@ -538,8 +565,8 @@ export function RightPane(
                         tab.file.scope === "auto"
                           ? undefined
                           : tab.file.scope === "session" || tab.file.external
-                            ? "Session files"
-                            : "Project files"
+                            ? language.t("atlas.files.sessionFiles")
+                            : language.t("atlas.files.project")
                       }
                       active={selectedFile(tab) && (context() === "files" || context() === "artifact")}
                       onDirtyChange={(dirty) => markDirty(tab.id, dirty)}
@@ -599,10 +626,10 @@ export function RightPane(
 
 const WORK_TAB_DRAG = "text/openscience-work-tab"
 
-function workTabLabel(tab: WorkTab) {
+function workTabLabel(tab: WorkTab, language: ReturnType<typeof useLanguage>) {
   if (tab.kind === "file") return tab.file.name
   if (tab.kind === "saved") return tab.artifact.title
-  return labels[tab.context]
+  return contextLabel(tab.context, language)
 }
 
 function workTabIcon(tab: WorkTab): JSX.Element {
@@ -623,6 +650,7 @@ function WorkTabStrip(props: {
   onClose: (id: string) => void
   onReorder: (id: string, to: number) => void
 }): JSX.Element {
+  const language = useLanguage()
   let strip: HTMLElement | undefined
 
   createEffect(() => {
@@ -639,7 +667,7 @@ function WorkTabStrip(props: {
     <nav
       ref={strip}
       class="inspector-tabs"
-      aria-label="Contextual work tabs"
+      aria-label={language.t("pages.surface.contextualTabs")}
       role="tablist"
       aria-orientation="horizontal"
     >
@@ -647,7 +675,13 @@ function WorkTabStrip(props: {
         {(tab, index) => (
           <div
             class="inspector-tab-pair"
-            title={tab.kind === "file" ? tab.file.path : tab.kind === "saved" ? tab.artifact.title : workTabLabel(tab)}
+            title={
+              tab.kind === "file"
+                ? tab.file.path
+                : tab.kind === "saved"
+                  ? tab.artifact.title
+                  : workTabLabel(tab, language)
+            }
             data-active={props.active === tab.id ? "true" : undefined}
             role="presentation"
           >
@@ -704,12 +738,12 @@ function WorkTabStrip(props: {
               <span class="inspector-tab__icon" aria-hidden="true">
                 {workTabIcon(tab)}
               </span>
-              <span class="inspector-tab__name">{workTabLabel(tab)}</span>
+              <span class="inspector-tab__name">{workTabLabel(tab, language)}</span>
             </button>
             <button
               type="button"
               class="inspector-tab__close"
-              aria-label={`Close ${workTabLabel(tab)}`}
+              aria-label={language.t("pages.copy.closeNamed", { name: workTabLabel(tab, language) })}
               onClick={() => props.onClose(tab.id)}
             >
               <IconX size={12} strokeWidth={1.5} />
@@ -722,6 +756,7 @@ function WorkTabStrip(props: {
 }
 
 function InspectorLoading(props: { label: string }): JSX.Element {
+  const language = useLanguage()
   return (
     <div
       data-component="inspector-loading"
@@ -729,7 +764,7 @@ function InspectorLoading(props: { label: string }): JSX.Element {
       aria-live="polite"
       style={{ flex: 1, "min-height": 0, display: "grid", "place-items": "center" }}
     >
-      <AtomLoader size={144} caption={`Loading ${props.label.toLowerCase()}`} />
+      <AtomLoader size={144} caption={language.t("atlas.files.loadingSource", { name: props.label.toLowerCase() })} />
     </div>
   )
 }

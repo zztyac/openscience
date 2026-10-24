@@ -1,3 +1,4 @@
+import type { JSX } from "solid-js"
 import { afterAll, afterEach, expect, test } from "bun:test"
 import { fileURLToPath } from "node:url"
 import { createOpenScienceClient } from "@synsci/sdk/v2/client"
@@ -82,6 +83,18 @@ const [overlays, tools, folder, models, web, fixture] = await Promise.all([
 ])
 
 const cleanups: Array<() => void> = []
+const { TestLanguage } = (await vite.ssrLoadModule("/test/language.tsx")) as typeof import("../../test/language")
+const localizedRender = (view: () => JSX.Element, host: HTMLElement) =>
+  web.render(
+    () =>
+      web.createComponent(TestLanguage, {
+        get children() {
+          return view()
+        },
+      }),
+    host,
+  )
+
 afterAll(() => vite.close())
 afterEach(() => {
   cleanups
@@ -137,7 +150,7 @@ async function compose() {
   document.body.append(host)
   const closed = { count: 0 }
   cleanups.push(
-    web.render(() => {
+    localizedRender(() => {
       const action = document.createElement("button")
       action.type = "button"
       action.dataset.composerToolsItem = ""
