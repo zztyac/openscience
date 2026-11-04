@@ -1,0 +1,180 @@
+.settings-skills {
+  flex-direction: column;
+}
+
+.settings-skills__navigation {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+  padding: 12px var(--settings-space-6) 0;
+  border-bottom: 1px solid var(--settings-border);
+}
+
+.settings-skills__navigation button {
+  padding: 9px 12px;
+  color: var(--color-text-muted);
+  border-bottom: 2px solid transparent;
+  font-size: var(--settings-type-body);
+}
+
+.settings-skills__navigation button[aria-selected="true"] {
+  color: var(--color-text);
+  border-bottom-color: var(--settings-primary);
+}
+
+.settings-skills__content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.settings-skills__content > .skills-workspace {
+  height: 100%;
+}
+
+.materials-skills {
+  display: grid;
+  gap: 16px;
+  color: var(--color-text);
+  font-size: var(--settings-type-body);
+  line-height: var(--settings-leading-body);
+}
+
+.materials-skills__hint,
+.materials-skills__count,
+.materials-skills__copy > span,
+.materials-skills__actions > span {
+  color: var(--color-text-muted);
+  font-size: var(--settings-type-helper);
+}
+
+.materials-skills__stages {
+  border: 1px solid var(--settings-border);
+  border-radius: var(--settings-radius-card);
+  background: var(--settings-surface);
+  overflow: hidden;
+}
+
+.materials-skills__stage + .materials-skills__stage {
+  border-top: 1px solid var(--settings-border);
+}
+
+.materials-skills__stage > summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.materials-skills__stage > summary::-webkit-details-marker {
+  display: none;
+}
+
+.materials-skills__stage > summary::after {
+  content: "+";
+  margin-left: auto;
+  color: var(--color-text-muted);
+}
+
+.materials-skills__stage[open] > summary::after {
+  content: "−";
+}
+
+.materials-skills__stage > summary strong {
+  font-weight: var(--font-weight-medium);
+}
+
+.materials-skills__number {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--settings-surface-muted);
+  color: var(--color-text-muted);
+  font-size: var(--settings-type-helper);
+}
+
+.materials-skills__stage fieldset {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 0 12px 12px;
+  border: 0;
+}
+
+.materials-skills__skill {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--settings-radius-control);
+  cursor: pointer;
+}
+
+.materials-skills__skill:hover {
+  background: var(--settings-surface-hover);
+}
+
+.materials-skills__skill input {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  accent-color: var(--settings-primary);
+}
+
+.materials-skills__copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.materials-skills__copy > strong {
+  font-weight: var(--font-weight-medium);
+}
+
+.materials-skills__copy > .materials-skills__reason {
+  color: var(--color-text);
+}
+
+.materials-skills__error {
+  padding: 12px;
+  border: 1px solid var(--settings-border);
+  border-radius: var(--settings-radius-control);
+  color: var(--color-text);
+  background: var(--settings-surface-muted);
+  overflow-wrap: anywhere;
+}
+
+.materials-skills__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.materials-skills :is(button, input, summary):focus-visible,
+.settings-skills__navigation button:focus-visible {
+  outline: 2px solid var(--settings-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 500px) {
+  .settings-skills__navigation {
+    padding-inline: 12px;
+  }
+
+  .materials-skills__stage > summary {
+    padding: 12px;
+  }
+
+  .materials-skills__count {
+    font-size: 11px;
+  }
+}

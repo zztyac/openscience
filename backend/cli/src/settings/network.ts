@@ -442,7 +442,7 @@ export namespace Network {
     const target = url(raw)
     if (!state.allowlistEnabled) return
     if (domainAllowed(target.hostname, domains(state))) return
-    throw new Error(`Network access to ${target.hostname} is not in the configured allow-list`)
+    throw new PolicyError(`Network access to ${target.hostname} is not in the configured allow-list`)
   }
 
   /** The hostname the allow-list would block for this URL, or undefined when
@@ -529,9 +529,27 @@ export namespace Network {
     }
   }
 
+  export class ResolutionError extends Error {
+    readonly phase = "dns"
+
+    constructor(
+      readonly code: "DNS_TIMEOUT" | "DNS_LOOKUP_FAILED" | "DNS_NO_ADDRESSES",
+      options?: ErrorOptions,
+    ) {
+      super(
+        code === "DNS_TIMEOUT"
+          ? "Public DNS resolution timed out"
+          : code === "DNS_NO_ADDRESSES"
+            ? "Public DNS resolution returned no addresses"
+            : "Public DNS resolution failed",
+        options,
+      )
+      this.name = "NetworkResolutionError"
+    }
+  }
+
   async function cancellable<T>(pending: Promise<T>, signal?: AbortSignal): Promise<T> {
     if (!signal) return pending
-    signal.throwIfAborted()
     return new Promise<T>((resolve, reject) => {
       const abort = () => {
         signal.removeEventListener("abort", abort)
@@ -548,26 +566,37 @@ export namespace Network {
           reject(error)
         },
       )
+      // The operation may abort synchronously before its promise reaches us.
+      // Attach its rejection handler before propagating that cancellation.
+      if (signal.aborted) abort()
     })
   }
 
-  export async function cloudflareResolve(
+  async function publicResolve(
     hostname: string,
+    provider: "cloudflare" | "alidns",
     signal?: AbortSignal,
     transport = pinnedFetch,
   ): Promise<string[]> {
     const name = canonicalDomain(hostname)
+    const endpoint =
+      provider === "alidns"
+        ? { url: "https://dns.alidns.com/resolve", address: "223.5.5.5" }
+        : { url: "https://cloudflare-dns.com/dns-query", address: "1.1.1.1" }
     const deadline = AbortSignal.any([AbortSignal.timeout(5000), ...(signal ? [signal] : [])])
     const answers = await Promise.all(
       [1, 28].map(async (type) => {
-        const target = new URL("https://cloudflare-dns.com/dns-query")
-        target.search = new URLSearchParams({ name, type: String(type) }).toString()
+        const target = new URL(endpoint.url)
+        target.search = new URLSearchParams({
+          name,
+          type: provider === "alidns" ? (type === 1 ? "A" : "AAAA") : String(type),
+        }).toString()
         // Bootstrap over a fixed public address so a TUN resolver cannot replace
         // the resolver itself with a synthetic address. TLS still verifies its hostname.
         const response = await transport(
           target,
           { signal: deadline, headers: { accept: "application/dns-json" } },
-          "1.1.1.1",
+          endpoint.address,
           64 * 1024,
         )
         if (!response.ok) throw new Error(`Public DNS lookup failed (${response.status})`)
@@ -587,10 +616,19 @@ export namespace Network {
     return [...new Set(answers.flat())]
   }
 
+  export async function cloudflareResolve(hostname: string, signal?: AbortSignal, transport = pinnedFetch) {
+    return publicResolve(hostname, "cloudflare", signal, transport)
+  }
+
+  export async function alidnsResolve(hostname: string, signal?: AbortSignal, transport = pinnedFetch) {
+    return publicResolve(hostname, "alidns", signal, transport)
+  }
+
   async function systemResolve(hostname: string, signal?: AbortSignal): Promise<readonly string[]> {
     const resolver = process.env.OPENSCIENCE_DNS_RESOLVER ?? "system"
     if (resolver === "cloudflare") return cloudflareResolve(hostname, signal)
-    if (resolver !== "system") throw new PolicyError("OPENSCIENCE_DNS_RESOLVER must be system or cloudflare")
+    if (resolver === "alidns") return alidnsResolve(hostname, signal)
+    if (resolver !== "system") throw new PolicyError("OPENSCIENCE_DNS_RESOLVER must be system, cloudflare or alidns")
     return (await lookup(hostname, { all: true, verbatim: true })).map((item) => item.address)
   }
 
@@ -606,10 +644,14 @@ export namespace Network {
       addresses = await (resolveAddresses ? resolveAddresses(target.hostname) : systemResolve(target.hostname, signal))
     } catch (error) {
       signal?.throwIfAborted()
-      if (error instanceof PolicyError) throw error
-      throw new Error(`Could not safely resolve ${target.hostname}: ${error}`)
+      if (error instanceof PolicyError || error instanceof ResolutionError) throw error
+      const code = error && typeof error === "object" && "code" in error ? error.code : undefined
+      const timeout =
+        (error instanceof Error && error.name === "TimeoutError") ||
+        ["ETIMEDOUT", "ETIME", "UND_ERR_CONNECT_TIMEOUT"].includes(String(code))
+      throw new ResolutionError(timeout ? "DNS_TIMEOUT" : "DNS_LOOKUP_FAILED", { cause: error })
     }
-    if (!addresses.length) throw new Error(`Could not safely resolve ${target.hostname}: no addresses returned`)
+    if (!addresses.length) throw new ResolutionError("DNS_NO_ADDRESSES")
     const blocked = addresses.find((address) => !addressPublic(address))
     if (blocked) {
       const hint = /^198\.(?:18|19)\./.test(blocked)
@@ -796,7 +838,9 @@ export namespace Network {
             .catch(fail)
         },
       )
-      req.once("error", fail)
+      // Aborting/destroying a failed request can emit another socket error in
+      // Bun. Keep the listener until the request is collected; fail is idempotent.
+      req.on("error", fail)
       if (signal.aborted) abort()
       else signal.addEventListener("abort", abort, { once: true })
       if (body) req.end(body)

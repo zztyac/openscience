@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "strategy_tree.schema.json",
+  "title": "SupraMAS Stage 1 Strategy Tree",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["job_id", "research_topic", "nodes", "edges"],
+  "properties": {
+    "job_id": { "type": "string" },
+    "research_topic": { "type": "string" },
+    "material_scope": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "target_property": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "nodes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "edges": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/edge" }
+    }
+  },
+  "$defs": {
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "node_id",
+        "level",
+        "paper_id",
+        "paper_title",
+        "strategy_records",
+        "limitation_records"
+      ],
+      "properties": {
+        "node_id": { "type": "string" },
+        "level": { "type": "integer", "minimum": 0 },
+        "parent_id": { "type": ["string", "null"] },
+        "paper_id": { "type": "string" },
+        "paper_title": { "type": "string" },
+        "year": { "type": ["integer", "null"] },
+        "doi": { "type": ["string", "null"] },
+        "url": { "type": ["string", "null"] },
+        "source_type": {
+          "type": "string",
+          "enum": ["experimental", "review", "theory", "dataset", "unknown"]
+        },
+        "notes": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "strategy_records": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/strategy_record" }
+        },
+        "limitation_records": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/limitation_record" }
+        }
+      }
+    },
+    "strategy_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_id",
+        "tuning_dimension",
+        "tuning_strategy",
+        "tuning_effect",
+        "evidence",
+        "confidence"
+      ],
+      "properties": {
+        "record_id": { "type": "string" },
+        "tuning_dimension": {
+          "type": "string",
+          "enum": [
+            "Composition tuning",
+            "Grain boundary tuning",
+            "Interface tuning",
+            "Texture tuning",
+            "Stress tuning"
+          ]
+        },
+        "tuning_strategy": { "type": "string" },
+        "tuning_effect": { "type": "string" },
+        "evidence": { "$ref": "#/$defs/evidence" },
+        "confidence": { "$ref": "#/$defs/confidence" }
+      }
+    },
+    "limitation_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "limitation_id",
+        "limitation",
+        "expectation",
+        "evidence",
+        "confidence"
+      ],
+      "properties": {
+        "limitation_id": { "type": "string" },
+        "limitation": { "type": "string" },
+        "expectation": { "type": "string" },
+        "related_record_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "evidence": { "$ref": "#/$defs/evidence" },
+        "confidence": { "$ref": "#/$defs/confidence" }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "parent_node_id",
+        "parent_limitation_id",
+        "parent_expectation",
+        "child_node_id",
+        "edge_type",
+        "edge_rationale",
+        "confidence"
+      ],
+      "properties": {
+        "edge_id": { "type": "string" },
+        "parent_node_id": { "type": "string" },
+        "parent_limitation_id": { "type": "string" },
+        "child_node_id": { "type": "string" },
+        "child_record_id": { "type": "string" },
+        "parent_expectation": { "type": "string" },
+        "child_tuning_effect": { "type": "string" },
+        "edge_type": {
+          "type": "string",
+          "enum": ["direct", "transferable", "exploratory"]
+        },
+        "edge_rationale": { "type": "string" },
+        "confidence": { "$ref": "#/$defs/confidence" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["chunk_id", "evidence_text"],
+      "properties": {
+        "chunk_id": { "type": "string" },
+        "page": { "type": ["integer", "null"] },
+        "evidence_text": { "type": "string" }
+      }
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    }
+  }
+}

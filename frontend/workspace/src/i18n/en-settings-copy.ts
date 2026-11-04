@@ -1,4 +1,39 @@
 export const dict = {
+  "settings.copy.materialSkills.library": "Skill library",
+  "settings.copy.materialSkills.title": "Materials research stages",
+  "settings.copy.materialSkills.description":
+    "Choose literature retrieval skills for the six research stages. Each stage can use more than one skill.",
+  "settings.copy.materialSkills.timing":
+    "Saved choices apply when a stage next starts. A running stage keeps its current configuration. Stages without skills use the existing workflow; stage order and researcher approvals stay unchanged.",
+  "settings.copy.materialSkills.intake": "Goal clarification",
+  "settings.copy.materialSkills.literature": "Literature & evidence",
+  "settings.copy.materialSkills.strategies": "Strategy tree",
+  "settings.copy.materialSkills.ideas": "Research ideas",
+  "settings.copy.materialSkills.protocol": "Experiment protocol",
+  "settings.copy.materialSkills.analysis": "Data & analysis",
+  "settings.copy.materialSkills.selected": "{{count}} selected",
+  "settings.copy.materialSkills.standard": "Existing workflow",
+  "settings.copy.materialSkills.arxiv": "Search preprints and retrieve open paper PDFs.",
+  "settings.copy.materialSkills.deepxiv": "Search preprints and paper metadata to locate originals and evidence.",
+  "settings.copy.materialSkills.exa": "Find scholarly pages, paper landing pages and open copies.",
+  "settings.copy.materialSkills.openalex": "Find paper metadata, abstracts and open full-text locations.",
+  "settings.copy.materialSkills.researchLit": "Combine relevant literature and evidence across sources.",
+  "settings.copy.materialSkills.semanticScholar": "Find papers, citation metadata and open full-text links.",
+  "settings.copy.materialSkills.save": "Save stage configuration",
+  "settings.copy.materialSkills.reload": "Discard changes and reload",
+  "settings.copy.materialSkills.saved": "Saved. Applies when a stage next starts.",
+  "settings.copy.materialSkills.unsaved": "Unsaved changes",
+  "settings.copy.materialSkills.conflict":
+    "This configuration changed elsewhere. Reload the latest configuration before editing again.",
+  "settings.copy.materialSkills.invalidResponse":
+    "The server returned an invalid stage configuration. Refresh and try again.",
+  "settings.copy.materialSkills.unavailable":
+    "Stage skill settings are unavailable on this server. Check that the updated version is running.",
+  "settings.copy.materialSkills.networkError": "Cannot connect to the server. Check the service and try again.",
+  "settings.copy.materialSkills.missing":
+    "This skill is currently unavailable. You can deselect it; refresh after configuring it.",
+  "settings.copy.catalog.service.exa": "API key for Exa scholarly web search.",
+  "settings.copy.catalog.service.deepxiv": "Access token for DeepXiv paper search and metadata lookup.",
   "settings.copy.yourSyntheticSciencesAccountWalletAndHowModels":
     "Your Synthetic Sciences account, Wallet, and how models are funded.",
   "settings.copy.workspaceCredentials": "Workspace credentials",

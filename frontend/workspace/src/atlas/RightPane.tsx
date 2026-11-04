@@ -608,7 +608,7 @@ export function RightPane(
             </Show>
             <Switch>
               <Match when={context() === "files" && uiStore.saved()}>
-                {(current) => <StoredArtifactView artifact={current()} />}
+                {(current) => <StoredArtifactView artifact={current()} versionID={uiStore.savedVersion()} />}
               </Match>
               <Match when={context() === "kernels"}>
                 <ComputeSurface />

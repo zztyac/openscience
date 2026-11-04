@@ -39,6 +39,8 @@ const groups = {
   },
 } as const
 const services = {
+  exa: "settings.copy.catalog.service.exa",
+  deepxiv: "settings.copy.catalog.service.deepxiv",
   aws: "settings.copy.catalog.service.aws",
   github: "settings.copy.catalog.service.github",
   gcp: "settings.copy.catalog.service.gcp",

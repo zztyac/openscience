@@ -167,6 +167,7 @@ export function AppInterface(props: { defaultUrl?: string }) {
                     </Suspense>
                   )}
                 />
+                <Route path="/materials/:id?" component={() => <Navigate href="/" />} />
                 <Route path="/:dir" component={DirectoryLayout}>
                   <Route path="/" component={() => <Navigate href="session" />} />
                   <Route

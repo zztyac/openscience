@@ -802,6 +802,47 @@ export function FilesPane(
     if (watcherRefresh) clearTimeout(watcherRefresh)
   })
 
+  // A material card can reveal an existing source without creating another
+  // browser. Only roots from this pane's verified access snapshot can be used.
+  createEffect(() => {
+    const navigation = uiStore.filesNavigation()
+    if (!navigation || resolving()) return
+    if (normalizeFilePath(navigation.directory) !== normalizeFilePath(projectRoot())) return
+    const target = normalizeFilePath(navigation.path ?? navigation.directory)
+    const source =
+      navigation.source === "results"
+        ? sources().find((item) => item.kind === "artifacts")
+        : sources()
+            .filter(
+              (item) => ["project", "connected", "session"].includes(item.kind) && containsFilePath(item.root, target),
+            )
+            .sort((a, b) => b.root.length - a.root.length)[0]
+    uiStore.clearFilesNavigation(navigation.id)
+    if (
+      !source ||
+      (source.kind !== "project" &&
+        source.kind !== "artifacts" &&
+        navigation.sessionID &&
+        navigation.sessionID !== sessionID())
+    ) {
+      setError(language.t("atlas.files.navigationUnavailable"))
+      return
+    }
+    const unchanged =
+      source.id === current().id && (source.kind === "artifacts" || normalizeFilePath(where()) === target)
+    choose(source.id)
+    setPath(
+      source.kind === "artifacts"
+        ? []
+        : target.slice(normalizeFilePath(source.root).replace(/\/$/, "").length).split("/").filter(Boolean),
+    )
+    setFilter("")
+    setError("")
+    setListingError("")
+    if (source.kind === "artifacts") void refetchArtifacts()
+    else if (unchanged) void refetchEntries()
+  })
+
   const rows = createMemo(() => {
     const query = filter().trim().toLowerCase()
     // No key means no location has been settled on yet, and the rows of the
@@ -827,11 +868,7 @@ export function FilesPane(
   // The grid takes artifacts whole. Projecting them into FileRow threw away the
   // MIME type, the session and the version count — everything that makes an
   // artifact different from a file in a folder.
-  const stored = createMemo(() => {
-    const query = filter().trim().toLowerCase()
-    const list = artifactData()?.active ?? []
-    return query ? list.filter((item) => item.title.toLowerCase().includes(query)) : list
-  })
+  const stored = createMemo(() => artifactData()?.active ?? [])
 
   const filterCopy = createMemo(() => {
     if (current().kind === "artifacts") return language.t("atlas.files.searchResults")
@@ -1548,6 +1585,7 @@ export function FilesPane(
         <Match when={current().kind === "artifacts"}>
           <ArtifactGrid
             artifacts={stored()}
+            query={filter()}
             titles={titles()}
             currentSession={sessionID()}
             filtered={Boolean(filter().trim())}

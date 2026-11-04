@@ -107,6 +107,20 @@ const CATALOG: ServiceSpec[] = [
     fields: [{ name: "api_key", label: "API key", type: "password" }],
   },
   {
+    id: "exa",
+    label: "Exa",
+    description: "API key for scholarly web search and open paper discovery through Exa.",
+    category: "integration",
+    fields: [{ name: "api_key", label: "API key", type: "password" }],
+  },
+  {
+    id: "deepxiv",
+    label: "DeepXiv",
+    description: "Access token for paper search and metadata lookup through DeepXiv.",
+    category: "integration",
+    fields: [{ name: "api_key", label: "Access token", type: "password" }],
+  },
+  {
     id: "firecrawl",
     label: "Firecrawl",
     description: "Your Firecrawl API key for web and research search.",
@@ -343,6 +357,12 @@ function mapServiceEnv(id: string, f: Record<string, string>): Record<string, st
       return out // service_account_json → file, handled in readDecryptedEnv
     case "literature":
       put("SEMANTIC_SCHOLAR_API_KEY", f.api_key)
+      return out
+    case "exa":
+      put("EXA_API_KEY", f.api_key)
+      return out
+    case "deepxiv":
+      put("DEEPXIV_API_KEY", f.api_key)
       return out
     case "azure":
       put("AZURE_TENANT_ID", f.tenant_id)

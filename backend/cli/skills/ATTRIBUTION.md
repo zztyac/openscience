@@ -374,3 +374,20 @@ upstream), **vendored** (unchanged apart from paths).
 
 
 273 of the bundled skills are covered above. `biology/pacsomatic` additionally carries its own MIT license from Beifang Niu, which K-Dense's collection preserves and this one keeps.
+
+
+## SupraMAS_V2_new user-provided literature skills — 6 skills
+
+- Source: the user's supplied `SupraMAS_V2_new/skills/` project.
+- Author/copyright: not declared in the supplied six Skill files. Existing source text is retained without assigning new ownership.
+- License: not declared in the supplied project; no additional license is inferred.
+- Relationship: adapted and rewritten for materials-stage tools. Each `references/supra-original.md` preserves the supplied Skill verbatim, and `metadata.upstream-sha256` identifies those bytes. Legacy helper scripts and personal configuration are not copied.
+
+| Skill | Upstream path | Relationship |
+| --- | --- | --- |
+| `research/arxiv` | `skills/arxiv/SKILL.md` | adapted and rewritten; original reference preserved |
+| `research/deepxiv` | `skills/deepxiv/SKILL.md` | adapted and rewritten; original reference preserved |
+| `research/exa-search` | `skills/exa-search/SKILL.md` | adapted and rewritten; original reference preserved |
+| `research/openalex` | `skills/openalex/SKILL.md` | adapted and rewritten; original reference preserved |
+| `research/research-lit` | `skills/research-lit/SKILL.md` | adapted and rewritten; original reference preserved |
+| `research/semantic-scholar` | `skills/semantic-scholar/SKILL.md` | adapted and rewritten; original reference preserved |

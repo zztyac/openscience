@@ -163,6 +163,18 @@ function isGeneratedTool(part: PartType | undefined): part is ToolPart {
   return part?.type === "tool" && part.tool === "artifact" && part.state.status === "completed"
 }
 
+/** A created research project outlives its tool call. Keep its controls in the
+ * conversation when the ordinary execution trace is folded. */
+function isMaterialsProjectTool(part: PartType | undefined): part is ToolPart {
+  if (part?.type !== "tool" || part.tool !== "materials_workflow" || !("metadata" in part.state)) return false
+  const metadata = part.state.metadata
+  return (
+    (metadata?.action ?? part.state.input?.action) === "create" &&
+    typeof metadata?.materialsProjectID === "string" &&
+    /^mat_[a-f0-9]{32}$/.test(metadata.materialsProjectID)
+  )
+}
+
 /** One collapsible line of the trace: a verb, a muted summary, a chevron.
  * Nested content is the ordinary part renderer, so details stay identical.
  * A burst of one shows its part directly; the header appears once a second
@@ -281,7 +293,8 @@ function AssistantTrace(props: {
         const own = (data.store.part[message.id] ?? emptyParts).map((part) => ({
           message,
           part,
-          hidden: (part.type === "tool" && part.tool === "todoread") || isGeneratedTool(part),
+          hidden:
+            (part.type === "tool" && part.tool === "todoread") || isGeneratedTool(part) || isMaterialsProjectTool(part),
         }))
         return [...notes(message), ...own]
       }),
@@ -632,6 +645,20 @@ export function SessionTurn(
   const generated = createMemo(() =>
     generatedArtifacts(assistantMessages().flatMap((message) => data.store.part[message.id] ?? emptyParts)),
   )
+  const materialsParts = createMemo(() => {
+    const projects = new Set<string>()
+    return assistantMessages().flatMap((message) =>
+      (data.store.part[message.id] ?? emptyParts).flatMap((part) => {
+        if (!isMaterialsProjectTool(part) || !("metadata" in part.state)) return []
+        const projectID = part.state.metadata?.materialsProjectID as string
+        if (projects.has(projectID)) return []
+        projects.add(projectID)
+        return [{ message, part }]
+      }),
+    )
+  })
+  const materialsByID = createMemo(() => new Map(materialsParts().map((entry) => [entry.part.id, entry])))
+  const materialsIDs = createMemo(() => materialsParts().map((entry) => entry.part.id), [], { equals: same })
 
   const permissions = createMemo(() => data.store.permission?.[props.sessionID] ?? emptyPermissions)
   const nextPermission = createMemo(() => permissions()[0])
@@ -1202,6 +1229,17 @@ export function SessionTurn(
                         </Show>
                       </div>
                     </Show>
+                    <For each={materialsIDs()}>
+                      {(id) => (
+                        <Show when={materialsByID().get(id)}>
+                          {(entry) => (
+                            <div data-slot="session-turn-materials-project">
+                              <Part part={entry().part} message={entry().message} defaultOpen hideCopy />
+                            </div>
+                          )}
+                        </Show>
+                      )}
+                    </For>
                     <Show when={requestParts().length === 0 && requestMessage() && nextQuestion()}>
                       <div data-slot="session-turn-permission-parts">
                         <Show when={requestParts().length === 0 && requestMessage() && nextQuestion()}>

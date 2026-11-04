@@ -25,6 +25,7 @@ export namespace ToolVisibility {
     "webfetch",
     "research_search",
     "literature",
+    "materials_workflow",
     "recall",
     "todowrite",
     "task",

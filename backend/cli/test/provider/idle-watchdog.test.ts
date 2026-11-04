@@ -77,9 +77,10 @@ function watched(
   fetchFn: Parameters<typeof Provider.fetchWithIdleWatchdog>[0],
   options: Partial<Parameters<typeof Provider.fetchWithIdleWatchdog>[3]> = {},
   init?: BunFetchRequestInit,
+  request: Provider.RequestContext = context,
 ) {
   const timings: Provider.RequestTiming[] = []
-  const response = Provider.withRequestContext(context, () =>
+  const response = Provider.withRequestContext(request, () =>
     Provider.fetchWithIdleWatchdog(fetchFn, "https://provider.test/v1/responses", init, {
       providerID: "test-provider",
       modelID: "test-model",
@@ -96,6 +97,124 @@ function watched(
 }
 
 describe("provider activity watchdog", () => {
+  for (const phase of ["connect", "first_event", "stream"] as const) {
+    test(`request context disables configured ${phase} and total deadlines without affecting other requests`, async () => {
+      const time = clock()
+      const headers = Promise.withResolvers<Response>()
+      const user = new AbortController()
+      let source!: ReadableStreamDefaultController<Uint8Array>
+      let signal: AbortSignal | undefined
+      let nativeTimeout: unknown
+      const upstream = new Response(
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            source = controller
+            if (phase === "stream") controller.enqueue(encoder.encode("first"))
+          },
+        }),
+      )
+      const { response, timings } = watched(
+        async (_input, init) => {
+          signal = init?.signal ?? undefined
+          nativeTimeout = (init as BunFetchRequestInit & { timeout?: unknown }).timeout
+          return phase === "connect" ? headers.promise : upstream
+        },
+        { connectTimeout: 60_000, idleTimeout: 60_000, totalTimeout: 120_000 },
+        { signal: user.signal },
+        { ...context, timeouts: false },
+      )
+      const bounded = watched(async () => new Promise<Response>(() => {}), { connectTimeout: 60_000 })
+      void bounded.response.catch(() => {})
+      const body = response.then((value) => value.text())
+      let settled = false
+      void body.then(
+        () => (settled = true),
+        () => (settled = true),
+      )
+      try {
+        await time.advance(3_600_001)
+        expect(settled).toBe(false)
+        expect(signal?.aborted).toBe(false)
+        expect(nativeTimeout).toBe(false)
+        expect(timings).toHaveLength(0)
+        await expect(bounded.response).rejects.toMatchObject({ phase: "connect", timeoutMs: 60_000 })
+        expect(Provider.currentRequestContext()).toBeUndefined()
+        headers.resolve(upstream)
+        source.enqueue(encoder.encode("finished"))
+        source.close()
+        expect(await body).toBe(phase === "stream" ? "firstfinished" : "finished")
+        expect(timings).toHaveLength(1)
+        expect(timings[0]).toMatchObject({ outcome: "completed", connectTimeoutMs: false, idleTimeoutMs: false })
+        expect(timings[0].completedAt - timings[0].startedAt).toBeGreaterThan(3_600_000)
+      } finally {
+        user.abort(new DOMException("fixture cleanup", "AbortError"))
+        time.restore()
+      }
+    })
+  }
+
+  for (const phase of ["connect", "stream"] as const) {
+    test(`an unbounded request still honors user cancellation during ${phase}`, async () => {
+      const time = clock()
+      const user = new AbortController()
+      const reason = new DOMException("User stopped", "AbortError")
+      let signal: AbortSignal | undefined
+      let cancelled: unknown
+      const { response, timings } = watched(
+        async (_input, init) => {
+          signal = init?.signal ?? undefined
+          if (phase === "connect") return new Promise<Response>(() => {})
+          return new Response(
+            new ReadableStream<Uint8Array>({
+              cancel(value) {
+                cancelled = value
+              },
+            }),
+          )
+        },
+        { connectTimeout: 60_000, idleTimeout: 60_000, totalTimeout: 120_000 },
+        { signal: user.signal },
+        { ...context, timeouts: false },
+      )
+      const body = response.then((value) => value.text())
+      void body.catch(() => {})
+      try {
+        await time.advance(3_600_001)
+        expect(signal?.aborted).toBe(false)
+        user.abort(reason)
+        await expect(body).rejects.toBe(reason)
+        expect(signal?.reason).toBe(reason)
+        if (phase === "stream") expect(cancelled).toBe(reason)
+        expect(timings).toHaveLength(1)
+        expect(timings[0]).toMatchObject({ outcome: "aborted", connectTimeoutMs: false, idleTimeoutMs: false })
+      } finally {
+        user.abort(reason)
+        time.restore()
+      }
+    })
+  }
+
+  test("an unbounded request preserves upstream errors and error responses", async () => {
+    const reason = new Error("Upstream connection closed")
+    const failed = watched(
+      async () => {
+        throw reason
+      },
+      {},
+      undefined,
+      { ...context, timeouts: false },
+    )
+    await expect(failed.response).rejects.toBe(reason)
+    expect(failed.timings[0].outcome).toBe("error")
+    const remote = watched(async () => new Response("Gateway timeout", { status: 504 }), {}, undefined, {
+      ...context,
+      timeouts: false,
+    })
+    const response = await remote.response
+    expect(response.status).toBe(504)
+    expect(await response.text()).toBe("Gateway timeout")
+  })
+
   test("never emits a funding credential through request timing", async () => {
     const secret = "thk_timing.super-secret"
     const timings: Provider.RequestTiming[] = []

@@ -1,0 +1,236 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://supramas.local/schemas/idea_design.schema.json",
+  "title": "SupraMAS Stage 2 Idea Design State",
+  "type": "object",
+  "required": [
+    "job_id",
+    "stage1_tree_source",
+    "iteration",
+    "target_final_ideas",
+    "idea_pool",
+    "review_log",
+    "similarity_graph",
+    "clusters",
+    "ranking_state",
+    "final_ideas",
+    "stop_reason"
+  ],
+  "properties": {
+    "job_id": { "type": ["string", "null"] },
+    "stage1_tree_source": { "type": "string" },
+    "stage1_strategy_tree_path": { "type": "string" },
+    "iteration": { "type": "integer", "minimum": 0 },
+    "max_iterations": { "type": "integer", "minimum": 1 },
+    "target_final_ideas": { "type": "integer", "minimum": 1 },
+    "idea_pool": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/idea" }
+    },
+    "review_log": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/review" }
+    },
+    "similarity_graph": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "clusters": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "duplicates": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "underexplored_regions": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "ranking_state": {
+      "type": "object",
+      "required": ["ranking_round", "ranked_ideas"],
+      "properties": {
+        "ranking_round": { "type": "integer", "minimum": 1 },
+        "pairwise_matches": { "type": "array" },
+        "ranked_ideas": { "type": "array" },
+        "ranking_feedback_for_evolution": { "type": "array" }
+      },
+      "additionalProperties": true
+    },
+    "meta_review_feedback": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "evolution_requests": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "final_ideas": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/final_idea" }
+    },
+    "stop_reason": { "type": "string" }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "evidence_trace": {
+      "type": "object",
+      "required": ["node_id", "record_id", "chunk_id"],
+      "properties": {
+        "node_id": { "type": "string" },
+        "paper_id": { "type": "string" },
+        "record_id": { "type": "string" },
+        "chunk_id": { "type": "string" },
+        "evidence_text": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "idea": {
+      "type": "object",
+      "required": [
+        "idea_id",
+        "title",
+        "material_system",
+        "target_property",
+        "scientific_problem",
+        "core_hypothesis",
+        "material_design_plan",
+        "tuning_strategy",
+        "mechanism_pathway",
+        "primary_dimensions",
+        "evidence_traces",
+        "expected_results",
+        "validation_concept",
+        "risks",
+        "overall_evidence_status",
+        "review_status"
+      ],
+      "properties": {
+        "idea_id": { "type": "string" },
+        "title": { "type": "string" },
+        "material_system": { "type": "string" },
+        "target_property": { "type": "string" },
+        "application_scenario": { "type": "string" },
+        "scientific_problem": { "type": "string" },
+        "core_hypothesis": { "type": "string" },
+        "material_design_plan": { "type": "object" },
+        "tuning_strategy": {
+          "type": "object",
+          "required": ["dominant_dimensions", "integrated_strategy", "strategy_steps", "controllable_variables"],
+          "properties": {
+            "dominant_dimensions": { "type": "array", "items": { "type": "string" } },
+            "integrated_strategy": { "type": "string" },
+            "strategy_steps": { "type": "array", "items": { "type": "object" } },
+            "controllable_variables": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": true
+        },
+        "mechanism_pathway": { "type": "string" },
+        "primary_dimensions": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "Composition tuning",
+              "Grain boundary tuning",
+              "Interface tuning",
+              "Texture tuning",
+              "Stress tuning"
+            ]
+          }
+        },
+        "evidence_traces": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidence_trace" }
+        },
+        "expected_results": { "type": "object" },
+        "validation_concept": { "type": "object" },
+        "risks": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "overall_evidence_status": {
+          "enum": ["evidence_supported", "inferred_design", "speculative_extension"]
+        },
+        "review_status": {
+          "enum": ["pending", "accept", "revise", "reject"]
+        }
+      },
+      "additionalProperties": true
+    },
+    "review": {
+      "type": "object",
+      "required": ["idea_id", "decision", "summary"],
+      "properties": {
+        "idea_id": { "type": "string" },
+        "decision": { "enum": ["accept", "revise", "reject"] },
+        "summary": { "type": "string" },
+        "critical_issues": { "type": "array" },
+        "minor_issues": { "type": "array" },
+        "unsupported_claims": { "type": "array" },
+        "risk_notes": { "type": "array" },
+        "acceptance_conditions": { "type": "array" }
+      },
+      "additionalProperties": true
+    },
+    "final_idea": {
+      "type": "object",
+      "required": [
+        "idea_id",
+        "title",
+        "material_system",
+        "target_property",
+        "scientific_problem",
+        "core_hypothesis",
+        "material_design_plan",
+        "tuning_strategy",
+        "mechanism_pathway",
+        "primary_dimensions",
+        "evidence_traces",
+        "expected_results",
+        "validation_concept",
+        "risks",
+        "overall_evidence_status"
+      ],
+      "properties": {
+        "idea_id": { "type": "string" },
+        "title": { "type": "string" },
+        "material_system": { "type": "string" },
+        "target_property": { "type": "string" },
+        "application_scenario": { "type": "string" },
+        "scientific_problem": { "type": "string" },
+        "core_hypothesis": { "type": "string" },
+        "material_design_plan": { "type": "object" },
+        "tuning_strategy": {
+          "type": "object",
+          "required": ["dominant_dimensions", "integrated_strategy", "strategy_steps", "controllable_variables"],
+          "properties": {
+            "dominant_dimensions": { "type": "array", "items": { "type": "string" } },
+            "integrated_strategy": { "type": "string" },
+            "strategy_steps": { "type": "array", "items": { "type": "object" } },
+            "controllable_variables": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": true
+        },
+        "mechanism_pathway": { "type": "string" },
+        "primary_dimensions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "evidence_traces": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidence_trace" }
+        },
+        "expected_results": { "type": "object" },
+        "validation_concept": { "type": "object" },
+        "risks": { "type": "array" },
+        "rank": { "type": ["integer", "null"] },
+        "cluster_id": { "type": ["string", "null"] },
+        "overall_evidence_status": {
+          "enum": ["evidence_supported", "inferred_design", "speculative_extension"]
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

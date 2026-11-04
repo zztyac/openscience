@@ -304,7 +304,7 @@ export const dict = {
   "common.attachment": "Attachment",
 
   "prompt.placeholder.shell": "Enter shell command…",
-  "prompt.placeholder.normal": "Describe the research task you want to work through…",
+  "prompt.placeholder.normal": "Share your research idea. No detailed plan needed…",
   "prompt.placeholder.working": "Add to this turn while it works · Esc stops",
   "prompt.placeholder.backgroundWorker":
     "A worker is still running in the background; its report will start a new turn. Add to the conversation…",

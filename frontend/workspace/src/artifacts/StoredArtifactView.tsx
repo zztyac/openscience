@@ -59,7 +59,7 @@ function label(version: StoredArtifactVersion | undefined, fallback: string) {
   return fallback === "report" ? "Document" : fallback
 }
 
-export function StoredArtifactView(props: { artifact: StoredArtifact }): JSX.Element {
+export function StoredArtifactView(props: { artifact: StoredArtifact; versionID?: string }): JSX.Element {
   const sdk = useSDK()
   const previewScope = () => `${sdk.url}\n${sdk.scope}`
   const [action, setAction] = createSignal<Action>()
@@ -108,7 +108,7 @@ export function StoredArtifactView(props: { artifact: StoredArtifact }): JSX.Ele
   const selected = createMemo(() => {
     const current = record()
     if (!current || current.id !== props.artifact.id) return
-    return current.current
+    return props.versionID ? current.versions.find((version) => version.id === props.versionID) : current.current
   })
   const [preview, previewActions] = createStoredArtifactPreview(sdk.request, () => ({
     scope: previewScope(),
@@ -206,6 +206,7 @@ export function StoredArtifactView(props: { artifact: StoredArtifact }): JSX.Ele
             <span style={meta()}>
               {label(selected(), record()?.kind ?? props.artifact.kind)} ·{" "}
               {size(selected()?.size ?? props.artifact.current.size)}
+              <Show when={selected()}>{(version) => <> · v{version().version}</>}</Show>
             </span>
           </span>
           <ViewerControlsSlot />

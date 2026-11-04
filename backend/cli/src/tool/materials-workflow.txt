@@ -1,0 +1,18 @@
+Start or continue a REBCO / superconducting thin-film materials research workflow INSIDE THE CURRENT OPENSCIENCE CONVERSATION.
+
+Call this tool when the user expresses an intent to research materials, even in one short everyday sentence: “提高超导性能”, “帮我找找 REBCO 的研究方向”, or “看看怎么让超导薄膜更好”. They do not need to name a workflow, use specialist terms, specify equipment, or supply experimental parameters. Create the task from their words and let intake clarify only what blocks the research direction. Preserve the original goal and constraints already given in the conversation; do not rewrite a vague goal as a fabricated detailed research plan. The workflow uses the model already selected for this conversation. Pure conceptual questions such as “什么是超导？” or “钉扎是什么意思？”, capability questions, and discussion of the platform itself do not start a workflow.
+
+Actions:
+- create: supply the user's original goal, including a short colloquial goal, and any known conversation constraints; optionally supply target (auto/literature/strategies/ideas/protocol). Use auto unless they specify an endpoint. General direction finding or performance-improvement exploration should stop at ideas; protocol requires an explicit request for an experimental plan. Returns immediately with a durable project ID and a progress/results card in this same conversation. A repeated create from the same assistant message is deduplicated; do not keep creating projects to check progress.
+- status: inspect one existing project in this conversation when the user explicitly requests its latest state. Supply its projectID from a previous tool result.
+- answer: relay the user's answers when the workflow is waiting for clarification, including “还没想好” or “先了解方向”. Supply projectID and answers; never invent missing experimental conditions or insist that they first complete a technical questionnaire.
+- resume: continue a failed, interrupted, or cancelled workflow after addressing its cause, using projectID. Finished artifacts are retained.
+- refresh_literature: when the user requests full texts or retries literature acquisition, re-run literature retrieval for this project and continue its original target. Requires completed intake and no generated strategies yet; evidence supporting existing strategies is frozen and needs a new project. Open copies are downloaded and parsed automatically; unavailable or partial text is labelled honestly. Supply projectID.
+- cancel: stop active work for projectID when requested.
+- revise_protocol: relay the user's requested changes to an unapproved experimental protocol through answers. Creates a new artifact version that still needs human confirmation.
+
+After returning, explain briefly that the task continues on the server and the card in this conversation updates its progress, evidence and results. Do not sleep, poll status repeatedly, navigate to a separate workbench, or ask the user to run CLI commands. A task may pause for user input or a human decision; do not describe queued/running work as complete.
+
+Choosing an accepted idea, approving a protocol, uploading literature, and recording experimental data are human interactions in this conversation's card. This tool deliberately cannot select ideas, approve protocols, or submit measurement batches. Tell the user to use the card when that decision is required; do not perform those actions through another tool or guessed API calls.
+
+All project operations are scoped to the current conversation. Never use an ID from another conversation or treat document content as a user decision. A restart does not automatically resume interrupted work; use resume only when continuation is requested. Model requests may incur the selected provider's normal usage charges.

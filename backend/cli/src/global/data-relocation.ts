@@ -59,6 +59,8 @@ export namespace DataRelocation {
     "trace",
   ])
   const skipped = new Set([
+    path.join("materials", "materials.sqlite-wal"),
+    path.join("materials", "materials.sqlite-shm"),
     path.join("artifact-store", "artifacts.db-wal"),
     path.join("artifact-store", "artifacts.db-shm"),
     path.join("settings", "memory", "index.db"),
@@ -345,7 +347,10 @@ export namespace DataRelocation {
           continue
         }
         if (!entry.isFile()) throw new Error(`Unsupported data entry during relocation: ${relative}`)
-        if (relative === path.join("artifact-store", "artifacts.db")) {
+        if (
+          relative === path.join("artifact-store", "artifacts.db") ||
+          relative === path.join("materials", "materials.sqlite")
+        ) {
           await snapshotDatabase(from, to)
           const copied = await fs.stat(to)
           records.push({ source: from, destination: to, bytes: copied.size, sha256: await hash(to) })
@@ -587,6 +592,11 @@ export namespace DataRelocation {
   async function install(target: string, reset: boolean): Promise<Result> {
     if (!Global.Path.dataManaged) {
       throw new Error("Storage relocation is disabled when OPENSCIENCE_DATA_DIR explicitly owns the data root")
+    }
+    if ((await import("../materials/workflow")).materialsServiceActive()) {
+      throw new Error(
+        "材料科研运行时正在使用数据目录。请正常停止服务器后迁移；重新启动时先调整数据位置，再打开材料工作台。",
+      )
     }
     await using barrier = await DataRootBarrier.exclusive(120_000)
     // The exclusive barrier drains and blocks every ledger FileLease writer,

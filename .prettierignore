@@ -33,3 +33,9 @@ tooling/harbor/.venv/
 evals/science-harness/datasets/
 evals/science-harness/jobs/
 evals/science-harness/workspaces/
+
+# Original SupraMAS schema references retain their source bytes.
+backend/cli/src/materials/supra/*.json
+
+# Local verification builds, downloaded artifacts and deployment backups.
+.local/

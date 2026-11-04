@@ -335,7 +335,7 @@ export const dict = {
   "common.attachment": "附件",
 
   "prompt.placeholder.shell": "输入 shell 命令...",
-  "prompt.placeholder.normal": "描述你想开展的研究任务…",
+  "prompt.placeholder.normal": "说说你的研究想法，不需要完整方案…",
   "prompt.placeholder.summarizeComments": "总结评论…",
   "prompt.placeholder.summarizeComment": "总结该评论…",
   "prompt.mode.shell": "Shell",

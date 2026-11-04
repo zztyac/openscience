@@ -37,6 +37,7 @@ import { ModalTool } from "./modal"
 import { ComputeJobTool } from "./compute-job"
 import { ExperimentsTool } from "./experiments"
 import { StudyTool } from "./study"
+import { MaterialsWorkflowTool } from "./materials-workflow"
 import { State } from "@/project/state"
 import { ProjectTrust } from "@/project/trust"
 import { AuthoritySignal } from "@/project/authority-signal"
@@ -219,6 +220,7 @@ export namespace ToolRegistry {
       ProviderComputeTool,
       ExperimentsTool,
       StudyTool,
+      MaterialsWorkflowTool,
       ...custom.filter((tool) => !compatibility.has(tool.id) && tool.id !== PythonTool.id && tool.id !== RTool.id),
     ]
   }

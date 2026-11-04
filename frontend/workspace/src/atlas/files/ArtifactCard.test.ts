@@ -1,6 +1,7 @@
 import { afterAll, afterEach, describe, expect, test } from "bun:test"
 import { fileURLToPath } from "node:url"
 import type { JSX } from "solid-js"
+import type { StoredArtifact } from "@/artifacts/store"
 import { createTestServer as createServer } from "../../../test/vite"
 import solid from "vite-plugin-solid"
 
@@ -133,6 +134,38 @@ describe("artifact card", () => {
     expect(host.querySelector("[data-card-menu]")?.getAttribute("aria-expanded")).toBe("false")
   })
 
+  test("moves focus within actions and Escape returns to its trigger without dismissing the host", async () => {
+    const host = mount(() => subject.ArtifactCard(props() as never))
+    const escaped: KeyboardEvent[] = []
+    web.spread(host, {
+      onKeyDown: (event: KeyboardEvent) => {
+        if (event.key === "Escape") escaped.push(event)
+      },
+    })
+    const trigger = host.querySelector<HTMLButtonElement>("[data-card-menu]")!
+    trigger.click()
+    await Promise.resolve()
+    const options = [...host.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
+    expect(document.activeElement).toBe(options[0])
+
+    options[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }))
+    expect(document.activeElement).toBe(options[1])
+    options[1].dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }))
+    expect(document.activeElement).toBe(options.at(-1)!)
+    document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }))
+    expect(document.activeElement).toBe(options[0])
+    document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }))
+    expect(document.activeElement).toBe(options.at(-1)!)
+
+    document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }))
+    await Promise.resolve()
+    expect(host.querySelector("[role='menu']")).toBeNull()
+    expect(document.activeElement).toBe(trigger)
+    expect(escaped).toHaveLength(0)
+    trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }))
+    expect(escaped).toHaveLength(1)
+  })
+
   // The menu is wider than a grid cell. Anchored inside the card it rendered at
   // left: -16px in a real browser, where the pane's overflow: hidden cut it off,
   // so it is placed in script against the viewport instead.
@@ -163,6 +196,76 @@ describe("artifact card", () => {
     expect(asked).toEqual(["art_1"])
     expect(host.querySelector("[data-action='download']")).toBeNull()
     expect(host.querySelector("a[href*='/raw']")).toBeNull()
+  })
+
+  test("keeps report and companion actions separate and passes each original artifact", () => {
+    const material = (id: string, format: "md" | "json"): StoredArtifact => {
+      const item: StoredArtifact = artifact({ filename: `ideas.${format}` })
+      return {
+        ...item,
+        id,
+        title: format === "md" ? "My renamed BZO report" : "BZO research data",
+        currentVersionID: `ver_card_${id}`,
+        current: {
+          ...item.current,
+          id: `ver_card_${id}`,
+          artifactID: id,
+          mimeType: format === "md" ? "text/markdown" : "application/json",
+          sourcePath: `materials/mat_card/reports/ideas.${format}`,
+        },
+      }
+    }
+    const report = material("art_card_report", "md")
+    const data = material("art_card_data", "json")
+    const opened: StoredArtifact[] = []
+    const downloaded: StoredArtifact[] = []
+    const renamed: StoredArtifact[] = []
+    const trashed: StoredArtifact[] = []
+    const host = mount(() =>
+      subject.ArtifactCard(
+        props({
+          artifact: report,
+          companion: data,
+          onOpen: (item: StoredArtifact) => opened.push(item),
+          onDownload: (item: StoredArtifact) => downloaded.push(item),
+          onRename: (item: StoredArtifact) => renamed.push(item),
+          onTrash: (item: StoredArtifact) => trashed.push(item),
+        }) as never,
+      ),
+    )
+
+    const open = host.querySelector<HTMLButtonElement>("[data-card-open]")!
+    const companion = host.querySelector<HTMLButtonElement>("[data-card-companion]")!
+    expect(host.querySelector(".artifact-card__name")?.textContent).toBe(report.title)
+    expect(open.contains(companion)).toBe(false)
+    expect(companion.getAttribute("aria-label")).toBe(`Open data: ${data.title}`)
+    open.click()
+    companion.click()
+    for (const action of [
+      "open",
+      "open-data",
+      "download",
+      "download-data",
+      "rename",
+      "rename-data",
+      "trash",
+      "trash-data",
+    ]) {
+      host.querySelector<HTMLButtonElement>("[data-card-menu]")!.click()
+      host.querySelector<HTMLButtonElement>(`[data-action='${action}']`)!.click()
+      expect(host.querySelector("[role='menu']")).toBeNull()
+    }
+
+    expect(opened).toHaveLength(4)
+    expect(opened[0]).toBe(report)
+    expect(opened[1]).toBe(data)
+    expect(opened[2]).toBe(report)
+    expect(opened[3]).toBe(data)
+    for (const requested of [downloaded, renamed, trashed]) {
+      expect(requested).toHaveLength(2)
+      expect(requested[0]).toBe(report)
+      expect(requested[1]).toBe(data)
+    }
   })
 
   test("shows the size only when asked", () => {

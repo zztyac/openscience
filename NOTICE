@@ -154,3 +154,24 @@ Computer Modern Unicode (CMU Concrete; frontend/landing/public/fonts,
 frontend/workspace/public/fonts/cmc, frontend/docs/public/fonts/cmc) and Inter
 (frontend/landing/public/fonts) are bundled under the SIL Open Font License 1.1;
 the OFL text sits next to each font.
+
+--------------------------------------------------------------------------------
+SupraMAS_V2_new (local materials workbench migration)
+User-provided source project, migrated on 2026-10-25.
+
+The reference schemas under backend/cli/src/materials/supra/ and domain rules
+adapted in backend/cli/src/materials/domain.ts originate from this project.
+See backend/cli/src/materials/supra/README.md for source paths and scope.
+No upstream LICENSE file was present in the supplied source tree. Original
+authorship and rights are retained; this notice does not assign an upstream
+license or change the OpenScience license. Credentials and research run data
+are not included in the migration.
+
+On 2026-10-26, the user-provided arxiv, deepxiv, exa-search, openalex,
+research-lit, and semantic-scholar skill instructions were adapted under
+backend/cli/skills/research/. Their original instruction text and SHA256
+identities are retained in each skill's references/supra-original.md and
+frontmatter. See backend/cli/skills/ATTRIBUTION.md. These skills retain the
+same undeclared upstream licensing status stated above; the adaptation does
+not assign a new license to the supplied instructions. No credentials, home
+configuration files, research data, or legacy executable helpers were copied.

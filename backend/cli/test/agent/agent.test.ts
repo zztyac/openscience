@@ -551,6 +551,7 @@ test("fresh Approve mode auto-allows safe sandboxed work and asks at external bo
       expect(evalPerm(research, "network")).toBe("ask")
       expect(evalPerm(research, "webfetch")).toBe("allow")
       expect(evalPerm(research, "websearch")).toBe("allow")
+      expect(evalPerm(research, "materials_workflow")).toBe("allow")
       expect(evalPerm(research, "mcp")).toBe("ask")
       expect(evalPerm(research, "external_directory")).toBe("ask")
       expect(evalPerm(research, "compute_job")).toBe("ask")
@@ -570,6 +571,8 @@ test("persisted Ask mode overrides built-in subagent convenience allows", async 
       const research = await Agent.get("research")
       const explore = await Agent.get("explore")
       expect(evalPerm(research, "edit")).toBe("ask")
+      expect(evalPerm(research, "materials_workflow")).toBe("ask")
+      expect(evalPerm(explore, "materials_workflow")).toBe("deny")
       expect(evalPerm(explore, "edit")).toBe("deny")
       for (const permission of ["bash", "network", "webfetch", "websearch"]) {
         expect(evalPerm(research, permission)).toBe("ask")
@@ -592,7 +595,15 @@ test("explicit Full mode removes file command and internet approval prompts", as
       directory: tmp.path,
       fn: async () => {
         const research = await Agent.get("research")
-        for (const permission of ["edit", "bash", "network", "webfetch", "websearch", "external_directory"]) {
+        for (const permission of [
+          "edit",
+          "bash",
+          "network",
+          "webfetch",
+          "websearch",
+          "external_directory",
+          "materials_workflow",
+        ]) {
           expect(evalPerm(research, permission)).toBe("allow")
         }
         expect(PermissionNext.evaluate("read", ".env", research!.permission).action).toBe("allow")

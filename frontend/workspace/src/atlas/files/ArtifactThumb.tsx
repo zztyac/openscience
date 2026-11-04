@@ -1,9 +1,12 @@
 import { useLanguage } from "@/context/language"
-import { Match, Show, Switch, createEffect, createSignal, onCleanup, type JSX } from "solid-js"
+import { For, Match, Show, Switch, createEffect, onCleanup, type JSX } from "solid-js"
+import { createStore } from "solid-js/store"
 import { blobDataUrl } from "@/artifacts/bytes"
 import type { StoredArtifact } from "@/artifacts/store"
 import { ensurePdfWorker } from "@/science/renderers/documents/pdfjs-worker"
-import { extension, thumbKind, thumbLanguage } from "./artifact-thumb"
+import { PREVIEW_LIMIT, extension, thumbKind, thumbLanguage } from "./artifact-thumb"
+import { artifactSummary, type ArtifactSummary } from "./artifact-summary"
+import { materialArtifact } from "./artifact-entries"
 
 export interface ThumbProps {
   artifact: StoredArtifact
@@ -19,6 +22,7 @@ const shared = (code: string, lang: string) =>
   import("@synsci/ui/context/marked").then((module) => module.highlightSnippet(code, lang))
 
 interface Preview {
+  summary?: ArtifactSummary
   text?: string
   html?: string
   image?: string
@@ -96,23 +100,26 @@ const remember = (version: string, preview: Preview) => {
 export function ArtifactThumb(props: ThumbProps): JSX.Element {
   const copy = useLanguage()
   const kind = () => thumbKind(props.artifact.current)
-  const [preview, setPreview] = createSignal<Preview>()
-  const [failed, setFailed] = createSignal(false)
+  const [state, setState] = createStore<{ preview?: Preview; failed: boolean }>({ failed: false })
+  const preview = () => state.preview
+  const failed = () => state.failed
 
-  // Deliberately a signal and an effect rather than createResource. Reading a
+  // Deliberately a store and an effect rather than createResource. Reading a
   // resource from the render tree increments the nearest <Suspense> counter, and
   // this renders inside RightPane's (RightPane.tsx:351) -- one thumbnail waiting
   // on shiki's cold start replaced the whole pane with the spinner, the same
   // hazard FilesPane.tsx:248 already documents for the listing.
   createEffect(() => {
     const artifact = props.artifact
-    setPreview(undefined)
-    setFailed(false)
-    if (kind() === "binary") return
+    const version = { ...artifact.current }
+    const selected = thumbKind(version)
+    const stage = materialArtifact(artifact)?.stage
+    setState({ preview: undefined, failed: false })
+    if (selected === "binary") return
 
-    const cached = previews.get(artifact.current.id)
+    const cached = previews.get(version.id)
     if (cached) {
-      setPreview(cached)
+      setState("preview", cached)
       return
     }
 
@@ -124,42 +131,49 @@ export function ArtifactThumb(props: ThumbProps): JSX.Element {
         // Inside the try, because `read` can throw rather than reject:
         // sdk.request is a plain function that throws when no project is open.
         const blob = await props.read(artifact)
-        if (kind() === "image") {
-          const typed =
-            blob.type === artifact.current.mimeType ? blob : new Blob([blob], { type: artifact.current.mimeType })
+        if (selected === "image") {
+          const typed = blob.type === version.mimeType ? blob : new Blob([blob], { type: version.mimeType })
           const preview = { image: await blobDataUrl(typed) }
-          remember(artifact.current.id, preview)
-          if (live) setPreview(preview)
+          remember(version.id, preview)
+          if (live) setState("preview", preview)
           return
         }
-        if (kind() === "pdf") {
+        if (selected === "pdf") {
           const preview = { image: await pdfImage(blob), label: "PDF preview" }
-          remember(artifact.current.id, preview)
-          if (live) setPreview(preview)
+          remember(version.id, preview)
+          if (live) setState("preview", preview)
           return
         }
-        const body = await blob.text()
-        if (kind() === "table") {
-          const preview = { table: cells(body, artifact.current.filename) }
-          remember(artifact.current.id, preview)
-          if (live) setPreview(preview)
+        const body = await blob.slice(0, PREVIEW_LIMIT).text()
+        if (selected === "table") {
+          const preview = { table: cells(body, version.filename) }
+          remember(version.id, preview)
+          if (live) setState("preview", preview)
           return
         }
-        if (kind() === "notebook") {
+        if (selected === "notebook") {
           const preview = notebookText(body)
-          remember(artifact.current.id, preview)
-          if (live) setPreview(preview)
+          remember(version.id, preview)
+          if (live) setState("preview", preview)
           return
         }
-        const lines = body.split("\n").slice(0, PREVIEW_LINES).join("\n")
-        const html = await (props.highlight ?? shared)(lines, thumbLanguage(artifact.current.filename)).catch(
-          () => undefined,
-        )
+        const summary = artifactSummary(body, version.filename, version.mimeType, stage)
+        if (summary) {
+          const preview = { summary }
+          remember(version.id, preview)
+          if (live) setState("preview", preview)
+          return
+        }
+        const lines = body.replace(/\r\n?/g, "\n").split("\n").slice(0, PREVIEW_LINES).join("\n").slice(0, 4_000)
+        const html = await (props.highlight ?? shared)(lines, thumbLanguage(version.filename))
+          // Shiki's inline form emits br elements; this pre owns line spacing.
+          .then((value) => value.replace(/<br\s*\/?>/gi, "\n"))
+          .catch(() => undefined)
         const preview = { text: lines, html }
-        remember(artifact.current.id, preview)
-        if (live) setPreview(preview)
+        remember(version.id, preview)
+        if (live) setState("preview", preview)
       } catch {
-        if (live) setFailed(true)
+        if (live) setState("failed", true)
       }
     })()
   })
@@ -192,6 +206,24 @@ export function ArtifactThumb(props: ThumbProps): JSX.Element {
           <span class="artifact-thumb artifact-thumb--notebook">
             <small>{value().label}</small>
             <pre>{value().text}</pre>
+          </span>
+        )}
+      </Match>
+      <Match when={kind() === "text" && !failed() && preview()?.summary}>
+        {(summary) => (
+          <span class={`artifact-thumb artifact-thumb--${summary().kind}`}>
+            <span data-thumb-summary>
+              <For each={summary().paragraphs}>{(paragraph) => <span data-thumb-paragraph>{paragraph}</span>}</For>
+            </span>
+            <Show when={summary().count}>
+              {(count) => (
+                <span data-thumb-stat>
+                  {copy.t(count().kind === "items" ? "atlas.results.previewItems" : "atlas.results.previewFields", {
+                    count: count().value,
+                  })}
+                </span>
+              )}
+            </Show>
           </span>
         )}
       </Match>

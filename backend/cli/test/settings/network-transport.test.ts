@@ -18,6 +18,40 @@ async function fixture(listener: RequestListener) {
   }
 }
 
+test.each([false, true])(
+  "refused connections reject once without an unhandled teardown error (stream=%s)",
+  async (stream) => {
+    const closed = await fixture((_request, response) => response.end("unused"))
+    await closed[Symbol.asyncDispose]()
+    const target = new URL(closed.url)
+    target.protocol = "https:"
+    await expect(Network.pinnedFetch(target, {}, "127.0.0.1", undefined, stream)).rejects.toMatchObject({
+      code: "ECONNREFUSED",
+    })
+    // Bun emits the teardown error on a later tick, after the first rejection.
+    await Bun.sleep(0)
+  },
+)
+
+test("socket failure after streamed headers rejects the body without escaping its consumer", async () => {
+  const stop = Promise.withResolvers<() => void>()
+  await using server = await fixture((_request, response) => {
+    response.writeHead(200, { "content-type": "application/pdf", "content-length": 1000 })
+    response.flushHeaders()
+    response.write("%PDF-partial")
+    stop.resolve(() => response.socket!.destroy())
+  })
+  const response = await Network.pinnedFetch(server.url, {}, "127.0.0.1", undefined, true)
+  const reading = response.text().then(
+    () => undefined,
+    (error: unknown) => error,
+  )
+  const interrupt = await stop.promise
+  interrupt()
+  expect(await reading).toBeInstanceOf(Error)
+  await Bun.sleep(0)
+})
+
 test.each([false, true])("chunked response limits cover actual bytes (stream=%s)", async (stream) => {
   await using server = await fixture((_request, response) => {
     response.writeHead(200, { "content-type": "text/plain" })
@@ -201,6 +235,68 @@ test("public DNS transport bypasses synthetic system addresses without permittin
       },
     ),
   ).rejects.toBeInstanceOf(Network.PolicyError)
+})
+
+test("AliDNS uses its pinned HTTPS endpoint and accepts an empty AAAA answer", async () => {
+  const calls: string[] = []
+  await using server = await fixture((request, response) => {
+    const type = new URL(request.url!, "http://fixture.test").searchParams.get("type")
+    response.writeHead(200, { "content-type": "application/dns-json" })
+    response.end(
+      JSON.stringify({
+        Status: 0,
+        TC: false,
+        ...(type === "A"
+          ? {
+              Answer: [
+                { type: 1, data: "8.8.8.8" },
+                { type: 1, data: "8.8.8.8" },
+              ],
+            }
+          : {}),
+      }),
+    )
+  })
+  const addresses = await Network.alidnsResolve("api.example.com", undefined, (target, init, address, limit) => {
+    expect(target.origin).toBe("https://dns.alidns.com")
+    expect(target.pathname).toBe("/resolve")
+    expect(target.searchParams.get("name")).toBe("api.example.com")
+    expect(address).toBe("223.5.5.5")
+    expect(new Headers(init.headers).get("accept")).toBe("application/dns-json")
+    expect(limit).toBe(65536)
+    calls.push(target.searchParams.get("type")!)
+    const local = new URL(server.url)
+    local.search = target.search
+    return Network.pinnedFetch(local, init, "127.0.0.1", limit)
+  })
+  expect(new Set(calls)).toEqual(new Set(["A", "AAAA"]))
+  expect(addresses).toEqual(["8.8.8.8"])
+})
+
+test("AliDNS answers retain public-address checks and malformed results fail closed", async () => {
+  const unsafe = await Network.alidnsResolve("api.example.com", undefined, async (target) =>
+    Response.json({
+      Status: 0,
+      Answer: target.searchParams.get("type") === "A" ? [{ type: 1, data: "198.18.0.30" }] : [],
+    }),
+  )
+  let connected = false
+  await expect(
+    Network.fetch(
+      "https://api.example.com/paper",
+      {},
+      {
+        resolveAddresses: async () => unsafe,
+        transport: async () => {
+          connected = true
+          return new Response("unexpected")
+        },
+      },
+    ),
+  ).rejects.toBeInstanceOf(Network.PolicyError)
+  expect(connected).toBe(false)
+  for (const data of [{ Status: 2 }, { Status: 0, TC: true }, { Status: 0, Answer: [{ type: 1, data: "not-an-IP" }] }])
+    await expect(Network.alidnsResolve("api.example.com", undefined, async () => Response.json(data))).rejects.toThrow()
 })
 
 test("cancelling a streamed response closes its upstream socket", async () => {

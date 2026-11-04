@@ -1,4 +1,6 @@
 export const dict = {
+  "atlas.files.navigationUnavailable":
+    "This saved folder is not accessible in this conversation. Return to the original conversation or reconnect the folder.",
   "atlas.reading.options": "Reading options",
   "atlas.reading.description": "Saved on this device. Your file stays unchanged.",
   "atlas.reading.size": "Text size",
@@ -259,6 +261,15 @@ export const dict = {
   "atlas.files.source.projectHint": "Shared working files for {{name}}",
   "atlas.files.saveFile": "Save file",
   "atlas.files.saveFileFirst": "Save file first",
+  "atlas.results.fileCount": "{{count}} files",
+  "atlas.results.historyHint": "Version history available",
+  "atlas.results.structuredData": "Structured data",
+  "atlas.results.report": "Report",
+  "atlas.results.file": "File",
+  "atlas.results.data": "Data",
+  "atlas.results.openData": "Open data: {{name}}",
+  "atlas.results.previewItems": "{{count}} items",
+  "atlas.results.previewFields": "{{count}} fields",
   "atlas.results.immutable": "Immutable versions",
   "atlas.results.options": "Artifact view options",
   "atlas.results.view": "View",

@@ -44,6 +44,9 @@ export namespace PermissionNext {
     "batch",
     "edit",
     "lsp",
+    // The fixed materials workflow only manages its conversation's research;
+    // experiment approval and measured-data submission remain user actions.
+    "materials_workflow",
     "plan_enter",
     "plan_exit",
     "planwrite",

@@ -32,7 +32,14 @@
         "groups": [
           {
             "group": "Research and evidence",
-            "pages": ["workflow-examples", "literature-review", "research-search", "database-workflows", "documents"]
+            "pages": [
+              "materials-workbench",
+              "workflow-examples",
+              "literature-review",
+              "research-search",
+              "database-workflows",
+              "documents"
+            ]
           },
           {
             "group": "Analyze and experiment",

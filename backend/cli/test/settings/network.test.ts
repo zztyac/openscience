@@ -338,6 +338,74 @@ test("policy-aware fetch rejects private DNS answers before opening a socket", a
   }
 })
 
+test("DNS failures preserve safe categories and internal causes without exposing resolver details", async () => {
+  await Network.set({ allowlistEnabled: false, enabled: [], custom: [] })
+  const secret = "api_key=resolver-secret-fixture"
+  const cases = [
+    [new DOMException(secret, "TimeoutError"), "DNS_TIMEOUT"],
+    [Object.assign(new Error(secret), { code: "ETIMEDOUT" }), "DNS_TIMEOUT"],
+    [Object.assign(new Error(secret), { code: "ENOTFOUND" }), "DNS_LOOKUP_FAILED"],
+    [new Error(secret), "DNS_LOOKUP_FAILED"],
+  ] as const
+  let connected = 0
+  for (const [cause, code] of cases) {
+    const result = await Network.fetch(
+      "https://public.example/paper",
+      {},
+      {
+        resolveAddresses: async () => {
+          throw cause
+        },
+        transport: async () => {
+          connected++
+          return new Response("unexpected")
+        },
+      },
+    ).catch((error: unknown) => error)
+    expect(result).toBeInstanceOf(Network.ResolutionError)
+    const error = result as Network.ResolutionError
+    expect(error).toMatchObject({ phase: "dns", code, name: "NetworkResolutionError" })
+    expect(error.cause).toBe(cause)
+    expect(error.message).not.toContain(secret)
+    expect(String(error)).not.toContain(secret)
+    expect(JSON.stringify(error)).not.toContain(secret)
+  }
+  expect(connected).toBe(0)
+})
+
+test("empty DNS answers are distinct and policy or caller cancellation retain their identity", async () => {
+  await Network.set({ allowlistEnabled: false, enabled: [], custom: [] })
+  await expect(
+    Network.fetch("https://public.example/paper", {}, { resolveAddresses: async () => [] }),
+  ).rejects.toMatchObject({ name: "NetworkResolutionError", phase: "dns", code: "DNS_NO_ADDRESSES" })
+  const denied = new Network.PolicyError("Resolver is disabled by policy")
+  await expect(
+    Network.fetch(
+      "https://public.example/paper",
+      {},
+      {
+        resolveAddresses: async () => {
+          throw denied
+        },
+      },
+    ),
+  ).rejects.toBe(denied)
+  const controller = new AbortController()
+  const cancelled = new Error("User cancelled the request")
+  await expect(
+    Network.fetch(
+      "https://public.example/paper",
+      { signal: controller.signal },
+      {
+        resolveAddresses: async () => {
+          controller.abort(cancelled)
+          throw new Error("late resolver error")
+        },
+      },
+    ),
+  ).rejects.toBe(cancelled)
+})
+
 test("policy-aware fetch pins the validated address instead of resolving twice", async () => {
   await Network.set({ allowlistEnabled: false, enabled: [], custom: [] })
   let resolutions = 0
@@ -478,6 +546,7 @@ test("assertAllowed blocks hosts outside the effective allow-list", async () => 
 
   await expect(Network.assertAllowed("https://api.example.com/resource")).resolves.toBeUndefined()
   await expect(Network.assertAllowed("https://blocked.test/resource")).rejects.toThrow("allow-list")
+  await expect(Network.assertAllowed("https://blocked.test/resource")).rejects.toBeInstanceOf(Network.PolicyError)
 })
 
 test("settings GET and PUT round-trip backend-confirmed state and reject invalid hosts", async () => {

@@ -104,6 +104,8 @@ export namespace Provider {
     resubmit?: number
     /** Provider-only cancellation; tool execution keeps its own authority signal. */
     abort?: AbortSignal
+    /** Disable local model-request deadlines while retaining caller cancellation. */
+    timeouts?: false
     /** Actual fetch dispatch, after local request and credential preparation. */
     onRequest?: () => void
     /** Durable attempt recording, installed by the session trace path. */
@@ -487,12 +489,15 @@ export namespace Provider {
     options: FetchWithWatchdogOptions,
   ): Promise<Response> {
     const context = timingContext()
-    const idleTimeoutMs = resolveIdleTimeout(options.idleTimeout)
-    const connectTimeoutMs = resolveConnectTimeout(options.connectTimeout)
+    const idleTimeoutMs = context.timeouts === false ? false : resolveIdleTimeout(options.idleTimeout)
+    const connectTimeoutMs = context.timeouts === false ? false : resolveConnectTimeout(options.connectTimeout)
     const idleController = new AbortController()
     const signals = [init?.signal, context.abort, idleController.signal].filter(Boolean) as AbortSignal[]
     const total =
-      typeof options.totalTimeout === "number" && Number.isFinite(options.totalTimeout) && options.totalTimeout > 0
+      context.timeouts !== false &&
+      typeof options.totalTimeout === "number" &&
+      Number.isFinite(options.totalTimeout) &&
+      options.totalTimeout > 0
         ? Math.min(Math.floor(options.totalTimeout), MAX_TIMER_MS)
         : undefined
     const timer =

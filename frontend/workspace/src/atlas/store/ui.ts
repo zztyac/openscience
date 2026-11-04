@@ -1,5 +1,5 @@
 import { createSignal } from "solid-js"
-import { createStore } from "solid-js/store"
+import { createStore, reconcile } from "solid-js/store"
 import { normalizeStoredArtifact, type StoredArtifact } from "@/artifacts/store"
 import { defaultWorkspaceScope, projectScope, workspaceScope } from "./scope"
 
@@ -22,6 +22,7 @@ export type WorkTab =
       id: string
       kind: "saved"
       artifact: StoredArtifact
+      versionID?: string
     }
 
 export interface ContextFile {
@@ -32,6 +33,13 @@ export interface ContextFile {
   /** Scratch and conversation links keep the session that authorized them. */
   sessionID?: string
   external?: boolean
+}
+export interface FilesNavigation {
+  id: number
+  directory: string
+  source: "files" | "results"
+  path?: string
+  sessionID?: string
 }
 
 const AGENT_KEY = "thesis-agent-v1"
@@ -191,11 +199,12 @@ function fileTab(file: ContextFile): WorkTab {
   }
 }
 
-function savedTab(artifact: StoredArtifact): WorkTab {
+function savedTab(artifact: StoredArtifact, versionID?: string): WorkTab {
   return {
     id: `saved:${artifact.id}`,
     kind: "saved",
     artifact,
+    ...(versionID ? { versionID } : {}),
   }
 }
 
@@ -210,7 +219,7 @@ function restoreWorkTab(value: unknown): WorkTab | undefined {
   }
   if (row.kind === "saved") {
     const artifact = normalizeStoredArtifact(row.artifact)
-    return artifact ? savedTab(artifact) : undefined
+    return artifact ? savedTab(artifact, typeof row.versionID === "string" ? row.versionID : undefined) : undefined
   }
   if (row.kind !== "file") return
   const file = restoreFile(row.file)
@@ -330,7 +339,9 @@ export function createContextState(options: { storage?: ContextStorage } = {}) {
     sessionID: "new",
     scopes: restore(storage) as Record<string, ContextState>,
     transient: {} as Record<string, TransientState>,
+    navigation: {} as Record<string, FilesNavigation | undefined>,
   })
+  let navigationID = 0
 
   const persist = () => {
     if (!storage) return
@@ -459,10 +470,10 @@ export function createContextState(options: { storage?: ContextStorage } = {}) {
     }
     closeWorkTab(fileTab(target).id)
   }
-  const openSaved = (artifact: StoredArtifact) => {
+  const openSaved = (artifact: StoredArtifact, versionID?: string) => {
     const state = current()
-    const tab = savedTab(artifact)
-    const tabs = ensure(own(state.workTabs ?? [], "files"), tab)
+    const tab = savedTab(artifact, versionID)
+    const tabs = ensure(own(state.workTabs ?? [], "files"), tab).map((item) => (item.id === tab.id ? tab : item))
     update(select(state, tabs, tab.id))
   }
   const updateSaved = (artifact: StoredArtifact) => {
@@ -471,7 +482,9 @@ export function createContextState(options: { storage?: ContextStorage } = {}) {
     if (!(state.workTabs ?? []).some((item) => item.id === id)) return
     update({
       ...state,
-      workTabs: (state.workTabs ?? []).map((item) => (item.id === id ? savedTab(artifact) : item)),
+      workTabs: (state.workTabs ?? []).map((item) =>
+        item.id === id && item.kind === "saved" ? savedTab(artifact, item.versionID) : item,
+      ),
       saved: state.activeWorkTab === id ? artifact : state.saved,
     })
   }
@@ -527,6 +540,14 @@ export function createContextState(options: { storage?: ContextStorage } = {}) {
     closeWorkTab,
     moveWorkTab,
     openContext,
+    openFiles(input: Omit<FilesNavigation, "id">) {
+      setStore("navigation", store.scope, reconcile({ ...input, id: ++navigationID }))
+      openContext("files")
+    },
+    filesNavigation: () => store.navigation[store.scope],
+    clearFilesNavigation(id: number) {
+      if (store.navigation[store.scope]?.id === id) setStore("navigation", store.scope, undefined)
+    },
     closeContext,
     syncArtifact,
     tab: () => current().tab,
@@ -542,6 +563,10 @@ export function createContextState(options: { storage?: ContextStorage } = {}) {
     },
     file: () => current().file,
     saved: () => current().saved,
+    savedVersion: () => {
+      const tab = current().workTabs?.find((item) => item.id === current().activeWorkTab)
+      return tab?.kind === "saved" ? tab.versionID : undefined
+    },
     files: () => current().files ?? [],
     openFile,
     openSaved,
@@ -590,6 +615,9 @@ export const uiStore = {
   closeWorkTab: state.closeWorkTab,
   moveWorkTab: state.moveWorkTab,
   openContext: state.openContext,
+  openFiles: state.openFiles,
+  filesNavigation: state.filesNavigation,
+  clearFilesNavigation: state.clearFilesNavigation,
   closeContext: state.closeContext,
   syncArtifact: state.syncArtifact,
   rightPaneTab: state.tab,
@@ -600,6 +628,7 @@ export const uiStore = {
   setRightPaneOpen: state.setOpen,
   file: state.file,
   saved: state.saved,
+  savedVersion: state.savedVersion,
   files: state.files,
   openFile: state.openFile,
   openSaved: state.openSaved,

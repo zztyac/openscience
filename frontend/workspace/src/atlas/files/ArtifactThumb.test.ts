@@ -1,6 +1,7 @@
 import { afterAll, afterEach, describe, expect, test } from "bun:test"
 import { fileURLToPath } from "node:url"
 import type { JSX } from "solid-js"
+import type { StoredArtifact } from "@/artifacts/store"
 import { createTestServer as createServer } from "../../../test/vite"
 import solid from "vite-plugin-solid"
 
@@ -19,6 +20,7 @@ const [subject, web] = await Promise.all([
   server.ssrLoadModule("solid-js/web") as Promise<typeof import("solid-js/web")>,
 ])
 const { TestLanguage } = (await server.ssrLoadModule("/test/language.tsx")) as typeof import("../../../test/language")
+const store = (await server.ssrLoadModule("solid-js/store")) as typeof import("solid-js/store")
 const cleanups: Array<() => void> = []
 
 afterAll(() => server.close())
@@ -137,6 +139,80 @@ describe("artifact thumbnail", () => {
     expect(host.querySelector(".tinted")?.textContent).not.toContain("line 10")
   })
 
+  test("renders Markdown and structured prose as inert readable text without highlighting", async () => {
+    let highlights = 0
+    const highlight = async () => {
+      highlights += 1
+      return ""
+    }
+    const markdown = mount(() =>
+      subject.ArtifactThumb({
+        artifact: artifact({ filename: "report.md", mimeType: "text/markdown" }),
+        read: async () => new Blob(["# 研究报告\n\n**待验证**的材料方案。\n\n&lt;img src=x onerror=alert(1)&gt;"]),
+        highlight,
+      }),
+    )
+    const structured = mount(() =>
+      subject.ArtifactThumb({
+        artifact: artifact({ filename: "ideas.json", mimeType: "application/json" }),
+        read: async () => new Blob([JSON.stringify({ ideas: [{ hypothesis: "增加对照实验，以检验假设。" }] })]),
+        highlight,
+      }),
+    )
+    await settle()
+    expect(markdown.querySelector("[data-thumb-summary]")?.textContent).toContain("待验证的材料方案。")
+    expect(markdown.querySelector("[data-thumb-summary]")?.textContent).not.toContain("研究报告")
+    expect(markdown.querySelector("img")).toBeNull()
+    expect(structured.querySelector("[data-thumb-summary]")?.textContent).toContain("增加对照实验，以检验假设。")
+    expect(structured.querySelector("[data-thumb-stat]")?.textContent).toBe("1 items")
+    expect(highlights).toBe(0)
+  })
+
+  test("a slow previous artifact cannot replace the current summary or corrupt its version cache", async () => {
+    const previous = artifact({ filename: "old.md", mimeType: "text/markdown" }) as StoredArtifact
+    const current = artifact({ filename: "current.json", mimeType: "application/json" }) as StoredArtifact
+    const [state, setState] = store.createStore({ current: false })
+    let release: (value: Blob) => void = () => {}
+    const host = mount(() =>
+      subject.ArtifactThumb({
+        get artifact() {
+          return state.current ? current : previous
+        },
+        read: (item) =>
+          item.current.filename === "old.md"
+            ? new Promise<Blob>((resolve) => {
+                release = resolve
+              })
+            : Promise.resolve(new Blob(['{"objective":"当前版本的研究目标。"}'])),
+      }),
+    )
+    setState("current", true)
+    await settle()
+    release(new Blob(["# 旧报告\n\n旧版本的研究内容。"]))
+    await settle()
+    expect(host.querySelector("[data-thumb-summary]")?.textContent).toBe("当前版本的研究目标。")
+    setState("current", false)
+    await settle()
+    expect(host.querySelector(".artifact-thumb--document")?.textContent).toBe("旧版本的研究内容。")
+  })
+
+  test("uses workflow excerpts only for a verified materials artifact", async () => {
+    const material = artifact({ filename: "ideas.md", mimeType: "text/markdown" }) as StoredArtifact
+    material.currentVersionID = material.current.id
+    material.current.sourcePath = "materials/mat_abc123/reports/ideas.md"
+    const body = "# 创新方案\n\n记录角色 review 与 rank。\n\n## 1. 首个候选\n\n待验证的材料假设。"
+    const verified = mount(() => subject.ArtifactThumb({ artifact: material, read: async () => new Blob([body]) }))
+    const ordinary = mount(() =>
+      subject.ArtifactThumb({
+        artifact: artifact({ filename: "ideas.md", mimeType: "text/markdown" }),
+        read: async () => new Blob([body]),
+      }),
+    )
+    await settle()
+    expect(verified.querySelector("[data-thumb-summary]")?.textContent).toBe("首个候选待验证的材料假设。")
+    expect(ordinary.querySelector("[data-thumb-summary]")?.textContent).toContain("记录角色 review 与 rank。")
+  })
+
   // The rule the Compute strip established: a degraded tile, never an error page.
   test("falls back to the extension when the read fails", async () => {
     const host = mount(() =>
@@ -216,5 +292,6 @@ describe("artifact thumbnail", () => {
 
     expect(tinted).toBeTruthy()
     expect(host.querySelector("[data-thumb-text]")?.textContent).toContain("import numpy as np")
+    expect(host.querySelector("[data-thumb-text]")?.textContent).toContain('\nname = "x"')
   }, 20_000)
 })

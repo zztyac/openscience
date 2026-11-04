@@ -1870,6 +1870,72 @@ describe("collapsed activity safeguards", () => {
     expect(store.question?.[sessionID]).toHaveLength(1)
   })
 
+  test("keeps a created materials project's controls visible and mounted outside the folded activity trace", async () => {
+    const previous = parts.ToolRegistry.render("materials_workflow")
+    parts.ToolRegistry.register({
+      name: "materials_workflow",
+      render: (props) => {
+        const card = document.createElement("section")
+        card.dataset.component = "materials-project-test"
+        card.textContent = "REBCO research controls"
+        card.dataset.project = props.metadata.materialsProjectID
+        card.dataset.open = String(props.defaultOpen)
+        const draft = document.createElement("textarea")
+        card.append(draft)
+        return card
+      },
+    })
+    try {
+      const message = assistant(3_000)
+      const projectID = "mat_0123456789abcdef0123456789abcdef"
+      const created: ToolPart = {
+        id: "prt_materials_created",
+        sessionID,
+        messageID: message.id,
+        type: "tool",
+        tool: "materials_workflow",
+        callID: "call_materials_created",
+        state: {
+          status: "completed",
+          input: { action: "create", goal: "Review REBCO evidence" },
+          output: "Research started",
+          title: "REBCO research",
+          metadata: { action: "create", materialsProjectID: projectID },
+          time: { start: 2_000, end: 3_000 },
+        },
+      }
+      const store: Store = {
+        ...empty(),
+        message: { [sessionID]: [user, message] },
+        part: {
+          [user.id]: [],
+          [message.id]: [read("prt_materials_read", "/research/protocol.md", 1_000), created],
+        },
+      }
+      const host = mount(() => turn.SessionTurn({ sessionID, messageID: user.id }), store)
+      await ready(() => host.querySelector('[data-slot="session-turn-materials-project"]') !== null)
+      const card = host.querySelector('[data-component="materials-project-test"]')!
+      const draft = card.querySelector("textarea")!
+      const toggle = host.querySelector<HTMLButtonElement>('[data-slot="session-turn-collapsible-trigger-content"]')!
+      expect(toggle.getAttribute("aria-expanded")).toBe("false")
+      expect(card.getAttribute("data-project")).toBe(projectID)
+      expect(card.getAttribute("data-open")).toBe("true")
+      expect(card.closest('[data-slot="session-turn-materials-project"]')).not.toBeNull()
+      expect(card.closest('[data-slot="session-turn-response-section"]')).toBeNull()
+      draft.value = "Use 77 K and 1 T"
+      for (const expanded of [true, false, true, false]) {
+        toggle.click()
+        await ready(() => toggle.getAttribute("aria-expanded") === String(expanded))
+        expect(host.querySelectorAll('[data-component="materials-project-test"]')).toHaveLength(1)
+        expect(host.querySelector('[data-component="materials-project-test"]')).toBe(card)
+        expect(draft.isConnected).toBe(true)
+        expect(draft.value).toBe("Use 77 K and 1 T")
+      }
+    } finally {
+      parts.ToolRegistry.register({ name: "materials_workflow", render: previous })
+    }
+  })
+
   test("keeps a completed turn's tool error visible while ordinary activity is collapsed", async () => {
     const message = assistant(3_000)
     const error = "Measurement file was not found. No result was produced."

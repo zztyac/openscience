@@ -50,6 +50,7 @@ import { ExperimentsRoutes } from "./routes/experiments"
 import { PermissionRoutes } from "./routes/permission"
 import { SearchRoutes } from "./routes/search"
 import { GlobalRoutes } from "./routes/global"
+import { MaterialsRoutes } from "./routes/materials"
 import { SettingsSkillsRoutes } from "./routes/settings/skills"
 import { NetworkSettingsRoutes } from "./routes/settings/network"
 import { CredentialsRoutes } from "./routes/settings/credentials"
@@ -275,6 +276,7 @@ export namespace Server {
           await DataRootBarrier.during(Global.Path.data, next, 120_000)
         })
         .route("/global", GlobalRoutes())
+        .route("/materials", MaterialsRoutes())
         .route("/account", AccountRoutes())
         // Settings panels backed by global (project-independent) stores, so
         // mounted before the Instance.provide wrapper below (no directory).

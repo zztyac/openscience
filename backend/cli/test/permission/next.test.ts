@@ -1246,6 +1246,18 @@ test("shell risk script and build target parsing stays linear on adversarial nam
   expect(ShellRisk.classify(`make ${ambiguous}`)).toMatchObject({ level: "risky" })
 })
 
+test("materials workflow respects action modes and explicit denials", () => {
+  expect(PermissionNext.risk("materials_workflow")).toBe("contained")
+  for (const mode of ["ask", "approve", "full"] as const) {
+    expect(
+      PermissionNext.modeAction({ mode, permission: "materials_workflow", configured: "allow", granted: "allow" }),
+    ).toBe(mode === "ask" ? "ask" : "allow")
+    expect(
+      PermissionNext.modeAction({ mode, permission: "materials_workflow", configured: "deny", granted: "allow" }),
+    ).toBe("deny")
+  }
+})
+
 test("project action modes are execution-time authority floors", () => {
   expect(PermissionNext.risk("provider_compute")).toBe("risky")
   expect(PermissionNext.modeAction({ mode: "ask", permission: "edit", configured: "allow", granted: "allow" })).toBe(

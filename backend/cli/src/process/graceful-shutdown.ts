@@ -1,6 +1,7 @@
 import { CommandRuntime } from "@/science/command/registry"
 import { Instance } from "@/project/instance"
 import { UpdateQuiescence } from "./update-quiescence"
+import { disposeMaterialsService } from "../materials/workflow"
 
 type Dependencies = {
   seal: () => void
@@ -74,7 +75,10 @@ export function createGracefulDisposer(input: Dependencies) {
 const dispose = createGracefulDisposer({
   seal: UpdateQuiescence.seal,
   stopCommands: CommandRuntime.stopAll,
-  disposeInstances: () => Instance.disposeAll({ strict: true }),
+  disposeInstances: async () => {
+    await disposeMaterialsService()
+    await Instance.disposeAll({ strict: true })
+  },
 })
 
 export namespace GracefulShutdown {

@@ -3713,6 +3713,1873 @@ export type GlobalDisposeResponses = {
 
 export type GlobalDisposeResponse = GlobalDisposeResponses[keyof GlobalDisposeResponses]
 
+export type MaterialsGetSkillsData = {
+  body?: never
+  path?: never
+  query?: never
+  url: "/materials/skills"
+}
+
+export type MaterialsGetSkillsErrors = {
+  /**
+   * The request cannot be applied to the current research project
+   */
+  400: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  404: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  409: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  413: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  422: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  503: {
+    error: string
+  }
+}
+
+export type MaterialsGetSkillsError = MaterialsGetSkillsErrors[keyof MaterialsGetSkillsErrors]
+
+export type MaterialsGetSkillsResponses = {
+  /**
+   * Research project
+   */
+  200: {
+    revision: number
+    stages: {
+      intake: Array<"arxiv" | "deepxiv" | "exa-search" | "openalex" | "research-lit" | "semantic-scholar">
+      literature: Array<"arxiv" | "deepxiv" | "exa-search" | "openalex" | "research-lit" | "semantic-scholar">
+      strategies: Array<"arxiv" | "deepxiv" | "exa-search" | "openalex" | "research-lit" | "semantic-scholar">
+      ideas: Array<"arxiv" | "deepxiv" | "exa-search" | "openalex" | "research-lit" | "semantic-scholar">
+      protocol: Array<"arxiv" | "deepxiv" | "exa-search" | "openalex" | "research-lit" | "semantic-scholar">
+      analysis: Array<"arxiv" | "deepxiv" | "exa-search" | "openalex" | "research-lit" | "semantic-scholar">
+    }
+    catalog: Array<{
+      name: "arxiv" | "deepxiv" | "exa-search" | "openalex" | "research-lit" | "semantic-scholar"
+      description: string
+      available: boolean
+      reason?: string
+    }>
+  }
+}
+
+export type MaterialsGetSkillsResponse = MaterialsGetSkillsResponses[keyof MaterialsGetSkillsResponses]
+
+export type MaterialsSaveSkillsData = {
+  body?: {
+    revision: number
+    stages: {
+      intake: Array<"arxiv" | "deepxiv" | "exa-search" | "openalex" | "research-lit" | "semantic-scholar">
+      literature: Array<"arxiv" | "deepxiv" | "exa-search" | "openalex" | "research-lit" | "semantic-scholar">
+      strategies: Array<"arxiv" | "deepxiv" | "exa-search" | "openalex" | "research-lit" | "semantic-scholar">
+      ideas: Array<"arxiv" | "deepxiv" | "exa-search" | "openalex" | "research-lit" | "semantic-scholar">
+      protocol: Array<"arxiv" | "deepxiv" | "exa-search" | "openalex" | "research-lit" | "semantic-scholar">
+      analysis: Array<"arxiv" | "deepxiv" | "exa-search" | "openalex" | "research-lit" | "semantic-scholar">
+    }
+  }
+  path?: never
+  query?: never
+  url: "/materials/skills"
+}
+
+export type MaterialsSaveSkillsErrors = {
+  /**
+   * The request cannot be applied to the current research project
+   */
+  400: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  404: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  409: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  413: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  422: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  503: {
+    error: string
+  }
+}
+
+export type MaterialsSaveSkillsError = MaterialsSaveSkillsErrors[keyof MaterialsSaveSkillsErrors]
+
+export type MaterialsSaveSkillsResponses = {
+  /**
+   * Research project
+   */
+  200: {
+    revision: number
+    stages: {
+      intake: Array<"arxiv" | "deepxiv" | "exa-search" | "openalex" | "research-lit" | "semantic-scholar">
+      literature: Array<"arxiv" | "deepxiv" | "exa-search" | "openalex" | "research-lit" | "semantic-scholar">
+      strategies: Array<"arxiv" | "deepxiv" | "exa-search" | "openalex" | "research-lit" | "semantic-scholar">
+      ideas: Array<"arxiv" | "deepxiv" | "exa-search" | "openalex" | "research-lit" | "semantic-scholar">
+      protocol: Array<"arxiv" | "deepxiv" | "exa-search" | "openalex" | "research-lit" | "semantic-scholar">
+      analysis: Array<"arxiv" | "deepxiv" | "exa-search" | "openalex" | "research-lit" | "semantic-scholar">
+    }
+    catalog: Array<{
+      name: "arxiv" | "deepxiv" | "exa-search" | "openalex" | "research-lit" | "semantic-scholar"
+      description: string
+      available: boolean
+      reason?: string
+    }>
+  }
+}
+
+export type MaterialsSaveSkillsResponse = MaterialsSaveSkillsResponses[keyof MaterialsSaveSkillsResponses]
+
+export type MaterialsListData = {
+  body?: never
+  path?: never
+  query?: never
+  url: "/materials/projects"
+}
+
+export type MaterialsListErrors = {
+  /**
+   * The request cannot be applied to the current research project
+   */
+  400: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  404: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  409: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  413: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  422: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  503: {
+    error: string
+  }
+}
+
+export type MaterialsListError = MaterialsListErrors[keyof MaterialsListErrors]
+
+export type MaterialsListResponses = {
+  /**
+   * Projects
+   */
+  200: Array<{
+    id: string
+    workspaceID: "default"
+    sessionID?: string
+    title: string
+    goal: string
+    domain: "rebco"
+    target: "auto" | "literature" | "strategies" | "ideas" | "protocol"
+    status:
+      | "draft"
+      | "queued"
+      | "running"
+      | "needs_input"
+      | "awaiting_approval"
+      | "awaiting_data"
+      | "completed"
+      | "failed"
+      | "cancelled"
+      | "interrupted"
+    revision: number
+    createdAt: number
+    updatedAt: number
+    answers: string
+    questions: Array<string>
+    stages: Array<{
+      key: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      status: "pending" | "running" | "completed" | "failed" | "interrupted" | "skipped"
+      startedAt?: number
+      finishedAt?: number
+      error?: string
+    }>
+    sources: Array<{
+      id: string
+      title: string
+      authors?: string
+      doi?: string
+      url?: string
+      fulltextURL?: string
+      year?: number
+      kind: "fulltext" | "partial" | "abstract" | "note"
+      text: string
+      origin:
+        | "upload"
+        | "openalex"
+        | "crossref"
+        | "supramas"
+        | "arxiv"
+        | "deepxiv"
+        | "exa-search"
+        | "research-lit"
+        | "semantic-scholar"
+      createdAt: number
+      retrieval?: {
+        status: "fulltext" | "partial" | "unavailable"
+        reason?: string
+        attemptedAt: number
+        url?: string
+        pageCount?: number
+        extractor?: string
+      }
+      chunks?: Array<{
+        id: string
+        page?: number
+        text: string
+      }>
+    }>
+    artifacts: Array<{
+      id: string
+      stage: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      version: number
+      title: string
+      createdAt: number
+      markdown: string
+      data: {
+        [key: string]: unknown
+      }
+      inputArtifactIDs: Array<string>
+    }>
+    batches: Array<{
+      id: string
+      protocolID: string
+      name: string
+      createdAt: number
+      measurements: Array<{
+        sampleID: string
+        groupID: string
+        property: string
+        value: number
+        unit: string
+        temperatureK?: number
+        fieldT?: number
+        angleDeg?: number
+        process?: string
+        notes?: string
+      }>
+      rawCSV?: string
+    }>
+    events: Array<{
+      id: string
+      createdAt: number
+      stage?: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      message: string
+      kind: "info" | "error" | "decision"
+    }>
+    selectedIdeaIDs: Array<string>
+    approvedProtocolID?: string
+    error?: string
+    model?: {
+      providerID: string
+      modelID: string
+    }
+  }>
+}
+
+export type MaterialsListResponse = MaterialsListResponses[keyof MaterialsListResponses]
+
+export type MaterialsCreateData = {
+  body?: {
+    goal: string
+    title?: string
+    target?: "auto" | "literature" | "strategies" | "ideas" | "protocol"
+    requestID: string
+    model?: {
+      providerID: string
+      modelID: string
+    }
+  }
+  path?: never
+  query?: never
+  url: "/materials/projects"
+}
+
+export type MaterialsCreateErrors = {
+  /**
+   * The request cannot be applied to the current research project
+   */
+  400: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  404: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  409: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  413: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  422: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  503: {
+    error: string
+  }
+}
+
+export type MaterialsCreateError = MaterialsCreateErrors[keyof MaterialsCreateErrors]
+
+export type MaterialsCreateResponses = {
+  /**
+   * Research project
+   */
+  200: {
+    id: string
+    workspaceID: "default"
+    sessionID?: string
+    title: string
+    goal: string
+    domain: "rebco"
+    target: "auto" | "literature" | "strategies" | "ideas" | "protocol"
+    status:
+      | "draft"
+      | "queued"
+      | "running"
+      | "needs_input"
+      | "awaiting_approval"
+      | "awaiting_data"
+      | "completed"
+      | "failed"
+      | "cancelled"
+      | "interrupted"
+    revision: number
+    createdAt: number
+    updatedAt: number
+    answers: string
+    questions: Array<string>
+    stages: Array<{
+      key: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      status: "pending" | "running" | "completed" | "failed" | "interrupted" | "skipped"
+      startedAt?: number
+      finishedAt?: number
+      error?: string
+    }>
+    sources: Array<{
+      id: string
+      title: string
+      authors?: string
+      doi?: string
+      url?: string
+      fulltextURL?: string
+      year?: number
+      kind: "fulltext" | "partial" | "abstract" | "note"
+      text: string
+      origin:
+        | "upload"
+        | "openalex"
+        | "crossref"
+        | "supramas"
+        | "arxiv"
+        | "deepxiv"
+        | "exa-search"
+        | "research-lit"
+        | "semantic-scholar"
+      createdAt: number
+      retrieval?: {
+        status: "fulltext" | "partial" | "unavailable"
+        reason?: string
+        attemptedAt: number
+        url?: string
+        pageCount?: number
+        extractor?: string
+      }
+      chunks?: Array<{
+        id: string
+        page?: number
+        text: string
+      }>
+    }>
+    artifacts: Array<{
+      id: string
+      stage: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      version: number
+      title: string
+      createdAt: number
+      markdown: string
+      data: {
+        [key: string]: unknown
+      }
+      inputArtifactIDs: Array<string>
+    }>
+    batches: Array<{
+      id: string
+      protocolID: string
+      name: string
+      createdAt: number
+      measurements: Array<{
+        sampleID: string
+        groupID: string
+        property: string
+        value: number
+        unit: string
+        temperatureK?: number
+        fieldT?: number
+        angleDeg?: number
+        process?: string
+        notes?: string
+      }>
+      rawCSV?: string
+    }>
+    events: Array<{
+      id: string
+      createdAt: number
+      stage?: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      message: string
+      kind: "info" | "error" | "decision"
+    }>
+    selectedIdeaIDs: Array<string>
+    approvedProtocolID?: string
+    error?: string
+    model?: {
+      providerID: string
+      modelID: string
+    }
+  }
+}
+
+export type MaterialsCreateResponse = MaterialsCreateResponses[keyof MaterialsCreateResponses]
+
+export type MaterialsLibraryData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: never
+  url: "/materials/projects/{id}/library"
+}
+
+export type MaterialsLibraryErrors = {
+  /**
+   * The request cannot be applied to the current research project
+   */
+  400: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  404: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  409: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  413: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  422: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  503: {
+    error: string
+  }
+}
+
+export type MaterialsLibraryError = MaterialsLibraryErrors[keyof MaterialsLibraryErrors]
+
+export type MaterialsLibraryResponses = {
+  /**
+   * Research project
+   */
+  200: {
+    materialsProjectID: string
+    status: "unbound" | "pending" | "syncing" | "synced" | "partial" | "error"
+    revision?: number
+    projectID?: string
+    sessionID?: string
+    directory?: string
+    root?: string
+    location?: "working" | "scratch"
+    updatedAt?: number
+    files: Array<{
+      kind: "paper" | "data" | "report" | "index"
+      title: string
+      path: string
+      mimeType: string
+      sourceID?: string
+      materialArtifactID?: string
+      batchID?: string
+      resultID?: string
+      resultVersionID?: string
+    }>
+    warnings: Array<string>
+    message?: string
+  }
+}
+
+export type MaterialsLibraryResponse = MaterialsLibraryResponses[keyof MaterialsLibraryResponses]
+
+export type MaterialsSyncLibraryData = {
+  body?: {
+    [key: string]: never
+  }
+  path: {
+    id: string
+  }
+  query?: never
+  url: "/materials/projects/{id}/library"
+}
+
+export type MaterialsSyncLibraryErrors = {
+  /**
+   * The request cannot be applied to the current research project
+   */
+  400: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  404: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  409: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  413: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  422: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  503: {
+    error: string
+  }
+}
+
+export type MaterialsSyncLibraryError = MaterialsSyncLibraryErrors[keyof MaterialsSyncLibraryErrors]
+
+export type MaterialsSyncLibraryResponses = {
+  /**
+   * Research project
+   */
+  200: {
+    materialsProjectID: string
+    status: "unbound" | "pending" | "syncing" | "synced" | "partial" | "error"
+    revision?: number
+    projectID?: string
+    sessionID?: string
+    directory?: string
+    root?: string
+    location?: "working" | "scratch"
+    updatedAt?: number
+    files: Array<{
+      kind: "paper" | "data" | "report" | "index"
+      title: string
+      path: string
+      mimeType: string
+      sourceID?: string
+      materialArtifactID?: string
+      batchID?: string
+      resultID?: string
+      resultVersionID?: string
+    }>
+    warnings: Array<string>
+    message?: string
+  }
+}
+
+export type MaterialsSyncLibraryResponse = MaterialsSyncLibraryResponses[keyof MaterialsSyncLibraryResponses]
+
+export type MaterialsActivityData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: never
+  url: "/materials/projects/{id}/activity"
+}
+
+export type MaterialsActivityErrors = {
+  /**
+   * The request cannot be applied to the current research project
+   */
+  400: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  404: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  409: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  413: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  422: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  503: {
+    error: string
+  }
+}
+
+export type MaterialsActivityError = MaterialsActivityErrors[keyof MaterialsActivityErrors]
+
+export type MaterialsActivityResponses = {
+  /**
+   * Research project
+   */
+  200: {
+    projectID: string
+    revision: number
+    status:
+      | "draft"
+      | "queued"
+      | "running"
+      | "needs_input"
+      | "awaiting_approval"
+      | "awaiting_data"
+      | "completed"
+      | "failed"
+      | "cancelled"
+      | "interrupted"
+    serverTime: number
+    current?: {
+      phase:
+        | "preparing"
+        | "searching"
+        | "retrieving"
+        | "waiting"
+        | "reasoning"
+        | "generating"
+        | "validating"
+        | "repairing"
+        | "saving"
+        | "completed"
+        | "failed"
+        | "cancelled"
+        | "interrupted"
+      role?: string
+      model?: string
+      step?: number
+      steps?: number
+      completed?: number
+      total?: number
+      item?: string
+      outputChars?: number
+      stage: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      startedAt: number
+      updatedAt: number
+      lastModelActivityAt?: number
+    }
+    events: Array<{
+      phase:
+        | "preparing"
+        | "searching"
+        | "retrieving"
+        | "waiting"
+        | "reasoning"
+        | "generating"
+        | "validating"
+        | "repairing"
+        | "saving"
+        | "completed"
+        | "failed"
+        | "cancelled"
+        | "interrupted"
+      role?: string
+      model?: string
+      step?: number
+      steps?: number
+      completed?: number
+      total?: number
+      item?: string
+      outputChars?: number
+      stage: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      startedAt: number
+      updatedAt: number
+      lastModelActivityAt?: number
+      id: string
+    }>
+  }
+}
+
+export type MaterialsActivityResponse = MaterialsActivityResponses[keyof MaterialsActivityResponses]
+
+export type MaterialsGetData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: never
+  url: "/materials/projects/{id}"
+}
+
+export type MaterialsGetErrors = {
+  /**
+   * The request cannot be applied to the current research project
+   */
+  400: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  404: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  409: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  413: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  422: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  503: {
+    error: string
+  }
+}
+
+export type MaterialsGetError = MaterialsGetErrors[keyof MaterialsGetErrors]
+
+export type MaterialsGetResponses = {
+  /**
+   * Research project
+   */
+  200: {
+    id: string
+    workspaceID: "default"
+    sessionID?: string
+    title: string
+    goal: string
+    domain: "rebco"
+    target: "auto" | "literature" | "strategies" | "ideas" | "protocol"
+    status:
+      | "draft"
+      | "queued"
+      | "running"
+      | "needs_input"
+      | "awaiting_approval"
+      | "awaiting_data"
+      | "completed"
+      | "failed"
+      | "cancelled"
+      | "interrupted"
+    revision: number
+    createdAt: number
+    updatedAt: number
+    answers: string
+    questions: Array<string>
+    stages: Array<{
+      key: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      status: "pending" | "running" | "completed" | "failed" | "interrupted" | "skipped"
+      startedAt?: number
+      finishedAt?: number
+      error?: string
+    }>
+    sources: Array<{
+      id: string
+      title: string
+      authors?: string
+      doi?: string
+      url?: string
+      fulltextURL?: string
+      year?: number
+      kind: "fulltext" | "partial" | "abstract" | "note"
+      text: string
+      origin:
+        | "upload"
+        | "openalex"
+        | "crossref"
+        | "supramas"
+        | "arxiv"
+        | "deepxiv"
+        | "exa-search"
+        | "research-lit"
+        | "semantic-scholar"
+      createdAt: number
+      retrieval?: {
+        status: "fulltext" | "partial" | "unavailable"
+        reason?: string
+        attemptedAt: number
+        url?: string
+        pageCount?: number
+        extractor?: string
+      }
+      chunks?: Array<{
+        id: string
+        page?: number
+        text: string
+      }>
+    }>
+    artifacts: Array<{
+      id: string
+      stage: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      version: number
+      title: string
+      createdAt: number
+      markdown: string
+      data: {
+        [key: string]: unknown
+      }
+      inputArtifactIDs: Array<string>
+    }>
+    batches: Array<{
+      id: string
+      protocolID: string
+      name: string
+      createdAt: number
+      measurements: Array<{
+        sampleID: string
+        groupID: string
+        property: string
+        value: number
+        unit: string
+        temperatureK?: number
+        fieldT?: number
+        angleDeg?: number
+        process?: string
+        notes?: string
+      }>
+      rawCSV?: string
+    }>
+    events: Array<{
+      id: string
+      createdAt: number
+      stage?: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      message: string
+      kind: "info" | "error" | "decision"
+    }>
+    selectedIdeaIDs: Array<string>
+    approvedProtocolID?: string
+    error?: string
+    model?: {
+      providerID: string
+      modelID: string
+    }
+  }
+}
+
+export type MaterialsGetResponse = MaterialsGetResponses[keyof MaterialsGetResponses]
+
+export type MaterialsDecideData = {
+  body?: {
+    action:
+      | "start"
+      | "resume"
+      | "cancel"
+      | "answer"
+      | "select_ideas"
+      | "approve_protocol"
+      | "analyze"
+      | "revise_protocol"
+      | "refresh_literature"
+    revision: number
+    answers?: string
+    ideaIDs?: Array<string>
+    protocolID?: string
+  }
+  path: {
+    id: string
+  }
+  query?: never
+  url: "/materials/projects/{id}/actions"
+}
+
+export type MaterialsDecideErrors = {
+  /**
+   * The request cannot be applied to the current research project
+   */
+  400: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  404: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  409: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  413: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  422: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  503: {
+    error: string
+  }
+}
+
+export type MaterialsDecideError = MaterialsDecideErrors[keyof MaterialsDecideErrors]
+
+export type MaterialsDecideResponses = {
+  /**
+   * Research project
+   */
+  200: {
+    id: string
+    workspaceID: "default"
+    sessionID?: string
+    title: string
+    goal: string
+    domain: "rebco"
+    target: "auto" | "literature" | "strategies" | "ideas" | "protocol"
+    status:
+      | "draft"
+      | "queued"
+      | "running"
+      | "needs_input"
+      | "awaiting_approval"
+      | "awaiting_data"
+      | "completed"
+      | "failed"
+      | "cancelled"
+      | "interrupted"
+    revision: number
+    createdAt: number
+    updatedAt: number
+    answers: string
+    questions: Array<string>
+    stages: Array<{
+      key: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      status: "pending" | "running" | "completed" | "failed" | "interrupted" | "skipped"
+      startedAt?: number
+      finishedAt?: number
+      error?: string
+    }>
+    sources: Array<{
+      id: string
+      title: string
+      authors?: string
+      doi?: string
+      url?: string
+      fulltextURL?: string
+      year?: number
+      kind: "fulltext" | "partial" | "abstract" | "note"
+      text: string
+      origin:
+        | "upload"
+        | "openalex"
+        | "crossref"
+        | "supramas"
+        | "arxiv"
+        | "deepxiv"
+        | "exa-search"
+        | "research-lit"
+        | "semantic-scholar"
+      createdAt: number
+      retrieval?: {
+        status: "fulltext" | "partial" | "unavailable"
+        reason?: string
+        attemptedAt: number
+        url?: string
+        pageCount?: number
+        extractor?: string
+      }
+      chunks?: Array<{
+        id: string
+        page?: number
+        text: string
+      }>
+    }>
+    artifacts: Array<{
+      id: string
+      stage: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      version: number
+      title: string
+      createdAt: number
+      markdown: string
+      data: {
+        [key: string]: unknown
+      }
+      inputArtifactIDs: Array<string>
+    }>
+    batches: Array<{
+      id: string
+      protocolID: string
+      name: string
+      createdAt: number
+      measurements: Array<{
+        sampleID: string
+        groupID: string
+        property: string
+        value: number
+        unit: string
+        temperatureK?: number
+        fieldT?: number
+        angleDeg?: number
+        process?: string
+        notes?: string
+      }>
+      rawCSV?: string
+    }>
+    events: Array<{
+      id: string
+      createdAt: number
+      stage?: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      message: string
+      kind: "info" | "error" | "decision"
+    }>
+    selectedIdeaIDs: Array<string>
+    approvedProtocolID?: string
+    error?: string
+    model?: {
+      providerID: string
+      modelID: string
+    }
+  }
+}
+
+export type MaterialsDecideResponse = MaterialsDecideResponses[keyof MaterialsDecideResponses]
+
+export type MaterialsUploadSourceData = {
+  body: {
+    /**
+     * Original PDF, TXT or Markdown, up to 20 MB
+     */
+    file: Blob | File
+    /**
+     * JSON-encoded MaterialSourceInput with extracted text and citation metadata
+     */
+    source: string
+  }
+  path: {
+    id: string
+  }
+  query?: never
+  url: "/materials/projects/{id}/sources/upload"
+}
+
+export type MaterialsUploadSourceErrors = {
+  /**
+   * The request cannot be applied to the current research project
+   */
+  400: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  404: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  409: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  413: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  422: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  503: {
+    error: string
+  }
+}
+
+export type MaterialsUploadSourceError = MaterialsUploadSourceErrors[keyof MaterialsUploadSourceErrors]
+
+export type MaterialsUploadSourceResponses = {
+  /**
+   * Research project
+   */
+  200: {
+    id: string
+    workspaceID: "default"
+    sessionID?: string
+    title: string
+    goal: string
+    domain: "rebco"
+    target: "auto" | "literature" | "strategies" | "ideas" | "protocol"
+    status:
+      | "draft"
+      | "queued"
+      | "running"
+      | "needs_input"
+      | "awaiting_approval"
+      | "awaiting_data"
+      | "completed"
+      | "failed"
+      | "cancelled"
+      | "interrupted"
+    revision: number
+    createdAt: number
+    updatedAt: number
+    answers: string
+    questions: Array<string>
+    stages: Array<{
+      key: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      status: "pending" | "running" | "completed" | "failed" | "interrupted" | "skipped"
+      startedAt?: number
+      finishedAt?: number
+      error?: string
+    }>
+    sources: Array<{
+      id: string
+      title: string
+      authors?: string
+      doi?: string
+      url?: string
+      fulltextURL?: string
+      year?: number
+      kind: "fulltext" | "partial" | "abstract" | "note"
+      text: string
+      origin:
+        | "upload"
+        | "openalex"
+        | "crossref"
+        | "supramas"
+        | "arxiv"
+        | "deepxiv"
+        | "exa-search"
+        | "research-lit"
+        | "semantic-scholar"
+      createdAt: number
+      retrieval?: {
+        status: "fulltext" | "partial" | "unavailable"
+        reason?: string
+        attemptedAt: number
+        url?: string
+        pageCount?: number
+        extractor?: string
+      }
+      chunks?: Array<{
+        id: string
+        page?: number
+        text: string
+      }>
+    }>
+    artifacts: Array<{
+      id: string
+      stage: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      version: number
+      title: string
+      createdAt: number
+      markdown: string
+      data: {
+        [key: string]: unknown
+      }
+      inputArtifactIDs: Array<string>
+    }>
+    batches: Array<{
+      id: string
+      protocolID: string
+      name: string
+      createdAt: number
+      measurements: Array<{
+        sampleID: string
+        groupID: string
+        property: string
+        value: number
+        unit: string
+        temperatureK?: number
+        fieldT?: number
+        angleDeg?: number
+        process?: string
+        notes?: string
+      }>
+      rawCSV?: string
+    }>
+    events: Array<{
+      id: string
+      createdAt: number
+      stage?: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      message: string
+      kind: "info" | "error" | "decision"
+    }>
+    selectedIdeaIDs: Array<string>
+    approvedProtocolID?: string
+    error?: string
+    model?: {
+      providerID: string
+      modelID: string
+    }
+  }
+}
+
+export type MaterialsUploadSourceResponse = MaterialsUploadSourceResponses[keyof MaterialsUploadSourceResponses]
+
+export type MaterialsSourceData = {
+  body?: {
+    title: string
+    authors?: string
+    doi?: string
+    url?: string
+    year?: number
+    kind: "fulltext" | "abstract" | "note"
+    text: string
+  }
+  path: {
+    id: string
+  }
+  query?: never
+  url: "/materials/projects/{id}/sources"
+}
+
+export type MaterialsSourceErrors = {
+  /**
+   * The request cannot be applied to the current research project
+   */
+  400: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  404: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  409: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  413: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  422: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  503: {
+    error: string
+  }
+}
+
+export type MaterialsSourceError = MaterialsSourceErrors[keyof MaterialsSourceErrors]
+
+export type MaterialsSourceResponses = {
+  /**
+   * Research project
+   */
+  200: {
+    id: string
+    workspaceID: "default"
+    sessionID?: string
+    title: string
+    goal: string
+    domain: "rebco"
+    target: "auto" | "literature" | "strategies" | "ideas" | "protocol"
+    status:
+      | "draft"
+      | "queued"
+      | "running"
+      | "needs_input"
+      | "awaiting_approval"
+      | "awaiting_data"
+      | "completed"
+      | "failed"
+      | "cancelled"
+      | "interrupted"
+    revision: number
+    createdAt: number
+    updatedAt: number
+    answers: string
+    questions: Array<string>
+    stages: Array<{
+      key: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      status: "pending" | "running" | "completed" | "failed" | "interrupted" | "skipped"
+      startedAt?: number
+      finishedAt?: number
+      error?: string
+    }>
+    sources: Array<{
+      id: string
+      title: string
+      authors?: string
+      doi?: string
+      url?: string
+      fulltextURL?: string
+      year?: number
+      kind: "fulltext" | "partial" | "abstract" | "note"
+      text: string
+      origin:
+        | "upload"
+        | "openalex"
+        | "crossref"
+        | "supramas"
+        | "arxiv"
+        | "deepxiv"
+        | "exa-search"
+        | "research-lit"
+        | "semantic-scholar"
+      createdAt: number
+      retrieval?: {
+        status: "fulltext" | "partial" | "unavailable"
+        reason?: string
+        attemptedAt: number
+        url?: string
+        pageCount?: number
+        extractor?: string
+      }
+      chunks?: Array<{
+        id: string
+        page?: number
+        text: string
+      }>
+    }>
+    artifacts: Array<{
+      id: string
+      stage: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      version: number
+      title: string
+      createdAt: number
+      markdown: string
+      data: {
+        [key: string]: unknown
+      }
+      inputArtifactIDs: Array<string>
+    }>
+    batches: Array<{
+      id: string
+      protocolID: string
+      name: string
+      createdAt: number
+      measurements: Array<{
+        sampleID: string
+        groupID: string
+        property: string
+        value: number
+        unit: string
+        temperatureK?: number
+        fieldT?: number
+        angleDeg?: number
+        process?: string
+        notes?: string
+      }>
+      rawCSV?: string
+    }>
+    events: Array<{
+      id: string
+      createdAt: number
+      stage?: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      message: string
+      kind: "info" | "error" | "decision"
+    }>
+    selectedIdeaIDs: Array<string>
+    approvedProtocolID?: string
+    error?: string
+    model?: {
+      providerID: string
+      modelID: string
+    }
+  }
+}
+
+export type MaterialsSourceResponse = MaterialsSourceResponses[keyof MaterialsSourceResponses]
+
+export type MaterialsBatchData = {
+  body?: {
+    protocolID: string
+    name: string
+    measurements: Array<{
+      sampleID: string
+      groupID: string
+      property: string
+      value: number
+      unit: string
+      temperatureK?: number
+      fieldT?: number
+      angleDeg?: number
+      process?: string
+      notes?: string
+    }>
+    rawCSV?: string
+    revision: number
+  }
+  path: {
+    id: string
+  }
+  query?: never
+  url: "/materials/projects/{id}/batches"
+}
+
+export type MaterialsBatchErrors = {
+  /**
+   * The request cannot be applied to the current research project
+   */
+  400: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  404: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  409: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  413: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  422: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  503: {
+    error: string
+  }
+}
+
+export type MaterialsBatchError = MaterialsBatchErrors[keyof MaterialsBatchErrors]
+
+export type MaterialsBatchResponses = {
+  /**
+   * Research project
+   */
+  200: {
+    id: string
+    workspaceID: "default"
+    sessionID?: string
+    title: string
+    goal: string
+    domain: "rebco"
+    target: "auto" | "literature" | "strategies" | "ideas" | "protocol"
+    status:
+      | "draft"
+      | "queued"
+      | "running"
+      | "needs_input"
+      | "awaiting_approval"
+      | "awaiting_data"
+      | "completed"
+      | "failed"
+      | "cancelled"
+      | "interrupted"
+    revision: number
+    createdAt: number
+    updatedAt: number
+    answers: string
+    questions: Array<string>
+    stages: Array<{
+      key: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      status: "pending" | "running" | "completed" | "failed" | "interrupted" | "skipped"
+      startedAt?: number
+      finishedAt?: number
+      error?: string
+    }>
+    sources: Array<{
+      id: string
+      title: string
+      authors?: string
+      doi?: string
+      url?: string
+      fulltextURL?: string
+      year?: number
+      kind: "fulltext" | "partial" | "abstract" | "note"
+      text: string
+      origin:
+        | "upload"
+        | "openalex"
+        | "crossref"
+        | "supramas"
+        | "arxiv"
+        | "deepxiv"
+        | "exa-search"
+        | "research-lit"
+        | "semantic-scholar"
+      createdAt: number
+      retrieval?: {
+        status: "fulltext" | "partial" | "unavailable"
+        reason?: string
+        attemptedAt: number
+        url?: string
+        pageCount?: number
+        extractor?: string
+      }
+      chunks?: Array<{
+        id: string
+        page?: number
+        text: string
+      }>
+    }>
+    artifacts: Array<{
+      id: string
+      stage: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      version: number
+      title: string
+      createdAt: number
+      markdown: string
+      data: {
+        [key: string]: unknown
+      }
+      inputArtifactIDs: Array<string>
+    }>
+    batches: Array<{
+      id: string
+      protocolID: string
+      name: string
+      createdAt: number
+      measurements: Array<{
+        sampleID: string
+        groupID: string
+        property: string
+        value: number
+        unit: string
+        temperatureK?: number
+        fieldT?: number
+        angleDeg?: number
+        process?: string
+        notes?: string
+      }>
+      rawCSV?: string
+    }>
+    events: Array<{
+      id: string
+      createdAt: number
+      stage?: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      message: string
+      kind: "info" | "error" | "decision"
+    }>
+    selectedIdeaIDs: Array<string>
+    approvedProtocolID?: string
+    error?: string
+    model?: {
+      providerID: string
+      modelID: string
+    }
+  }
+}
+
+export type MaterialsBatchResponse = MaterialsBatchResponses[keyof MaterialsBatchResponses]
+
+export type MaterialsExportData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: never
+  url: "/materials/projects/{id}/export"
+}
+
+export type MaterialsExportErrors = {
+  /**
+   * The request cannot be applied to the current research project
+   */
+  400: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  404: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  409: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  413: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  422: {
+    error: string
+  }
+  /**
+   * The request cannot be applied to the current research project
+   */
+  503: {
+    error: string
+  }
+}
+
+export type MaterialsExportError = MaterialsExportErrors[keyof MaterialsExportErrors]
+
+export type MaterialsExportResponses = {
+  /**
+   * Research project
+   */
+  200: {
+    id: string
+    workspaceID: "default"
+    sessionID?: string
+    title: string
+    goal: string
+    domain: "rebco"
+    target: "auto" | "literature" | "strategies" | "ideas" | "protocol"
+    status:
+      | "draft"
+      | "queued"
+      | "running"
+      | "needs_input"
+      | "awaiting_approval"
+      | "awaiting_data"
+      | "completed"
+      | "failed"
+      | "cancelled"
+      | "interrupted"
+    revision: number
+    createdAt: number
+    updatedAt: number
+    answers: string
+    questions: Array<string>
+    stages: Array<{
+      key: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      status: "pending" | "running" | "completed" | "failed" | "interrupted" | "skipped"
+      startedAt?: number
+      finishedAt?: number
+      error?: string
+    }>
+    sources: Array<{
+      id: string
+      title: string
+      authors?: string
+      doi?: string
+      url?: string
+      fulltextURL?: string
+      year?: number
+      kind: "fulltext" | "partial" | "abstract" | "note"
+      text: string
+      origin:
+        | "upload"
+        | "openalex"
+        | "crossref"
+        | "supramas"
+        | "arxiv"
+        | "deepxiv"
+        | "exa-search"
+        | "research-lit"
+        | "semantic-scholar"
+      createdAt: number
+      retrieval?: {
+        status: "fulltext" | "partial" | "unavailable"
+        reason?: string
+        attemptedAt: number
+        url?: string
+        pageCount?: number
+        extractor?: string
+      }
+      chunks?: Array<{
+        id: string
+        page?: number
+        text: string
+      }>
+    }>
+    artifacts: Array<{
+      id: string
+      stage: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      version: number
+      title: string
+      createdAt: number
+      markdown: string
+      data: {
+        [key: string]: unknown
+      }
+      inputArtifactIDs: Array<string>
+    }>
+    batches: Array<{
+      id: string
+      protocolID: string
+      name: string
+      createdAt: number
+      measurements: Array<{
+        sampleID: string
+        groupID: string
+        property: string
+        value: number
+        unit: string
+        temperatureK?: number
+        fieldT?: number
+        angleDeg?: number
+        process?: string
+        notes?: string
+      }>
+      rawCSV?: string
+    }>
+    events: Array<{
+      id: string
+      createdAt: number
+      stage?: "intake" | "literature" | "strategies" | "ideas" | "protocol" | "analysis"
+      message: string
+      kind: "info" | "error" | "decision"
+    }>
+    selectedIdeaIDs: Array<string>
+    approvedProtocolID?: string
+    error?: string
+    model?: {
+      providerID: string
+      modelID: string
+    }
+  }
+}
+
+export type MaterialsExportResponse = MaterialsExportResponses[keyof MaterialsExportResponses]
+
 export type AccountSessionData = {
   body?: never
   path?: never

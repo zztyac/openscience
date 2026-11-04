@@ -1,6 +1,7 @@
 import { afterAll, afterEach, describe, expect, test } from "bun:test"
 import { fileURLToPath } from "node:url"
 import type { JSX } from "solid-js"
+import type { StoredArtifact } from "@/artifacts/store"
 import { createTestServer as createServer } from "../../../test/vite"
 import solid from "vite-plugin-solid"
 
@@ -14,9 +15,10 @@ const server = await createServer({
   resolve: { conditions: ["browser", "production"], dedupe: ["solid-js", "solid-js/web"] },
   ssr: { noExternal: true, resolve: { conditions: ["browser", "production"] } },
 })
-const [subject, web] = await Promise.all([
+const [subject, web, reactive] = await Promise.all([
   server.ssrLoadModule("/src/atlas/files/ArtifactGrid.tsx") as Promise<typeof import("./ArtifactGrid")>,
   server.ssrLoadModule("solid-js/web") as Promise<typeof import("solid-js/web")>,
+  server.ssrLoadModule("solid-js/store") as Promise<typeof import("solid-js/store")>,
 ])
 const { TestLanguage } = (await server.ssrLoadModule("/test/language.tsx")) as typeof import("../../../test/language")
 const cleanups: Array<() => void> = []
@@ -98,6 +100,66 @@ describe("artifact grid", () => {
     const host = mount(() => subject.ArtifactGrid(props() as never))
 
     expect(host.querySelector("[data-artifact-count]")?.textContent).toBe("2 results")
+  })
+
+  test("counts paired results and preserves both formats when search matches only the data title", () => {
+    const material = (id: string, format: "md" | "json"): StoredArtifact => {
+      const item: StoredArtifact = artifact({ filename: `ideas.${format}`, session: "ses_one", createdAt: now })
+      return {
+        ...item,
+        id,
+        title: format === "md" ? "My renamed research report" : "Companion dataset",
+        currentVersionID: `ver_grid_${id}`,
+        current: {
+          ...item.current,
+          id: `ver_grid_${id}`,
+          artifactID: id,
+          mimeType: format === "md" ? "text/markdown" : "application/json",
+          sourcePath: `materials/mat_grid/reports/ideas.${format}`,
+        },
+      }
+    }
+    const report = material("art_grid_report", "md")
+    const data = material("art_grid_data", "json")
+    const other = artifact({ filename: "notes.txt", session: "ses_one", createdAt: now - 1000 })
+    const opened: StoredArtifact[] = []
+    const [state, setState] = reactive.createStore({ query: "" })
+    const host = mount(() =>
+      subject.ArtifactGrid({
+        ...props({ artifacts: [data, report, other], onOpen: (item: StoredArtifact) => opened.push(item) }),
+        get query() {
+          return state.query
+        },
+        get filtered() {
+          return Boolean(state.query)
+        },
+      } as never),
+    )
+
+    expect(host.querySelectorAll("[data-card-open]")).toHaveLength(2)
+    expect(host.querySelector("[data-artifact-count]")?.textContent).toBe("2 results")
+    expect(host.querySelector(".artifact-toolbar__hint")?.textContent).toBe("3 files")
+    expect(host.querySelectorAll("[data-card-companion]")).toHaveLength(1)
+
+    setState("query", "  DATASET  ")
+    expect(host.querySelectorAll("[data-card-open]")).toHaveLength(1)
+    expect(host.querySelector("[data-artifact-count]")?.textContent).toBe("1 result")
+    expect(host.querySelector(".artifact-toolbar__hint")?.textContent).toBe("2 files")
+    expect(host.querySelector(".artifact-card__name")?.textContent).toBe(report.title)
+    expect(host.querySelector("[data-card-open]")?.getAttribute("aria-label")).toContain(report.title)
+    host.querySelector<HTMLButtonElement>("[data-card-open]")!.click()
+    host.querySelector<HTMLButtonElement>("[data-card-companion]")!.click()
+    expect(opened[0]).toBe(report)
+    expect(opened[1]).toBe(data)
+
+    setState("query", "missing result")
+    expect(host.querySelectorAll("[data-card-open]")).toHaveLength(0)
+    expect(host.querySelector("[data-artifact-empty]")?.textContent).toContain("No matching results")
+    setState("query", "")
+    expect(host.querySelectorAll("[data-card-open]")).toHaveLength(2)
+    expect(host.querySelectorAll("[data-card-companion]")).toHaveLength(1)
+    expect(host.querySelector("[data-artifact-count]")?.textContent).toBe("2 results")
+    expect(host.querySelector("[data-artifact-empty]")).toBeNull()
   })
 
   test("groups under Created and flattens under Name", () => {
@@ -205,6 +267,12 @@ describe("artifact grid", () => {
   test("moves focus through view options and Escape restores the trigger", async () => {
     const host = mount(() => subject.ArtifactGrid(props() as never))
     const trigger = host.querySelector<HTMLButtonElement>("[data-artifact-prefs]")!
+    const escaped: KeyboardEvent[] = []
+    web.spread(host, {
+      onKeyDown: (event: KeyboardEvent) => {
+        if (event.key === "Escape") escaped.push(event)
+      },
+    })
 
     trigger.click()
     await Promise.resolve()
@@ -220,6 +288,9 @@ describe("artifact grid", () => {
     await Promise.resolve()
     expect(host.querySelector("[role='menu']")).toBeNull()
     expect(document.activeElement).toBe(trigger)
+    expect(escaped).toHaveLength(0)
+    trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }))
+    expect(escaped).toHaveLength(1)
   })
 
   test("pins the current session ahead of a newer one", () => {

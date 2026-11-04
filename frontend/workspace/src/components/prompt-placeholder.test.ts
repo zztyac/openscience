@@ -25,7 +25,7 @@ describe("research composer placeholder", () => {
     expect(source).not.toContain('setStore("placeholder"')
     expect(source).not.toContain("Math.floor(Math.random()")
     expect(source).toContain('return language.t("prompt.placeholder.normal")')
-    expect(en["prompt.placeholder.normal"]).toBe("Describe the research task you want to work through…")
+    expect(en["prompt.placeholder.normal"]).toBe("Share your research idea. No detailed plan needed…")
   })
 
   test("keeps every locale deterministic and free of example interpolation", () => {

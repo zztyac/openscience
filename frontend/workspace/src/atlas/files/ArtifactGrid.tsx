@@ -4,6 +4,7 @@ import type { StoredArtifact } from "@/artifacts/store"
 import { ArtifactCard } from "./ArtifactCard"
 import type { ThumbProps } from "./ArtifactThumb"
 import { groupBySession, sortArtifacts, type Group } from "./artifact-groups"
+import { artifactEntries, matchesArtifactEntry } from "./artifact-entries"
 import { readView, writeView, type View } from "./artifact-view"
 import { age } from "./ago"
 import { IconChevronDown } from "@/atlas/shared/Icon"
@@ -15,6 +16,7 @@ export interface GridProps extends Omit<ThumbProps, "artifact"> {
   currentSession: string | undefined
   /** Set while the pane's search box is filtering, so an empty grid can say why. */
   filtered?: boolean
+  query?: string
   /** Empty data during loading or a failed request is not a true empty state. */
   loading?: boolean
   unavailable?: boolean
@@ -60,18 +62,25 @@ export function ArtifactGrid(props: GridProps): JSX.Element {
   const sort = createMemo(() => view().sort)
   const layout = createMemo(() => view().layout)
   const sizes = createMemo(() => view().sizes)
+  const entries = createMemo(() =>
+    artifactEntries(props.artifacts).filter((entry) => matchesArtifactEntry(entry, props.query ?? "")),
+  )
+  const companions = createMemo(() => new Map(entries().map((entry) => [entry.artifact, entry.companion])))
+  const visible = createMemo(() => entries().map((entry) => entry.artifact))
+  const files = createMemo(() => entries().reduce((count, entry) => count + (entry.companion ? 2 : 1), 0))
 
   // One group with no label is how the flat A-Z case reuses the grouped render
   // path; the header is what disappears, not the list.
   const groups = createMemo((): Group[] =>
     sort() === "created"
-      ? groupBySession(props.artifacts, props.titles, props.currentSession)
-      : [{ key: "all", label: "", artifacts: sortArtifacts(props.artifacts, "name"), newest: 0 }],
+      ? groupBySession(visible(), props.titles, props.currentSession)
+      : [{ key: "all", label: "", artifacts: sortArtifacts(visible(), "name"), newest: 0 }],
   )
 
   const card = (artifact: StoredArtifact) => (
     <ArtifactCard
       artifact={artifact}
+      companion={companions().get(artifact)}
       layout={layout()}
       sizes={sizes()}
       read={props.read}
@@ -88,11 +97,15 @@ export function ArtifactGrid(props: GridProps): JSX.Element {
       <div class="artifact-toolbar">
         <span class="artifact-toolbar__primary">
           <span class="artifact-toolbar__count" data-artifact-count>
-            {props.artifacts.length === 1
+            {entries().length === 1
               ? language.t("atlas.results.oneCount")
-              : language.t("atlas.results.count", { count: props.artifacts.length })}
+              : language.t("atlas.results.count", { count: entries().length })}
           </span>
-          <span class="artifact-toolbar__hint">{language.t("atlas.results.immutable")}</span>
+          <span class="artifact-toolbar__hint">
+            {files() > entries().length
+              ? language.t("atlas.results.fileCount", { count: files() })
+              : language.t("atlas.results.historyHint")}
+          </span>
         </span>
 
         {/* Sorting, layout and the optional size column are one mental model:
@@ -134,6 +147,7 @@ export function ArtifactGrid(props: GridProps): JSX.Element {
               onKeyDown={(event) => {
                 if (event.key === "Escape" || event.key === "Tab") {
                   event.preventDefault()
+                  event.stopPropagation()
                   closePrefs(true)
                   return
                 }
@@ -216,7 +230,7 @@ export function ArtifactGrid(props: GridProps): JSX.Element {
       </div>
 
       <Show
-        when={props.artifacts.length > 0}
+        when={entries().length > 0}
         fallback={
           <Show when={!props.loading && !props.unavailable}>
             {/* "No artifacts saved yet." is false when a search simply matched

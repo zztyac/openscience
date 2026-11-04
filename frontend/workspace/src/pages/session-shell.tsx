@@ -8,6 +8,7 @@ import { usePlatform } from "@/context/platform"
 // Side effect: registers the inline science-artifact tool renderer before the
 // session page can dispatch a `metadata.artifact` envelope.
 import "@/science/tool-renderer"
+import "@/materials/tool-renderer"
 import SessionPage from "./session"
 
 export function SessionRenderProviders(props: ParentProps) {

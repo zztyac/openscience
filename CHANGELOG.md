@@ -8,6 +8,24 @@ tagged release also ships native binaries for Linux, macOS, and Windows.
 
 ## Unreleased
 
+- Configure literature Skills independently for all six materials research stages in the existing Skills settings. Run migrated arXiv, OpenAlex, Semantic Scholar, research-lit, Exa and DeepXiv procedures through real server tools, retain execution provenance, and admit verified original PDFs without rewriting earlier evidence.
+
+- Make Results easier to scan with readable report summaries, clear titles and responsive cards; show materials reports with their companion data in one card while preserving separate file actions and versions.
+
+- Connect materials research to the original Files and Results panels: archive papers, original uploads, data, and versioned reports in the conversation's working folder, with retryable synchronization and saved result versions.
+
+- Show live materials workflow activity inside the original conversation, including role steps, model response activity, elapsed time, literature retrieval progress, and persistent execution logs.
+
+- Remove local model request deadlines from materials workflows, including connection and stream-idle limits, while preserving manual cancellation and completed research artifacts.
+
+- Retrieve and cache open paper PDFs automatically in materials workflows, with page-addressed evidence chunks, honest partial/abstract fallbacks, validated citations, and a retry action inside the existing literature panel.
+
+- Integrate SupraMAS materials research into existing OpenScience conversations: the original composer starts durable REBCO workflows, with evidence, strategy trees, reviewed ideas, protocol approval, measurement batches, and analysis in inline conversation cards.
+
+- Accept short, everyday-language materials research goals and clarify only the information needed for the next step, without requiring users to write a workflow or supply a complete experimental plan.
+
+- Restore materials literature retrieval on local networks where the Cloudflare DNS endpoint is unreachable, with an opt-in AliDNS resolver and distinct, credential-safe DNS and source failure messages.
+
 - Localize settings, project and session navigation, model controls, terminals, compute/research panels, and file/skill panels in Simplified and Traditional Chinese; keep labels reactive when switching languages.
 
 - Record failed OAuth structured-output usage once per model call, even when object validation fails after the stream ends.

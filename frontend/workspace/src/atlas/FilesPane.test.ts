@@ -27,6 +27,7 @@ const subject = (await server.ssrLoadModule("/src/atlas/FilesPane.tsx")) as type
 const notifications = (await server.ssrLoadModule("/src/atlas/Toast.tsx")) as typeof import("./Toast")
 const uiToast = (await server.ssrLoadModule("@synsci/ui/toast")) as typeof import("@synsci/ui/toast")
 const { TestLanguage } = (await server.ssrLoadModule("/test/language.tsx")) as typeof import("../../test/language")
+const navigationStore = (await server.ssrLoadModule("/src/atlas/store/ui.ts")) as typeof import("./store/ui")
 const cleanups: Array<() => void> = []
 
 afterAll(() => server.close())
@@ -2118,4 +2119,67 @@ describe("files pane", () => {
     expect(host.querySelector('[data-source-item="trash"]')?.getAttribute("aria-checked")).toBe("true")
     expect(host.querySelector("[data-trash-list]")).not.toBeNull()
   })
+})
+
+test("existing Files pane reveals authorized material folders and Results", async () => {
+  navigationStore.uiStore.activateScope("material-navigation", SESSION)
+  const listed: string[] = [],
+    results: string[] = []
+  navigationStore.uiStore.openFiles({
+    directory: DIRECTORY,
+    path: "/shared/materials/mat_one",
+    source: "files",
+    sessionID: SESSION,
+  })
+  const host = mount(() =>
+    subject.FilesPane({
+      session: SESSION,
+      directory: DIRECTORY,
+      request: async (path, _init, query) => {
+        if (path === `/session/${SESSION}/filesystem`)
+          return listing(snapshot([grant("fsg_shared", "/shared", "write")]))
+        if (path === "/file") listed.push(String(query?.path))
+        if (path.includes("artifact-store")) results.push(path)
+        return listing([])
+      },
+    }),
+  )
+  await settle()
+  expect(listed).toContain("/shared/materials/mat_one")
+  expect(host.querySelector('[data-workspace-id="fsg_shared"]')?.getAttribute("aria-selected")).toBe("true")
+  expect(navigationStore.uiStore.filesNavigation()).toBeUndefined()
+  navigationStore.uiStore.openFiles({
+    directory: DIRECTORY,
+    path: `${DIRECTORY}/materials/two`,
+    source: "files",
+    sessionID: SESSION,
+  })
+  await settle()
+  expect(listed).toContain(`${DIRECTORY}/materials/two`)
+  navigationStore.uiStore.openFiles({ directory: DIRECTORY, source: "results", sessionID: SESSION })
+  await settle()
+  expect(results.length).toBeGreaterThan(0)
+})
+
+test("material folder navigation does not grant access outside roots or another session's scratch", async () => {
+  navigationStore.uiStore.activateScope("material-navigation-denied", SESSION)
+  const listed: string[] = []
+  mount(() =>
+    subject.FilesPane({
+      session: SESSION,
+      directory: DIRECTORY,
+      request: async (path, _init, query) => {
+        if (path === `/session/${SESSION}/filesystem`) return listing(snapshot([scratchGrant("/scratch/one")]))
+        if (path === "/file") listed.push(String(query?.path))
+        return listing([])
+      },
+    }),
+  )
+  await settle()
+  for (const path of ["/outside/secret", "/scratch/one/materials/foreign"]) {
+    navigationStore.uiStore.openFiles({ directory: DIRECTORY, path, source: "files", sessionID: "ses_other" })
+    await settle()
+    expect(listed.includes(path)).toBe(false)
+    expect(navigationStore.uiStore.filesNavigation()).toBeUndefined()
+  }
 })
